@@ -507,4 +507,7 @@
     </plurals>
     <string name="workout_manual_only">Manual workout · Camera off</string>
     <string name="exercise_media_unreadable">This file could not be opened. Replace it from the media library.</string>
+    <string name="camera_enter_frame">Camera ready. Step into frame.</string>
+    <string name="setup_camera_analysis">Motion analysis uses your camera.</string>
+    <string name="setup_manual_mode">Track this exercise manually. Camera access is optional.</string>
 </resources>

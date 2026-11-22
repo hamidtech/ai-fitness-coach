@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.heightIn
 import com.aifitnesscoach.core.ui.LayoutSpacing
+import com.aifitnesscoach.core.media.ExerciseIllustration
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -293,6 +295,7 @@ private fun SessionBuilderView(
                 ExerciseCatalog.allExercises.forEach { ex ->
                     DropdownMenuItem(
                         text = { Text(if (isPersian) ex.nameFa else ex.nameEn) },
+                        leadingIcon = { ExerciseIllustration(ex.id, Modifier.size(44.dp)) },
                         onClick = {
                             viewModel.addExerciseToPlan(ex)
                             pickerExpanded = false
@@ -550,7 +553,10 @@ private fun CameraSetupGuideView(
             }
         } else {
             Button(onClick = onStartTracking, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                Text(stringResource(R.string.camera_start_tracking), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(if (requiresAnalysis) R.string.camera_start_tracking else R.string.home_start_workout),
+                    style = MaterialTheme.typography.titleMedium
+                )
             }
         }
 
@@ -693,7 +699,8 @@ private fun LiveTrackingWorkoutView(
                 WorkoutCameraState.WORKOUT_READY -> when (analysis?.trackingQuality) {
                     TrackingQuality.GOOD -> stringResource(R.string.workout_tracking_ok)
                     TrackingQuality.LOW_CONFIDENCE -> stringResource(R.string.workout_tracking_low_conf)
-                    TrackingQuality.LOST, null -> stringResource(R.string.workout_tracking_lost)
+                    TrackingQuality.LOST -> stringResource(R.string.workout_tracking_lost)
+                    null -> stringResource(R.string.camera_enter_frame)
                 }
             }
             Text(

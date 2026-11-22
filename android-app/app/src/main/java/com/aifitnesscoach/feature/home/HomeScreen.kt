@@ -40,6 +40,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.media.ExerciseIllustration
 import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.database.FitnessGoal
 import com.aifitnesscoach.core.database.SavedInsightEntity
@@ -310,6 +311,8 @@ fun HomeScreen(
                             shape = RoundedCornerShape(14.dp)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
+                                ExerciseIllustration(ex.id, Modifier.fillMaxWidth().height(88.dp))
+                                Spacer(Modifier.height(LayoutSpacing.small))
                                 Text(
                                     text = if (isPersian) ex.nameFa else ex.nameEn,
                                     style = MaterialTheme.typography.titleMedium,

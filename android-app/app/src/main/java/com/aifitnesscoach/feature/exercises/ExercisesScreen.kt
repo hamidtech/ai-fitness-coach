@@ -266,7 +266,7 @@ private fun ExerciseWorkoutSetup(
                             onStartWorkout(configured)
                         }
                     ) {
-                        Text(stringResource(R.string.exercise_start_camera_workout))
+                        Text(stringResource(R.string.home_start_workout))
                     }
                 }
             }
@@ -297,6 +297,10 @@ private fun ExerciseWorkoutSetup(
             )
 
             TextButton(onClick = onOpenMedia) { Text(stringResource(R.string.exercise_media_actions)) }
+            Text(
+                stringResource(if (exercise.analyzerId != null) R.string.setup_camera_analysis else R.string.setup_manual_mode),
+                style = MaterialTheme.typography.bodyMedium
+            )
             TextButton(onClick = onOpenCameraGuide) { Text(stringResource(R.string.camera_setup_title)) }
 
             // Quick Set / Rep / Equipment Setup right inside Exercise Details

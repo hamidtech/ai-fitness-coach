@@ -105,7 +105,7 @@ class WorkoutViewModel(
     ) {
         val item = customItem ?: PlannedWorkoutItem(exercise = exercise, targetSets = 3)
         _uiState.value = WorkoutUiState(
-            stage = if (skipCameraGuide) WorkoutStage.LIVE_TRACKING else WorkoutStage.CAMERA_SETUP_GUIDE,
+            stage = if (skipCameraGuide || item.exercise.analyzerId == null) WorkoutStage.LIVE_TRACKING else WorkoutStage.CAMERA_SETUP_GUIDE,
             plannedItems = listOf(item),
             sessionStartedAtMs = System.currentTimeMillis()
         )

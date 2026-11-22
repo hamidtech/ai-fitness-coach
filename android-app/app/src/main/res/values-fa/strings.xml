@@ -507,4 +507,7 @@
     </plurals>
     <string name="workout_manual_only">تمرین دستی · دوربین خاموش است</string>
     <string name="exercise_media_unreadable">این فایل باز نشد. آن را از کتابخانهٔ رسانه جایگزین کنید.</string>
+    <string name="camera_enter_frame">دوربین آماده است. وارد کادر شوید.</string>
+    <string name="setup_camera_analysis">تحلیل حرکت از دوربین استفاده می‌کند.</string>
+    <string name="setup_manual_mode">این حرکت را دستی ثبت کنید. دسترسی دوربین اختیاری است.</string>
 </resources>

@@ -60,7 +60,12 @@ class PoseLandmarkerHelper(
                 .setMinPosePresenceConfidence(MIN_PRESENCE_CONFIDENCE)
                 .setMinTrackingConfidence(MIN_TRACKING_CONFIDENCE)
                 .setResultListener { result, input ->
-                    handleResult(result, input.width, input.height)
+                    try {
+                        handleResult(result, input.width, input.height)
+                    } catch (error: RuntimeException) {
+                        Log.e("WorkoutCamera", "pose_callback_failed", error)
+                        onError("pose_callback_failed")
+                    }
                 }
                 .setErrorListener { error ->
                     Log.e("WorkoutCamera", "pose_runtime_failed", error)
