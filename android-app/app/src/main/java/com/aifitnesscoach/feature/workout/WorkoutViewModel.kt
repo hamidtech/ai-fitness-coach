@@ -1,5 +1,6 @@
 package com.aifitnesscoach.feature.workout
 
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aifitnesscoach.core.database.ExerciseSetEntity
@@ -79,9 +80,25 @@ data class WorkoutUiState(
     val isUsingGpu: Boolean = true,
     val poseInitError: String? = null,
     val manualRepAdjustment: Int = 0,
+    val manualHoldStartedAtMs: Long? = null,
+    val manualHoldAccumulatedMs: Long = 0L,
     val isSaving: Boolean = false
 ) {
     val currentItem: PlannedWorkoutItem? get() = plannedItems.getOrNull(currentItemIndex)
+
+    val isManualHold: Boolean get() = currentItem?.exercise?.let {
+        it.analyzerId == null && it.exerciseMode == ExerciseMode.TIMED_HOLD
+    } == true
+
+    fun manualHoldElapsedMs(nowMs: Long): Long = manualHoldAccumulatedMs +
+        (manualHoldStartedAtMs?.let { (nowMs - it).coerceAtLeast(0L) } ?: 0L)
+
+    fun startManualHold(nowMs: Long): WorkoutUiState =
+        if (isManualHold && stage == WorkoutStage.LIVE_TRACKING && !isPaused) {
+            copy(manualHoldStartedAtMs = nowMs)
+        } else {
+            this
+        }
 }
 
 class WorkoutViewModel(
@@ -103,16 +120,18 @@ class WorkoutViewModel(
         customItem: PlannedWorkoutItem? = null,
         skipCameraGuide: Boolean = false
     ) {
+        restTimerJob?.cancel()
         val item = customItem ?: PlannedWorkoutItem(exercise = exercise, targetSets = 3)
         _uiState.value = WorkoutUiState(
             stage = if (skipCameraGuide || item.exercise.analyzerId == null) WorkoutStage.LIVE_TRACKING else WorkoutStage.CAMERA_SETUP_GUIDE,
             plannedItems = listOf(item),
             sessionStartedAtMs = System.currentTimeMillis()
-        )
+        ).startManualHold(SystemClock.elapsedRealtime())
         prepareAnalyzerForCurrentItem()
     }
 
     fun openSessionBuilder(initialExercises: List<ExerciseDefinition> = emptyList()) {
+        restTimerJob?.cancel()
         _uiState.value = WorkoutUiState(
             stage = WorkoutStage.PLANNING,
             plannedItems = initialExercises.map { PlannedWorkoutItem(exercise = it) }
@@ -152,12 +171,16 @@ class WorkoutViewModel(
         if (_uiState.value.plannedItems.isEmpty()) return
         _uiState.update {
             it.copy(
-                stage = if (skipCameraGuide) WorkoutStage.LIVE_TRACKING else WorkoutStage.CAMERA_SETUP_GUIDE,
+                stage = if (skipCameraGuide || it.plannedItems.first().exercise.analyzerId == null) {
+                    WorkoutStage.LIVE_TRACKING
+                } else {
+                    WorkoutStage.CAMERA_SETUP_GUIDE
+                },
                 currentItemIndex = 0,
                 currentSetNumber = 1,
                 sessionStartedAtMs = System.currentTimeMillis(),
                 completedSets = emptyList()
-            )
+            ).startManualHold(SystemClock.elapsedRealtime())
         }
         prepareAnalyzerForCurrentItem()
     }
@@ -169,12 +192,23 @@ class WorkoutViewModel(
                 stage = WorkoutStage.LIVE_TRACKING,
                 isPaused = false,
                 manualRepAdjustment = 0
-            )
+            ).startManualHold(SystemClock.elapsedRealtime())
         }
     }
 
     fun togglePause() {
-        _uiState.update { it.copy(isPaused = !it.isPaused) }
+        val now = SystemClock.elapsedRealtime()
+        _uiState.update { current ->
+            val updated = current.copy(isPaused = !current.isPaused)
+            when {
+                !current.isManualHold -> updated
+                updated.isPaused -> updated.copy(
+                    manualHoldStartedAtMs = null,
+                    manualHoldAccumulatedMs = current.manualHoldElapsedMs(now)
+                )
+                else -> updated.startManualHold(now)
+            }
+        }
     }
 
     fun adjustManualReps(delta: Int) {
@@ -238,6 +272,7 @@ class WorkoutViewModel(
 
     fun completeCurrentSet() {
         val state = _uiState.value
+        if (state.stage != WorkoutStage.LIVE_TRACKING) return
         val item = state.currentItem ?: return
         val analysis = state.latestAnalysis
 
@@ -246,7 +281,11 @@ class WorkoutViewModel(
         } else {
             (analysis?.repCount ?: 0) + state.manualRepAdjustment
         }
-        val holdMs = analysis?.holdDurationMs ?: 0L
+        val holdMs = if (state.isManualHold) {
+            state.manualHoldElapsedMs(SystemClock.elapsedRealtime())
+        } else {
+            analysis?.holdDurationMs ?: 0L
+        }
 
         val record = CompletedSetRecord(
             item = item,
@@ -325,9 +364,12 @@ class WorkoutViewModel(
             it.copy(
                 stage = WorkoutStage.LIVE_TRACKING,
                 restRemainingSec = 0,
+                isPaused = false,
                 manualRepAdjustment = 0,
+                manualHoldStartedAtMs = null,
+                manualHoldAccumulatedMs = 0L,
                 latestAnalysis = null
-            )
+            ).startManualHold(SystemClock.elapsedRealtime())
         }
     }
 

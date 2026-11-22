@@ -7,11 +7,13 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.core.app.ActivityCompat
 import android.content.pm.PackageManager
@@ -104,6 +106,8 @@ import com.aifitnesscoach.core.localization.LocaleManager
 import com.aifitnesscoach.core.personalization.PersonalizedGreeting
 import com.aifitnesscoach.core.pose.TrackingQuality
 import com.aifitnesscoach.feature.exercises.statusLabel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 
 @Composable
@@ -631,6 +635,16 @@ private fun LiveTrackingWorkoutView(
     val analysis = uiState.latestAnalysis
     val ttsLocale = remember(preferences.language) { LocaleManager.activeLocale(preferences.language) }
 
+    var timerNow by remember(uiState.manualHoldStartedAtMs) {
+        mutableLongStateOf(SystemClock.elapsedRealtime())
+    }
+    LaunchedEffect(uiState.manualHoldStartedAtMs) {
+        if (!uiState.isManualHold || uiState.manualHoldStartedAtMs == null) return@LaunchedEffect
+        while (isActive) {
+            timerNow = SystemClock.elapsedRealtime()
+            delay(250)
+        }
+    }
     var cameraAttempt by remember { mutableIntStateOf(0) }
     var cameraState by remember(useFrontCamera, cameraAttempt) {
         mutableStateOf(WorkoutCameraState.INITIALIZING_CAMERA)
@@ -768,7 +782,9 @@ private fun LiveTrackingWorkoutView(
             ) {
                 Column {
                     if (item.exercise.exerciseMode == ExerciseMode.TIMED_HOLD) {
-                        val sec = (analysis?.holdDurationMs ?: 0L) / 1000L
+                        val holdMs = if (uiState.isManualHold) uiState.manualHoldElapsedMs(timerNow)
+                            else analysis?.holdDurationMs ?: 0L
+                        val sec = holdMs / 1000L
                         Text(
                             text = "${sec}s",
                             color = Color.White,
@@ -827,7 +843,7 @@ private fun LiveTrackingWorkoutView(
                 )
             }
 
-            if (item.exercise.analyzerId == null) {
+            if (item.exercise.analyzerId == null && !uiState.isManualHold) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = { viewModel.adjustManualReps(-1) },

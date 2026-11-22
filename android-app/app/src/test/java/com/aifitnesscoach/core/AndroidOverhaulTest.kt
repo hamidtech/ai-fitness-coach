@@ -22,6 +22,9 @@ import com.aifitnesscoach.core.media.resolveEffectiveStatus
 import com.aifitnesscoach.core.personalization.ProfileValidationResult
 import com.aifitnesscoach.feature.onboarding.OnboardingDraft
 import com.aifitnesscoach.feature.onboarding.OnboardingStep
+import com.aifitnesscoach.feature.workout.PlannedWorkoutItem
+import com.aifitnesscoach.feature.workout.WorkoutStage
+import com.aifitnesscoach.feature.workout.WorkoutUiState
 import com.aifitnesscoach.feature.widget.WidgetActivity
 import com.aifitnesscoach.feature.widget.WidgetDay
 import com.aifitnesscoach.feature.widget.WorkoutWidgetRoutes
@@ -114,6 +117,19 @@ class AndroidOverhaulTest {
         assertEquals(WorkoutSetupProblem.REPS, workoutSetupProblem(reps, weighted, 2, 101, null, 5f))
         assertEquals(WorkoutSetupProblem.WEIGHT, workoutSetupProblem(reps, weighted, 2, 10, null, Float.NaN))
         assertNull(workoutSetupProblem(reps, weighted, 2, 10, null, 5f))
+    }
+
+    @Test
+    fun manualHoldsTrackElapsedTimeWithoutAPoseAnalyzer() {
+        val exercise = requireNotNull(ExerciseCatalog.findById("side_plank"))
+        val initial = WorkoutUiState(
+            stage = WorkoutStage.LIVE_TRACKING, plannedItems = listOf(PlannedWorkoutItem(exercise = exercise))
+        )
+        val started = initial.startManualHold(1000L)
+        assertEquals(3500L, started.manualHoldElapsedMs(4500L))
+        val paused = started.copy(isPaused = true, manualHoldStartedAtMs = null, manualHoldAccumulatedMs = 3500L)
+        assertEquals(3500L, paused.startManualHold(6000L).manualHoldElapsedMs(7500L))
+        assertEquals(5000L, paused.copy(isPaused = false).startManualHold(6000L).manualHoldElapsedMs(7500L))
     }
 
     @Test
