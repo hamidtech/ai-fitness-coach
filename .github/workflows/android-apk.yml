@@ -128,10 +128,24 @@ jobs:
           fi
           sudo chmod a+rw /dev/kvm
           sdkmanager --install 'emulator' 'system-images;android-35;google_apis;x86_64'
-          avdmanager create avd --name fitness-ci --package 'system-images;android-35;google_apis;x86_64' --force <<< no
+          export ANDROID_USER_HOME="$RUNNER_TEMP/fitness-android"
+          export ANDROID_EMULATOR_HOME="$ANDROID_USER_HOME"
+          export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          avd_path="$ANDROID_AVD_HOME/fitness-ci.avd"
+          avdmanager create avd --name fitness-ci --package 'system-images;android-35;google_apis;x86_64' --device pixel_6 --path "$avd_path" --force
+          test -f "$avd_path/config.ini"
+          if [[ ! -f "$ANDROID_AVD_HOME/fitness-ci.ini" ]]; then
+            {
+              echo 'avd.ini.encoding=UTF-8'
+              echo "path=$avd_path"
+              echo 'target=android-35'
+            } > "$ANDROID_AVD_HOME/fitness-ci.ini"
+          fi
           emulator_bin="$ANDROID_SDK_ROOT/emulator/emulator"
           test -x "$emulator_bin"
-          "$emulator_bin" -avd fitness-ci -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > emulator.log 2>&1 &
+          "$emulator_bin" -list-avds | grep -Fx fitness-ci
+          "$emulator_bin" -avd fitness-ci -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader > emulator.log 2>&1 &
           emulator_pid=$!
           trap 'adb emu kill || kill "$emulator_pid" || true' EXIT
           for attempt in {1..120}; do
