@@ -453,4 +453,12 @@
     <string name="workout_reps_count_format">%1$d تکرار</string>
     <string name="history_reps_ratio_format">%1$d از %2$d تکرار</string>
     <string name="history_set_line_format">• %1$s — ست %2$d: %3$s</string>
+    <string name="camera_open_settings">باز کردن تنظیمات برنامه</string>
+    <string name="camera_initializing">در حال باز کردن دوربین…</string>
+    <string name="camera_pose_initializing">دوربین متصل شد. تحلیل حرکت در حال بارگذاری است…</string>
+    <string name="camera_preview_ready">دوربین آماده است</string>
+    <string name="camera_lens_unavailable">این دوربین در دسترس نیست. دوربین را عوض کنید یا برگردید.</string>
+    <string name="camera_preview_error">پیش‌نمایش دوربین باز نشد. دوباره تلاش کنید یا دوربین را عوض کنید.</string>
+    <string name="camera_pose_error">تحلیل حرکت راه‌اندازی نشد. دوباره تلاش کنید یا برگردید.</string>
+    <string name="camera_retry">تلاش دوباره</string>
 </resources>

@@ -1,6 +1,19 @@
 package com.aifitnesscoach.feature.workout
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import android.util.Log
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.core.app.ActivityCompat
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -65,7 +78,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.aifitnesscoach.R
-import com.aifitnesscoach.core.camera.CameraPoseAnalyzer
+import com.aifitnesscoach.core.camera.WorkoutCameraState
 import com.aifitnesscoach.core.camera.CameraPreviewWithOverlay
 import com.aifitnesscoach.core.database.CameraLensPreference
 import com.aifitnesscoach.core.database.UserPreferences
@@ -79,7 +92,6 @@ import com.aifitnesscoach.core.exercise.ExerciseMode
 import com.aifitnesscoach.core.exercise.definitions.ExerciseCatalog
 import com.aifitnesscoach.core.localization.LocaleManager
 import com.aifitnesscoach.core.personalization.PersonalizedGreeting
-import com.aifitnesscoach.core.pose.PoseLandmarkerHelper
 import com.aifitnesscoach.core.pose.TrackingQuality
 import com.aifitnesscoach.feature.exercises.statusLabel
 import kotlin.math.roundToInt
@@ -97,15 +109,38 @@ fun WorkoutScreen(
     onExitWorkout: () -> Unit
 ) {
     val context = LocalContext.current
-    var hasCameraPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
-                PackageManager.PERMISSION_GRANTED
-        )
-    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    fun hasPermission() = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+        PackageManager.PERMISSION_GRANTED
+    var hasCameraPermission by remember { mutableStateOf(hasPermission()) }
+    var requestedPermission by rememberSaveable { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) { granted -> hasCameraPermission = granted }
+    ) { granted ->
+        requestedPermission = true
+        hasCameraPermission = granted
+        Log.i("WorkoutCamera", "permission_result granted=$granted")
+    }
+    DisposableEffect(lifecycleOwner, context) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) hasCameraPermission = hasPermission()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val activity = remember(context) {
+        generateSequence(context) { (it as? ContextWrapper)?.baseContext }
+            .filterIsInstance<Activity>().firstOrNull()
+    }
+    val permissionBlocked = requestedPermission && !hasCameraPermission &&
+        activity != null && !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)
+    val requestPermission = {
+        if (permissionBlocked) {
+            context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
+        } else {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
 
     var useFrontCamera by remember(preferences.cameraLens) {
         mutableStateOf(preferences.cameraLens == CameraLensPreference.FRONT)
@@ -134,7 +169,8 @@ fun WorkoutScreen(
                 uiState = uiState,
                 isPersian = isPersian,
                 hasCameraPermission = hasCameraPermission,
-                onRequestPermission = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                onRequestPermission = requestPermission,
+                permissionBlocked = permissionBlocked,
                 onStartTracking = {
                     onCameraGuideAcknowledged()
                     viewModel.startLiveTracking()
@@ -146,7 +182,8 @@ fun WorkoutScreen(
         WorkoutStage.LIVE_TRACKING -> {
             if (!hasCameraPermission) {
                 CameraPermissionRationaleView(
-                    onRequestPermission = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                    onRequestPermission = requestPermission,
+                    permissionBlocked = permissionBlocked,
                     onBack = onExitWorkout
                 )
             } else {
@@ -454,6 +491,7 @@ private fun CameraSetupGuideView(
     isPersian: Boolean,
     hasCameraPermission: Boolean,
     onRequestPermission: () -> Unit,
+    permissionBlocked: Boolean,
     onStartTracking: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -503,7 +541,7 @@ private fun CameraSetupGuideView(
 
         if (!hasCameraPermission) {
             Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Text(stringResource(R.string.camera_grant_permission))
+                Text(stringResource(if (permissionBlocked) R.string.camera_open_settings else R.string.camera_grant_permission))
             }
         } else {
             Button(onClick = onStartTracking, modifier = Modifier.fillMaxWidth().height(56.dp)) {
@@ -520,6 +558,7 @@ private fun CameraSetupGuideView(
 @Composable
 private fun CameraPermissionRationaleView(
     onRequestPermission: () -> Unit,
+    permissionBlocked: Boolean,
     onBack: () -> Unit
 ) {
     Column(
@@ -532,7 +571,7 @@ private fun CameraPermissionRationaleView(
         Text(stringResource(R.string.camera_permission_rationale), style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(20.dp))
         Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-            Text(stringResource(R.string.camera_grant_permission))
+            Text(stringResource(if (permissionBlocked) R.string.camera_open_settings else R.string.camera_grant_permission))
         }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
@@ -556,52 +595,33 @@ private fun LiveTrackingWorkoutView(
     val analysis = uiState.latestAnalysis
     val ttsLocale = remember(preferences.language) { LocaleManager.activeLocale(preferences.language) }
 
-    val poseHelper = remember {
-        PoseLandmarkerHelper(
-            context = context,
-            onResult = { frame ->
-                viewModel.onPoseFrame(
-                    frame = frame,
-                    voiceEnabled = preferences.voiceFeedbackEnabled,
-                    ttsLocale = ttsLocale,
-                    isPersian = isPersian
-                )
-            },
-            onError = { err -> viewModel.onPoseInitStatus(false, err) }
-        )
+    var cameraAttempt by remember { mutableIntStateOf(0) }
+    var cameraState by remember(useFrontCamera, cameraAttempt) {
+        mutableStateOf(WorkoutCameraState.INITIALIZING_CAMERA)
     }
-
-    LaunchedEffect(poseHelper) {
-        val ok = poseHelper.initialize()
-        viewModel.onPoseInitStatus(
-            usingGpu = poseHelper.isUsingGpu(),
-            error = if (ok) null else "Pose model not bundled in assets (pose_landmarker_lite.task)."
-        )
-    }
-
-    DisposableEffect(poseHelper) {
-        onDispose { poseHelper.close() }
-    }
-
-    val cameraAnalyzer = remember(poseHelper) {
-        CameraPoseAnalyzer(
-            landmarkerHelper = poseHelper,
-            isFrontCameraProvider = { useFrontCamera },
-            onFpsUpdated = { fps -> viewModel.onFpsUpdated(fps) }
-        )
-    }
+    val cameraFailed = cameraState in setOf(
+        WorkoutCameraState.CAMERA_UNAVAILABLE, WorkoutCameraState.PREVIEW_ERROR, WorkoutCameraState.POSE_ERROR
+    )
+    val canCompleteSet = item.exercise.analyzerId == null || cameraState == WorkoutCameraState.WORKOUT_READY
 
     var showCameraHelpDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        CameraPreviewWithOverlay(
-            useFrontCamera = useFrontCamera,
-            showSkeletonOverlay = preferences.skeletonOverlayEnabled,
-            latestPoseFrame = uiState.latestPoseFrame,
-            analyzer = cameraAnalyzer,
-            skeletonColor = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.fillMaxSize()
-        )
+        androidx.compose.runtime.key(cameraAttempt) {
+            CameraPreviewWithOverlay(
+                useFrontCamera = useFrontCamera,
+                showSkeletonOverlay = preferences.skeletonOverlayEnabled && cameraState == WorkoutCameraState.WORKOUT_READY,
+                latestPoseFrame = uiState.latestPoseFrame,
+                needsPose = item.exercise.analyzerId != null,
+                onPose = { frame ->
+                    viewModel.onPoseFrame(frame, preferences.voiceFeedbackEnabled, ttsLocale, isPersian)
+                },
+                onFps = viewModel::onFpsUpdated,
+                onState = { cameraState = it },
+                skeletonColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         // Top HUD (Exercise Name, Set, Tracking Status, Help, Camera Switch)
         Column(
@@ -653,11 +673,18 @@ private fun LiveTrackingWorkoutView(
                 }
             }
 
-            val trackingText = when (analysis?.trackingQuality) {
-                TrackingQuality.GOOD -> stringResource(R.string.workout_tracking_ok)
-                TrackingQuality.LOW_CONFIDENCE -> stringResource(R.string.workout_tracking_low_conf)
-                TrackingQuality.LOST -> stringResource(R.string.workout_tracking_lost)
-                null -> uiState.poseInitError ?: stringResource(R.string.workout_tracking_ok)
+            val trackingText = when (cameraState) {
+                WorkoutCameraState.INITIALIZING_CAMERA -> stringResource(R.string.camera_initializing)
+                WorkoutCameraState.INITIALIZING_POSE -> stringResource(R.string.camera_pose_initializing)
+                WorkoutCameraState.CAMERA_READY -> stringResource(R.string.camera_preview_ready)
+                WorkoutCameraState.CAMERA_UNAVAILABLE -> stringResource(R.string.camera_lens_unavailable)
+                WorkoutCameraState.PREVIEW_ERROR -> stringResource(R.string.camera_preview_error)
+                WorkoutCameraState.POSE_ERROR -> stringResource(R.string.camera_pose_error)
+                WorkoutCameraState.WORKOUT_READY -> when (analysis?.trackingQuality) {
+                    TrackingQuality.GOOD -> stringResource(R.string.workout_tracking_ok)
+                    TrackingQuality.LOW_CONFIDENCE -> stringResource(R.string.workout_tracking_low_conf)
+                    TrackingQuality.LOST, null -> stringResource(R.string.workout_tracking_lost)
+                }
             }
             Text(
                 text = trackingText,
@@ -665,6 +692,10 @@ private fun LiveTrackingWorkoutView(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
+
+            if (cameraFailed) {
+                Button(onClick = { cameraAttempt++ }) { Text(stringResource(R.string.camera_retry)) }
+            }
 
             if (preferences.developerMetricsEnabled) {
                 val avgConfPct = uiState.latestPoseFrame
@@ -789,6 +820,7 @@ private fun LiveTrackingWorkoutView(
 
                 Button(
                     onClick = { viewModel.completeCurrentSet() },
+                    enabled = canCompleteSet,
                     modifier = Modifier.weight(1.3f).height(52.dp)
                 ) {
                     Text(stringResource(R.string.workout_next_set), style = MaterialTheme.typography.titleMedium)

@@ -1,6 +1,7 @@
 package com.aifitnesscoach.core.camera
 
 import android.os.SystemClock
+import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.aifitnesscoach.core.pose.PoseLandmarkerHelper
@@ -12,16 +13,18 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class CameraPoseAnalyzer(
     private val landmarkerHelper: PoseLandmarkerHelper,
-    private val isFrontCameraProvider: () -> Boolean,
-    private val onFpsUpdated: (Float) -> Unit
+    private val isFrontCamera: Boolean,
+    private val onFpsUpdated: (Float) -> Unit,
+    private val onFailure: () -> Unit
 ) : ImageAnalysis.Analyzer {
 
     private val isBusy = AtomicBoolean(false)
+    private var failed = false
     private var frameCounter = 0
     private var windowStartMs = SystemClock.elapsedRealtime()
 
     override fun analyze(imageProxy: ImageProxy) {
-        if (!isBusy.compareAndSet(false, true)) {
+        if (failed || !isBusy.compareAndSet(false, true)) {
             imageProxy.close()
             return
         }
@@ -32,7 +35,7 @@ class CameraPoseAnalyzer(
             landmarkerHelper.detectLiveStream(
                 bitmap = bitmap,
                 rotationDegrees = rotation,
-                isFrontCamera = isFrontCameraProvider()
+                isFrontCamera = isFrontCamera
             )
 
             frameCounter += 1
@@ -44,6 +47,14 @@ class CameraPoseAnalyzer(
                 frameCounter = 0
                 windowStartMs = now
             }
+        } catch (error: RuntimeException) {
+            failed = true
+            Log.e("WorkoutCamera", "frame_analysis_failed", error)
+            onFailure()
+        } catch (error: LinkageError) {
+            failed = true
+            Log.e("WorkoutCamera", "frame_analysis_native_library_failed", error)
+            onFailure()
         } finally {
             imageProxy.close()
             isBusy.set(false)

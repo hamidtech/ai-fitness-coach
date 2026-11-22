@@ -453,4 +453,12 @@
     <string name="workout_reps_count_format">%1$d reps</string>
     <string name="history_reps_ratio_format">%1$d/%2$d reps</string>
     <string name="history_set_line_format">• %1$s — Set %2$d: %3$s</string>
+    <string name="camera_open_settings">Open app settings</string>
+    <string name="camera_initializing">Opening camera…</string>
+    <string name="camera_pose_initializing">Camera connected. Loading motion analysis…</string>
+    <string name="camera_preview_ready">Camera ready</string>
+    <string name="camera_lens_unavailable">This camera lens is unavailable. Switch cameras or go back.</string>
+    <string name="camera_preview_error">The camera preview could not start. Retry or switch cameras.</string>
+    <string name="camera_pose_error">Motion analysis could not start. Retry or go back.</string>
+    <string name="camera_retry">Retry camera</string>
 </resources>

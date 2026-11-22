@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.os.SystemClock
+import android.util.Log
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.core.Delegate
@@ -13,7 +14,7 @@ import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
 
 /**
  * Wraps MediaPipe Pose Landmarker in LIVE_STREAM mode.
- * Attempts GPU delegate first and falls back automatically to CPU if GPU initialization fails.
+ * Uses the CPU delegate to avoid device-specific EGL setup during camera startup.
  * Never uploads frames or landmarks off-device.
  */
 class PoseLandmarkerHelper(
@@ -22,7 +23,6 @@ class PoseLandmarkerHelper(
     private val onError: (String) -> Unit
 ) {
     private var poseLandmarker: PoseLandmarker? = null
-    private var activeDelegate: Delegate = Delegate.GPU
     @Volatile
     private var isFrontCamera: Boolean = true
     @Volatile
@@ -42,16 +42,14 @@ class PoseLandmarkerHelper(
     fun initialize(): Boolean {
         close()
         lastTimestampMs = 0L
-        return tryCreateLandmarker(Delegate.GPU) || tryCreateLandmarker(Delegate.CPU)
+        return tryCreateLandmarker()
     }
 
-    fun isUsingGpu(): Boolean = activeDelegate == Delegate.GPU
-
-    private fun tryCreateLandmarker(delegate: Delegate): Boolean {
+    private fun tryCreateLandmarker(): Boolean {
         return try {
             val baseOptions = BaseOptions.builder()
                 .setModelAssetPath(MODEL_ASSET_PATH)
-                .setDelegate(delegate)
+                .setDelegate(Delegate.CPU)
                 .build()
 
             val options = PoseLandmarker.PoseLandmarkerOptions.builder()
@@ -65,18 +63,21 @@ class PoseLandmarkerHelper(
                     handleResult(result, input.width, input.height)
                 }
                 .setErrorListener { error ->
-                    onError(error.message ?: "MediaPipe Pose Landmarker error")
+                    Log.e("WorkoutCamera", "pose_runtime_failed", error)
+                    onError("pose_runtime_failed")
                 }
                 .build()
 
             poseLandmarker = PoseLandmarker.createFromOptions(context, options)
-            activeDelegate = delegate
+            Log.i("WorkoutCamera", "pose_model_ready delegate=CPU")
             true
-        } catch (t: Throwable) {
-            poseLandmarker = null
-            if (delegate == Delegate.CPU) {
-                onError("Pose model initialization failed (${t.localizedMessage ?: "missing $MODEL_ASSET_PATH"})")
-            }
+        } catch (error: RuntimeException) {
+            Log.e("WorkoutCamera", "pose_model_load_failed", error)
+            onError("pose_model_load_failed")
+            false
+        } catch (error: LinkageError) {
+            Log.e("WorkoutCamera", "pose_native_library_failed", error)
+            onError("pose_native_library_failed")
             false
         }
     }
@@ -149,7 +150,14 @@ class PoseLandmarkerHelper(
     }
 
     fun close() {
-        poseLandmarker?.close()
+        val landmarker = poseLandmarker
         poseLandmarker = null
+        try {
+            landmarker?.close()
+        } catch (error: RuntimeException) {
+            Log.w("WorkoutCamera", "pose_close_failed", error)
+        } catch (error: LinkageError) {
+            Log.w("WorkoutCamera", "pose_close_native_library_failed", error)
+        }
     }
 }
