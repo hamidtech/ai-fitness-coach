@@ -510,4 +510,8 @@
     <string name="camera_enter_frame">Camera ready. Step into frame.</string>
     <string name="setup_camera_analysis">Motion analysis uses your camera.</string>
     <string name="setup_manual_mode">Track this exercise manually. Camera access is optional.</string>
+    <string name="guide_landscape">A horizontal phone orientation gives floor movements more room across the frame.</string>
+    <string name="guide_portrait">Start with the phone upright for standing movements. Step back if hands or feet reach the edge.</string>
+    <string name="camera_access_denied">Camera access denied</string>
+    <string name="media_import_failed">Could not import the file. Choose a supported image, GIF or MP4 up to 50 MB.</string>
 </resources>

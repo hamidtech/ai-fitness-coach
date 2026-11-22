@@ -63,6 +63,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -145,9 +148,8 @@ fun WorkoutScreen(
         requested = requestedPermission,
         showRationale = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, Manifest.permission.CAMERA) } ?: true
     )
-    val permissionBlocked = permissionState == CameraPermissionState.SETTINGS_REQUIRED
     val requestPermission = {
-        if (permissionBlocked) {
+        if (permissionState == CameraPermissionState.SETTINGS_REQUIRED) {
             context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
         } else {
             permissionLauncher.launch(Manifest.permission.CAMERA)
@@ -185,7 +187,7 @@ fun WorkoutScreen(
                 hasCameraPermission = hasCameraPermission,
                 requiresAnalysis = requiresAnalysis,
                 onRequestPermission = requestPermission,
-                permissionBlocked = permissionBlocked,
+                permissionState = permissionState,
                 onOpenGuide = { uiState.currentItem?.exercise?.id?.let(onOpenCameraGuide) },
                 onStartTracking = {
                     onCameraGuideAcknowledged()
@@ -199,7 +201,7 @@ fun WorkoutScreen(
             if (requiresAnalysis && !hasCameraPermission) {
                 CameraPermissionRationaleView(
                     onRequestPermission = requestPermission,
-                    permissionBlocked = permissionBlocked,
+                    permissionState = permissionState,
                     onOpenGuide = { uiState.currentItem?.exercise?.id?.let(onOpenCameraGuide) },
                     onBack = onExitWorkout
                 )
@@ -512,7 +514,7 @@ private fun CameraSetupGuideView(
     hasCameraPermission: Boolean,
     requiresAnalysis: Boolean,
     onRequestPermission: () -> Unit,
-    permissionBlocked: Boolean,
+    permissionState: CameraPermissionState,
     onOpenGuide: () -> Unit,
     onStartTracking: () -> Unit,
     onBack: () -> Unit
@@ -520,48 +522,61 @@ private fun CameraSetupGuideView(
     val item = uiState.currentItem ?: return
     val ex = item.exercise
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Text(stringResource(R.string.camera_setup_title), style = MaterialTheme.typography.headlineMedium)
-        Text(
-            text = if (isPersian) ex.nameFa else ex.nameEn,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary
-        )
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            Surface(tonalElevation = 3.dp) {
+                Column(
+                    Modifier.fillMaxWidth().padding(LayoutSpacing.screen),
+                    verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)
+                ) {
+                    if (!hasCameraPermission && requiresAnalysis) {
+                        Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth().sizeIn(minHeight = LayoutSpacing.touchTarget)) {
+                            Text(stringResource(if (permissionState == CameraPermissionState.SETTINGS_REQUIRED) R.string.camera_open_settings else R.string.camera_grant_permission))
+                        }
+                    } else {
+                        Button(onClick = onStartTracking, modifier = Modifier.fillMaxWidth().sizeIn(minHeight = LayoutSpacing.touchTarget)) {
+                            Text(
+                                stringResource(if (requiresAnalysis) R.string.camera_start_tracking else R.string.home_start_workout),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                    }
 
-        CameraFramingExample(ex.id)
-        CameraPositionInstructions(ex, isPersian)
-        TextButton(onClick = onOpenGuide) { Text(stringResource(R.string.guide_full)) }
-
-        if (ex.analyzerId == null) {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                Text(
-                    text = stringResource(R.string.workout_no_analyzer_notice, statusLabel(ex.implementationStatus)),
-                    modifier = Modifier.padding(14.dp)
-                )
+                    OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.workout_discard))
+                    }
+                }
             }
         }
+    ) { insets ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(insets)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(stringResource(R.string.camera_setup_title), style = MaterialTheme.typography.headlineMedium)
+            Text(
+                text = if (isPersian) ex.nameFa else ex.nameEn,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
 
-        if (!hasCameraPermission && requiresAnalysis) {
-            Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Text(stringResource(if (permissionBlocked) R.string.camera_open_settings else R.string.camera_grant_permission))
-            }
-        } else {
-            Button(onClick = onStartTracking, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                Text(
-                    stringResource(if (requiresAnalysis) R.string.camera_start_tracking else R.string.home_start_workout),
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-        }
+            CameraFramingExample(ex.id, Modifier.align(Alignment.CenterHorizontally))
+            CameraPositionInstructions(ex, isPersian)
+            TextButton(onClick = onOpenGuide) { Text(stringResource(R.string.guide_full)) }
 
-        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.workout_discard))
+            if (ex.analyzerId == null) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                    Text(
+                        text = stringResource(R.string.workout_no_analyzer_notice, statusLabel(ex.implementationStatus)),
+                        modifier = Modifier.padding(14.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -569,7 +584,7 @@ private fun CameraSetupGuideView(
 @Composable
 private fun CameraPermissionRationaleView(
     onRequestPermission: () -> Unit,
-    permissionBlocked: Boolean,
+    permissionState: CameraPermissionState,
     onOpenGuide: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -578,12 +593,19 @@ private fun CameraPermissionRationaleView(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(stringResource(R.string.camera_permission_title), style = MaterialTheme.typography.headlineMedium)
+        Text(
+            stringResource(if (permissionState == CameraPermissionState.REQUIRED) {
+                R.string.camera_permission_title
+            } else {
+                R.string.camera_access_denied
+            }),
+            style = MaterialTheme.typography.headlineMedium
+        )
         Spacer(Modifier.height(10.dp))
         Text(stringResource(R.string.camera_permission_rationale), style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(20.dp))
         Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-            Text(stringResource(if (permissionBlocked) R.string.camera_open_settings else R.string.camera_grant_permission))
+            Text(stringResource(if (permissionState == CameraPermissionState.SETTINGS_REQUIRED) R.string.camera_open_settings else R.string.camera_grant_permission))
         }
         TextButton(onClick = onOpenGuide) { Text(stringResource(R.string.camera_setup_title)) }
         Spacer(Modifier.height(8.dp))

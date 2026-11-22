@@ -93,7 +93,7 @@ fun ExerciseMediaLibraryScreen(
                 val res = assetRepository.importLocalMediaForExercise(exId, uri)
                 importFeedback = res.fold(
                     onSuccess = { null },
-                    onFailure = { it.localizedMessage }
+                    onFailure = { context.getString(R.string.media_import_failed) }
                 )
                 storageBytes = assetRepository.computeStorageBytes()
             }

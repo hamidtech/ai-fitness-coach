@@ -1,9 +1,9 @@
 # Local Assets Directory
 
-Place offline binary assets here before building an APK for physical devices:
+The MediaPipe Lite model is checked in for offline inference. Exercise identification also works offline using the original drawings in `core/media/ExerciseIllustration.kt`.
 
 1. **MediaPipe Pose Landmarker Model**:
-   - Download `pose_landmarker_lite.task` (or `pose_landmarker_full.task`) from Google MediaPipe Solutions.
+   - The shipped model is `pose_landmarker_lite.task` from Google MediaPipe Solutions.
    - Place it at: `app/src/main/assets/pose_landmarker_lite.task`
 
 2. **Persian Typography (Optional Vazirmatn Font)**:
@@ -16,4 +16,4 @@ Place offline binary assets here before building an APK for physical devices:
      - `dumbbell_curl_thumb.webp`, `dumbbell_curl_demo.mp4`
      - `forearm_plank_thumb.webp`, `forearm_plank_demo.mp4`
      - `band_biceps_curl_thumb.webp`, `band_biceps_curl_demo.mp4`
-   - When a binary demo file is not bundled yet, `ExerciseMediaPlayer.kt` displays an explicit labeled placeholder card and never misrepresents placeholder visuals as verified exercise form.
+   - The player falls back to the drawing for the exercise ID if bundled, downloaded, or imported media is unavailable. See [media provenance and licensing](../../../../README.md#exercise-visuals-and-media).

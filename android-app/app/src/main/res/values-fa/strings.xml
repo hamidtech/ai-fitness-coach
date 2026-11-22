@@ -510,4 +510,8 @@
     <string name="camera_enter_frame">دوربین آماده است. وارد کادر شوید.</string>
     <string name="setup_camera_analysis">تحلیل حرکت از دوربین استفاده می‌کند.</string>
     <string name="setup_manual_mode">این حرکت را دستی ثبت کنید. دسترسی دوربین اختیاری است.</string>
+    <string name="guide_landscape">برای حرکات روی زمین می‌توانید گوشی را افقی بگذارید تا پهنای بیشتری در کادر داشته باشید.</string>
+    <string name="guide_portrait">برای حرکات ایستاده، گوشی را عمودی بگذارید. اگر دست یا پا به لبهٔ کادر می‌رسد، کمی عقب‌تر بروید.</string>
+    <string name="camera_access_denied">دسترسی دوربین رد شد</string>
+    <string name="media_import_failed">فایل وارد نشد. تصویر، GIF یا MP4 پشتیبانی‌شده تا حجم ۵۰ مگابایت انتخاب کنید.</string>
 </resources>

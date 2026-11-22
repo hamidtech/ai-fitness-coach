@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -51,7 +52,7 @@ fun CameraPositionGuide(
             Text(stringResource(R.string.camera_setup_title), style = MaterialTheme.typography.headlineSmall)
         }
         Text(if (isPersian) exercise.nameFa else exercise.nameEn, style = MaterialTheme.typography.titleLarge)
-        CameraFramingExample(exercise.id)
+        CameraFramingExample(exercise.id, Modifier.align(Alignment.CenterHorizontally))
         CameraPositionInstructions(exercise, isPersian)
         Card {
             Column(
@@ -67,10 +68,11 @@ fun CameraPositionGuide(
 }
 
 @Composable
-internal fun CameraFramingExample(exerciseId: String) {
+internal fun CameraFramingExample(exerciseId: String, modifier: Modifier = Modifier) {
     val color = MaterialTheme.colorScheme.primary
     androidx.compose.foundation.layout.Box(
-        Modifier.fillMaxWidth().aspectRatio(1.8f).clip(RoundedCornerShape(16.dp))
+        modifier.widthIn(max = 280.dp).fillMaxWidth()
+            .aspectRatio(if (exerciseId in floorExerciseIds) 1.6f else 1f).clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.secondaryContainer)
     ) {
         ExerciseIllustration(exerciseId, Modifier.fillMaxSize())
@@ -94,6 +96,7 @@ internal fun CameraPositionInstructions(exercise: ExerciseDefinition, isPersian:
         Text(if (isPersian) guide.recommendedView.labelFa else guide.recommendedView.labelEn, style = MaterialTheme.typography.titleMedium)
         Text(stringResource(R.string.camera_setup_distance, if (isPersian) guide.distanceFa else guide.distanceEn))
         Text(stringResource(R.string.camera_setup_height, if (isPersian) guide.heightFa else guide.heightEn))
+        Text(stringResource(if (exercise.id in floorExerciseIds) R.string.guide_landscape else R.string.guide_portrait))
         Text(stringResource(R.string.guide_frame_range))
         when (exercise.id) {
             "dumbbell_biceps_curl", "band_biceps_curl" -> Text(stringResource(R.string.guide_curl))
@@ -102,3 +105,9 @@ internal fun CameraPositionInstructions(exercise: ExerciseDefinition, isPersian:
         }
     }
 }
+
+private val floorExerciseIds = setOf(
+    "dumbbell_chest_press", "push_up", "glute_bridge", "superman", "forearm_plank", "side_plank",
+    "dead_bug", "bird_dog", "abdominal_crunch", "reverse_crunch", "mountain_climber",
+    "hollow_body_hold", "mini_band_clamshell", "band_dead_bug"
+)
