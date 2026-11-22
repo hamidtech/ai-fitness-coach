@@ -42,8 +42,8 @@ jobs:
         with:
           packages: 'platform-tools'
 
-      - name: Install Android SDK 35
-        run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
+      - name: Install Android SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
