@@ -62,10 +62,32 @@ jobs:
           fi
 
       - name: Unit tests
-        run: bash ./gradlew testDebugUnitTest --stacktrace --no-daemon
+        id: unit
+        run: bash ./gradlew :app:testDebugUnitTest --stacktrace --no-daemon
+
+      - name: Summarize unit tests
+        if: always()
+        run: |
+          python3 - <<'PYTESTS'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          import os
+          paths = list(Path("app/build/test-results/testDebugUnitTest").glob("TEST-*.xml"))
+          keys = ("tests", "failures", "errors", "skipped")
+          totals = dict.fromkeys(keys, 0)
+          for path in paths:
+              suite = ET.parse(path).getroot()
+              for key in keys:
+                  totals[key] += int(suite.attrib.get(key, 0))
+          result = ", ".join(f"{name}={value}" for name, value in totals.items()) if paths else "No unit test reports"
+          print(result)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as report:
+              report.write("## Android unit tests\n\n" + result + "\n")
+          PYTESTS
 
       - name: Build debug APK
-        run: bash ./gradlew assembleDebug --stacktrace --no-daemon
+        id: debug_apk
+        run: bash ./gradlew :app:assembleDebug --stacktrace --no-daemon
 
       - name: Upload APK
         if: success()
@@ -87,13 +109,49 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-      - name: Upload test reports on failure
-        if: failure()
+      - name: Android lint
+        if: always() && steps.debug_apk.outcome == 'success'
+        run: bash ./gradlew :app:lintDebug --stacktrace --no-daemon
+
+      - name: Build instrumentation APK
+        if: always() && steps.debug_apk.outcome == 'success'
+        id: test_apk
+        run: bash ./gradlew :app:assembleDebugAndroidTest --stacktrace --no-daemon
+
+      - name: Instrumentation on Android emulator
+        if: always() && steps.test_apk.outcome == 'success'
+        timeout-minutes: 13
+        run: |
+          if [[ ! -e /dev/kvm ]]; then
+            echo 'Instrumentation skipped because this runner has no KVM.' | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          sudo chmod a+rw /dev/kvm
+          sdkmanager --install 'emulator' 'system-images;android-35;google_apis;x86_64'
+          avdmanager create avd --name fitness-ci --package 'system-images;android-35;google_apis;x86_64' --force <<< no
+          emulator -avd fitness-ci -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > emulator.log 2>&1 &
+          emulator_pid=$!
+          trap 'adb emu kill || kill "$emulator_pid" || true' EXIT
+          timeout 240 adb wait-for-device
+          timeout 300 bash -c 'until [[ "$(adb shell getprop sys.boot_completed | tr -d "\r")" = 1 ]]; do sleep 2; done'
+          adb shell input keyevent 82
+          bash ./gradlew :app:connectedDebugAndroidTest --stacktrace --no-daemon
+          adb shell am start -W -n com.aifitnesscoach/.app.MainActivity
+          sleep 2
+          adb exec-out screencap -p > onboarding-emulator.png
+
+      - name: Upload Android verification reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-test-reports
           path: |
             android-app/app/build/reports/tests/
             android-app/app/build/test-results/
+            android-app/app/build/reports/lint-results-debug.*
+            android-app/app/build/reports/androidTests/
+            android-app/app/build/outputs/androidTest-results/
+            android-app/emulator.log
+            android-app/onboarding-emulator.png
           if-no-files-found: ignore
           retention-days: 7

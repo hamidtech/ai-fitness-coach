@@ -8,7 +8,7 @@ Scope: `android-app` on `main`. This is a source/configuration audit; **successf
 |---|---|---|
 | JDK | 17 | Compatible with AGP 8.10 |
 | Android Gradle Plugin | 8.10.1 | Requires Gradle 8.11.1; supports API 36 |
-| Gradle wrapper | 8.11.1 | Matches AGP 8.10 |
+| Gradle wrapper | 8.14.4 | Pinned by the existing successful Android build |
 | compileSdk | 36 | Required by Health Connect 1.1.0 |
 | targetSdk | 35 | Independent of compileSdk |
 | minSdk | 26 | Higher than Room 2.8.x minimum 23; assess feature runtimes individually |
@@ -71,3 +71,7 @@ It fails early when the report contains unresolved dependencies. Successful comp
 - Gradle dependency verification: https://docs.gradle.org/current/userguide/dependency_verification.html
 
 **Unresolved risk:** This report cannot certify that every third-party library works at runtime. CI dependency reports and successful APK build are the next gates. Dependency locking and checksum verification should be introduced only after reviewing the resolved graph, to avoid generating or committing unverified lock/checksum files.
+
+## Android overhaul
+
+The production dependency versions are unchanged. AndroidX Test runner 1.6.2 is declared in the version catalog for the instrumentation APK only. See [Android setup and verification](README.md).
