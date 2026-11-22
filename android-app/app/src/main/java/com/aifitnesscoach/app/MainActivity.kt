@@ -32,6 +32,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.navArgument
@@ -43,10 +45,9 @@ import androidx.navigation.compose.rememberNavController
 import com.aifitnesscoach.R
 import com.aifitnesscoach.core.database.UserPreferences
 import com.aifitnesscoach.core.exercise.ExerciseCategory
-import com.aifitnesscoach.core.exercise.ExerciseDefinition
 import com.aifitnesscoach.core.exercise.definitions.ExerciseCatalog
 import com.aifitnesscoach.core.localization.LocaleManager
-import com.aifitnesscoach.core.motivation.DailyQuoteSelector
+import com.aifitnesscoach.core.motivation.MotivationalQuote
 import com.aifitnesscoach.core.motivation.VerifiedQuoteRepository
 import com.aifitnesscoach.core.notifications.AppNotificationManager
 import com.aifitnesscoach.core.ui.theme.AIFitnessCoachTheme
@@ -72,7 +73,14 @@ import com.aifitnesscoach.feature.workout.WorkoutScreen
 import com.aifitnesscoach.feature.workout.WorkoutViewModel
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.time.Duration
+import kotlinx.coroutines.delay
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.aifitnesscoach.feature.widget.WorkoutWidgetRefresh
+import com.aifitnesscoach.feature.widget.WorkoutWidgetRoutes
 
 sealed class MainDestination(val route: String) {
     data object Onboarding : MainDestination("onboarding")
@@ -111,8 +119,8 @@ class MainActivity : AppCompatActivity() {
 
             val activePrefs = nullablePrefs ?: UserPreferences()
 
-            LaunchedEffect(activePrefs.language) {
-                LocaleManager.applyLanguage(activePrefs.language)
+            LaunchedEffect(nullablePrefs?.language) {
+                nullablePrefs?.language?.let(LocaleManager::applyLanguage)
             }
 
             val isPersian = LocaleManager.isPersianActive(activePrefs.language)
@@ -163,12 +171,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun extractDeepLinkRoute(intent: Intent?): String? {
-        return when (intent?.getStringExtra(AppNotificationManager.EXTRA_OPEN_ROUTE)) {
-            AppNotificationManager.ROUTE_INSIGHTS -> MainDestination.AiInsights.route
-            else -> null
-        }
+        return routeForLaunchExtra(intent?.getStringExtra(AppNotificationManager.EXTRA_OPEN_ROUTE))
     }
 }
+
+internal fun routeForLaunchExtra(extra: String?): String? = when (extra) {
+    AppNotificationManager.ROUTE_INSIGHTS -> MainDestination.AiInsights.route
+    WorkoutWidgetRoutes.QUICK_START -> MainDestination.Exercises.route
+    WorkoutWidgetRoutes.ACTIVITY -> MainDestination.History.route
+    WorkoutWidgetRoutes.MOTIVATION -> MainDestination.Home.route
+    else -> null
+}
+
+internal fun startDestination(profile: com.aifitnesscoach.core.database.UserProfile): String =
+    if (profile.hasCompletedOnboarding) MainDestination.Home.route else MainDestination.Onboarding.route
 
 @Composable
 private fun AIFitnessCoachAppRoot(
@@ -179,6 +195,7 @@ private fun AIFitnessCoachAppRoot(
     onConsumeDeepLink: () -> Unit
 ) {
     val navController = rememberNavController()
+    val appContext = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -207,63 +224,54 @@ private fun AIFitnessCoachAppRoot(
             workoutDao = container.workoutDao,
             coachExplanationProvider = container.coachExplanationProvider,
             ttsCoachManager = container.ttsCoachManager,
-            healthConnectManager = container.healthConnectManager
+            healthConnectManager = container.healthConnectManager,
+            onWorkoutPersisted = { WorkoutWidgetRefresh.request(appContext) }
         )
     }
     val workoutUiState by workoutViewModel.uiState.collectAsStateWithLifecycle()
 
     var selectedCategoryFilter by remember { mutableStateOf<ExerciseCategory?>(null) }
-    var selectedExerciseDetail by remember { mutableStateOf<ExerciseDefinition?>(null) }
+    var selectedExerciseId by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedExerciseDetail = selectedExerciseId?.let(ExerciseCatalog::findById)
     var selectedAnalysisSessionId by remember { mutableStateOf<Long?>(null) }
 
     val quoteRepository = remember { VerifiedQuoteRepository() }
-    val today = LocalDate.now()
-    val quoteSelection = remember(
-        today,
-        preferences.dailyQuoteDateIso,
-        preferences.dailyQuoteId,
-        preferences.recentDailyQuoteIds
-    ) {
-        DailyQuoteSelector.selectForDate(
-            repository = quoteRepository,
-            today = today,
-            savedDateIso = preferences.dailyQuoteDateIso,
-            savedQuoteId = preferences.dailyQuoteId,
-            recentIds = preferences.recentDailyQuoteIds
-        )
-    }
-
-    LaunchedEffect(quoteSelection.dateIso, quoteSelection.quote?.id, quoteSelection.didChange) {
-        val selectedQuote = quoteSelection.quote
-        if (quoteSelection.didChange && selectedQuote != null) {
-            container.preferencesRepository.saveDailyQuoteSelection(
-                dateIso = quoteSelection.dateIso,
-                quoteId = selectedQuote.id,
-                recentIds = quoteSelection.updatedRecentIds
-            )
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var dailyQuote by remember { mutableStateOf<MotivationalQuote?>(null) }
+    LaunchedEffect(lifecycleOwner, preferences.dailyQuoteId) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                val now = ZonedDateTime.now()
+                dailyQuote = container.preferencesRepository.dailyQuote(now.toLocalDate(), quoteRepository)
+                val next = now.toLocalDate().plusDays(1).atStartOfDay(now.zone)
+                delay(Duration.between(now, next).toMillis().coerceAtLeast(1_000))
+            }
         }
     }
-
-    val startDestination = remember {
-        if (preferences.profile.hasCompletedOnboarding) {
-            MainDestination.Home.route
-        } else {
-            MainDestination.Onboarding.route
-        }
+    LaunchedEffect(preferences.language, preferences.themeMode, sessions.size) {
+        WorkoutWidgetRefresh.request(appContext)
     }
 
-    LaunchedEffect(pendingDeepLinkRoute, preferences.profile.hasCompletedOnboarding) {
-        if (pendingDeepLinkRoute != null && preferences.profile.hasCompletedOnboarding) {
+    val startDestination = remember { startDestination(preferences.profile) }
+
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    LaunchedEffect(pendingDeepLinkRoute, preferences.profile.hasCompletedOnboarding, currentRoute) {
+        if (pendingDeepLinkRoute != null && preferences.profile.hasCompletedOnboarding &&
+            currentRoute != null && currentRoute != MainDestination.Onboarding.route
+        ) {
             selectedAnalysisSessionId = null
+            if (pendingDeepLinkRoute == MainDestination.Exercises.route) {
+                selectedCategoryFilter = null
+                selectedExerciseId = null
+            }
             navController.navigate(pendingDeepLinkRoute) {
                 launchSingleTop = true
             }
             onConsumeDeepLink()
         }
     }
-
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
 
     val topLevelRoutes = remember {
         setOf(
@@ -343,7 +351,7 @@ private fun AIFitnessCoachAppRoot(
                             recentExerciseIds = recentExerciseIds,
                             allSessions = sessions,
                             latestInsight = latestInsight,
-                            dailyQuote = quoteSelection.quote,
+                            dailyQuote = dailyQuote,
                             onOpenProfileSetup = { navController.navigate(MainDestination.PersonalProfile.route) },
                             onStartQuickWorkout = {
                                 val defaultEx = ExerciseCatalog.findById("bodyweight_squat")
@@ -370,7 +378,7 @@ private fun AIFitnessCoachAppRoot(
                                 navController.navigate(MainDestination.Exercises.route)
                             },
                             onSelectExercise = { ex ->
-                                selectedExerciseDetail = ex
+                                selectedExerciseId = ex.id
                                 navController.navigate(MainDestination.Exercises.route)
                             },
                             onOpenInsights = {
@@ -386,7 +394,7 @@ private fun AIFitnessCoachAppRoot(
                             downloadedAssets = downloadedAssetsMap,
                             initialCategoryFilter = selectedCategoryFilter,
                             selectedExerciseForDetail = selectedExerciseDetail,
-                            onSelectExerciseForDetail = { selectedExerciseDetail = it },
+                            onSelectExerciseForDetail = { selectedExerciseId = it?.id },
                             onOpenMedia = { id -> navController.navigate("media_library?exercise=$id") },
                             onOpenCameraGuide = { id -> navController.navigate("camera_guide/$id") },
                             onStartWorkoutWithItem = { plannedItem ->

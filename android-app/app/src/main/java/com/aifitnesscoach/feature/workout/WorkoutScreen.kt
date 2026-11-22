@@ -20,6 +20,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.heightIn
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -79,6 +82,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.aifitnesscoach.R
 import com.aifitnesscoach.core.camera.WorkoutCameraState
+import com.aifitnesscoach.core.camera.CameraPermissionState
+import com.aifitnesscoach.core.camera.cameraPermissionState
 import com.aifitnesscoach.core.camera.CameraPreviewWithOverlay
 import com.aifitnesscoach.core.database.CameraLensPreference
 import com.aifitnesscoach.core.database.UserPreferences
@@ -133,8 +138,12 @@ fun WorkoutScreen(
         generateSequence(context) { (it as? ContextWrapper)?.baseContext }
             .filterIsInstance<Activity>().firstOrNull()
     }
-    val permissionBlocked = requestedPermission && !hasCameraPermission &&
-        activity != null && !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)
+    val permissionState = cameraPermissionState(
+        granted = hasCameraPermission,
+        requested = requestedPermission,
+        showRationale = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, Manifest.permission.CAMERA) } ?: true
+    )
+    val permissionBlocked = permissionState == CameraPermissionState.SETTINGS_REQUIRED
     val requestPermission = {
         if (permissionBlocked) {
             context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
@@ -143,12 +152,14 @@ fun WorkoutScreen(
         }
     }
 
-    var useFrontCamera by remember(preferences.cameraLens) {
+    val requiresAnalysis = uiState.currentItem?.exercise?.analyzerId != null
+    var useFrontCamera by rememberSaveable(preferences.cameraLens) {
         mutableStateOf(preferences.cameraLens == CameraLensPreference.FRONT)
     }
 
-    LaunchedEffect(uiState.stage) {
-        onPoseTrackingActiveChanged(uiState.stage == WorkoutStage.LIVE_TRACKING)
+    LaunchedEffect(uiState.stage, hasCameraPermission, uiState.currentItem?.exercise?.analyzerId) {
+        onPoseTrackingActiveChanged(uiState.stage == WorkoutStage.LIVE_TRACKING && hasCameraPermission &&
+            uiState.currentItem?.exercise?.analyzerId != null)
     }
     DisposableEffect(Unit) {
         onDispose { onPoseTrackingActiveChanged(false) }
@@ -170,6 +181,7 @@ fun WorkoutScreen(
                 uiState = uiState,
                 isPersian = isPersian,
                 hasCameraPermission = hasCameraPermission,
+                requiresAnalysis = requiresAnalysis,
                 onRequestPermission = requestPermission,
                 permissionBlocked = permissionBlocked,
                 onOpenGuide = { uiState.currentItem?.exercise?.id?.let(onOpenCameraGuide) },
@@ -182,7 +194,7 @@ fun WorkoutScreen(
         }
 
         WorkoutStage.LIVE_TRACKING -> {
-            if (!hasCameraPermission) {
+            if (requiresAnalysis && !hasCameraPermission) {
                 CameraPermissionRationaleView(
                     onRequestPermission = requestPermission,
                     permissionBlocked = permissionBlocked,
@@ -195,6 +207,7 @@ fun WorkoutScreen(
                     preferences = preferences,
                     isPersian = isPersian,
                     useFrontCamera = useFrontCamera,
+                    hasCameraPermission = hasCameraPermission,
                     onToggleCamera = { useFrontCamera = !useFrontCamera },
                     onOpenGuide = { uiState.currentItem?.exercise?.id?.let(onOpenCameraGuide) },
                     coachExplanationProvider = coachExplanationProvider,
@@ -494,6 +507,7 @@ private fun CameraSetupGuideView(
     uiState: WorkoutUiState,
     isPersian: Boolean,
     hasCameraPermission: Boolean,
+    requiresAnalysis: Boolean,
     onRequestPermission: () -> Unit,
     permissionBlocked: Boolean,
     onOpenGuide: () -> Unit,
@@ -530,7 +544,7 @@ private fun CameraSetupGuideView(
             }
         }
 
-        if (!hasCameraPermission) {
+        if (!hasCameraPermission && requiresAnalysis) {
             Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                 Text(stringResource(if (permissionBlocked) R.string.camera_open_settings else R.string.camera_grant_permission))
             }
@@ -579,12 +593,12 @@ private fun LiveTrackingWorkoutView(
     preferences: UserPreferences,
     isPersian: Boolean,
     useFrontCamera: Boolean,
+    hasCameraPermission: Boolean,
     onToggleCamera: () -> Unit,
     onOpenGuide: () -> Unit,
     coachExplanationProvider: CoachExplanationProvider,
     viewModel: WorkoutViewModel
 ) {
-    val context = LocalContext.current
     val item = uiState.currentItem ?: return
     val analysis = uiState.latestAnalysis
     val ttsLocale = remember(preferences.language) { LocaleManager.activeLocale(preferences.language) }
@@ -598,8 +612,10 @@ private fun LiveTrackingWorkoutView(
     )
     val canCompleteSet = item.exercise.analyzerId == null || cameraState == WorkoutCameraState.WORKOUT_READY
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        androidx.compose.runtime.key(cameraAttempt) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color(0xFF111827))) {
+        val headerLimit = maxHeight * 0.40f
+        val controlsLimit = maxHeight * 0.55f
+        if (hasCameraPermission) androidx.compose.runtime.key(cameraAttempt, item.exercise.id) {
             CameraPreviewWithOverlay(
                 useFrontCamera = useFrontCamera,
                 showSkeletonOverlay = preferences.skeletonOverlayEnabled && cameraState == WorkoutCameraState.WORKOUT_READY,
@@ -620,8 +636,10 @@ private fun LiveTrackingWorkoutView(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
+                .heightIn(max = headerLimit)
                 .background(Color.Black.copy(alpha = 0.62f))
-                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(LayoutSpacing.screen)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -652,7 +670,7 @@ private fun LiveTrackingWorkoutView(
                             tint = Color.White
                         )
                     }
-                    IconButton(
+                    if (hasCameraPermission) IconButton(
                         onClick = onToggleCamera,
                         modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                     ) {
@@ -665,7 +683,7 @@ private fun LiveTrackingWorkoutView(
                 }
             }
 
-            val trackingText = when (cameraState) {
+            val trackingText = if (!hasCameraPermission) stringResource(R.string.workout_manual_only) else when (cameraState) {
                 WorkoutCameraState.INITIALIZING_CAMERA -> stringResource(R.string.camera_initializing)
                 WorkoutCameraState.INITIALIZING_POSE -> stringResource(R.string.camera_pose_initializing)
                 WorkoutCameraState.CAMERA_READY -> stringResource(R.string.camera_preview_ready)
@@ -708,8 +726,10 @@ private fun LiveTrackingWorkoutView(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
+                .heightIn(max = controlsLimit)
                 .background(Color.Black.copy(alpha = 0.72f))
-                .padding(16.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(LayoutSpacing.screen),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
@@ -797,7 +817,7 @@ private fun LiveTrackingWorkoutView(
             ) {
                 OutlinedButton(
                     onClick = { viewModel.togglePause() },
-                    modifier = Modifier.weight(1f).height(52.dp)
+                    modifier = Modifier.weight(1f).sizeIn(minHeight = LayoutSpacing.touchTarget)
                 ) {
                     Icon(
                         imageVector = if (uiState.isPaused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
@@ -813,7 +833,7 @@ private fun LiveTrackingWorkoutView(
                 Button(
                     onClick = { viewModel.completeCurrentSet() },
                     enabled = canCompleteSet,
-                    modifier = Modifier.weight(1.3f).height(52.dp)
+                    modifier = Modifier.weight(1.3f).sizeIn(minHeight = LayoutSpacing.touchTarget)
                 ) {
                     Text(stringResource(R.string.workout_next_set), style = MaterialTheme.typography.titleMedium)
                 }

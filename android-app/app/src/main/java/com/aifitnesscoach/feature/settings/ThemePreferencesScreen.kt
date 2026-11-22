@@ -39,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.database.AppColorPalette
 import com.aifitnesscoach.core.database.AppThemeMode
 import com.aifitnesscoach.core.database.UserPreferences
@@ -87,7 +88,7 @@ fun ThemePreferencesScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = LayoutSpacing.pagePadding, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Appearance Mode

@@ -49,8 +49,8 @@ class OperationalFeaturesTest {
         val available = entries.filter { it.defaultStatus == AssetDownloadStatus.AVAILABLE }
         val unavailable = entries.filter { it.defaultStatus == AssetDownloadStatus.NOT_AVAILABLE }
 
-        assertEquals(32, available.size)
-        assertEquals(7, unavailable.size)
+        assertEquals(33, available.size)
+        assertEquals(6, unavailable.size)
 
         available.forEach { entry ->
             assertEquals(AssetSourceType.REPDB_FREE_TIER, entry.sourceType)
@@ -58,7 +58,7 @@ class OperationalFeaturesTest {
             assertTrue(entry.attribution.contains("RepDB"))
         }
 
-        // Verify all 7 unavailable entries belong exclusively to Resistance Band Training
+        // Verify all 6 unavailable entries belong exclusively to Resistance Band Training
         unavailable.forEach { entry ->
             val def = ExerciseCatalog.findById(entry.exerciseId)
             assertNotNull(def)

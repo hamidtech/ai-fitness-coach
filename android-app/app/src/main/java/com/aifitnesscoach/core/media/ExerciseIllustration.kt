@@ -36,7 +36,7 @@ private val extension = ExercisePose(5428, 4939, 4965, limb(4939, 5015, 3519), l
 private val bug = ExercisePose(1874, 2978, 5381, limb(2978, 4864, 6347), limb(2978, 3158, 3041), limb(5381, 5961, 7847), limb(5381, 7677, 9082))
 
 private fun dumbbells(pose: ExercisePose) = pose.copy(
-    props = listOf(pose.nearArm.last(), pose.farArm.last()).distinct().map { hand ->
+    props = pose.props + listOf(pose.nearArm.last(), pose.farArm.last()).distinct().map { hand ->
         limb(hand - 300, hand + 300)
     }
 )

@@ -22,6 +22,7 @@ import com.aifitnesscoach.core.database.UserPreferencesRepository
 import com.aifitnesscoach.core.notifications.AppNotificationManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -34,6 +35,14 @@ class ExerciseAssetDownloadManager(
     private val assetRepository: ExerciseAssetRepository
 ) {
     private val workManager = WorkManager.getInstance(context)
+
+    val activeDownloads = workManager.getWorkInfosByTagFlow(TAG_ASSET_DOWNLOAD).map { work ->
+        work.asSequence().filterNot { it.state.isFinished }
+            .flatMap { it.tags.asSequence() }
+            .filter { it.startsWith(EXERCISE_TAG_PREFIX) }
+            .map { it.removePrefix(EXERCISE_TAG_PREFIX) }
+            .toSet()
+    }
 
     fun enqueueDownload(exerciseId: String, wifiOnly: Boolean = false) {
         val manifest = ExerciseAssetCatalog.entryFor(exerciseId)
@@ -48,6 +57,7 @@ class ExerciseAssetDownloadManager(
             .setConstraints(constraints)
             .setInputData(Data.Builder().putString(KEY_EXERCISE_ID, exerciseId).build())
             .addTag(TAG_ASSET_DOWNLOAD)
+            .addTag(EXERCISE_TAG_PREFIX + exerciseId)
             .build()
 
         workManager.enqueueUniqueWork(
@@ -72,6 +82,7 @@ class ExerciseAssetDownloadManager(
     companion object {
         const val KEY_EXERCISE_ID = "exercise_id"
         const val TAG_ASSET_DOWNLOAD = "aifc_asset_download"
+        private const val EXERCISE_TAG_PREFIX = "aifc_asset_exercise:"
         fun uniqueWorkName(exerciseId: String) = "aifc_asset_dl_$exerciseId"
     }
 }
@@ -145,19 +156,21 @@ class ExerciseAssetDownloadWorker(
                 "Downloaded size differs from the published manifest"
             }
             coroutineContext.ensureActive()
-            assetDao.upsert(working.copy(
-                status = AssetDownloadStatus.DOWNLOADED.name,
-                localPrimaryPath = primary.absolutePath,
-                localSecondaryPath = secondary?.absolutePath,
-                checksumSha256 = hash,
-                bytesDownloaded = received,
-                totalBytes = received
-            ))
-            saved = true
+            withContext(NonCancellable) {
+                assetDao.upsert(working.copy(
+                    status = AssetDownloadStatus.DOWNLOADED.name,
+                    localPrimaryPath = primary.absolutePath,
+                    localSecondaryPath = secondary?.absolutePath,
+                    checksumSha256 = hash,
+                    bytesDownloaded = received,
+                    totalBytes = received
+                ))
+                saved = true
+            }
             listOfNotNull(existing?.localPrimaryPath, existing?.localSecondaryPath).forEach { File(it).delete() }
         } catch (error: CancellationException) {
             withContext(NonCancellable) {
-                assetDao.upsert(working.copy(status = AssetDownloadStatus.PAUSED.name, bytesDownloaded = 0))
+                if (!saved) assetDao.upsert(working.copy(status = AssetDownloadStatus.PAUSED.name, bytesDownloaded = 0))
             }
             throw error
         } catch (error: Exception) {

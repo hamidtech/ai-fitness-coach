@@ -82,8 +82,8 @@ fun ExercisesScreen(
     onOpenCameraGuide: (String) -> Unit,
     onStartWorkoutWithItem: (PlannedWorkoutItem) -> Unit
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember(initialCategoryFilter) { mutableStateOf(initialCategoryFilter) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedCategory by rememberSaveable(initialCategoryFilter) { mutableStateOf(initialCategoryFilter) }
 
     val filtered = remember(searchQuery, selectedCategory) {
         ExerciseCatalog.allExercises.filter { ex ->
@@ -159,7 +159,7 @@ fun ExercisesScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(LayoutSpacing.pagePadding),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(filtered, key = { it.id }) { ex ->
@@ -216,7 +216,7 @@ private fun ExerciseWorkoutSetup(
     val sets = targetSets.toIntOrNull()?.takeIf { it in 1..20 }
     val reps = targetReps.toIntOrNull()?.takeIf { it in 1..100 }
     val hold = targetHoldSec.toIntOrNull()?.takeIf { it in 5..600 }
-    val weight = weightText.map { it.digitToIntOrNull()?.digitToChar() ?: it }.joinToString("")
+    val weight = weightText.map { it.digitToIntOrNull()?.digitToChar() ?: if (it == '٫' || it == ',') '.' else it }.joinToString("")
         .toFloatOrNull()?.takeIf { it.isFinite() && it >= 0f }
     val problem = when {
         sets == null -> R.string.setup_valid_sets
@@ -280,174 +280,173 @@ private fun ExerciseWorkoutSetup(
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.common_back))
             }
-        Text(
-            text = if (isPersian) exercise.nameFa else exercise.nameEn,
-            style = MaterialTheme.typography.headlineMedium
-        )
-        Text(
-            text = "${categoryLabel(exercise.category)} · ${statusLabel(exercise.implementationStatus)}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        ExerciseDemoMediaView(
-            mediaRef = exercise.demoMedia,
-            exerciseId = exercise.id,
-            isPersian = isPersian,
-            downloadedAsset = downloadedAsset
-        )
-
-        TextButton(onClick = onOpenMedia) { Text(stringResource(R.string.exercise_media_actions)) }
-        TextButton(onClick = onOpenCameraGuide) { Text(stringResource(R.string.camera_setup_title)) }
-
-        // Quick Set / Rep / Equipment Setup right inside Exercise Details
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
-        ) {
-            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = stringResource(R.string.exercise_quick_configure),
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = targetSets,
-                        onValueChange = { targetSets = it.filter(Char::isDigit).take(2) },
-                        label = { Text(stringResource(R.string.equip_sets)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (exercise.exerciseMode == ExerciseMode.TIMED_HOLD) {
-                        OutlinedTextField(
-                            value = targetHoldSec,
-                            onValueChange = { targetHoldSec = it.filter(Char::isDigit).take(3) },
-                            label = { Text(stringResource(R.string.equip_hold_sec)) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                    } else {
-                        OutlinedTextField(
-                            value = targetReps,
-                            onValueChange = { targetReps = it.filter(Char::isDigit).take(3) },
-                            label = { Text(stringResource(R.string.equip_reps)) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                if (exercise.category == ExerciseCategory.WEIGHTED_TRAINING) {
-                    Column {
-                        OutlinedTextField(
-                            value = weightText,
-                            onValueChange = { weightText = it.filter { ch -> ch.isDigit() || ch == '.' } },
-                            label = { Text(stringResource(R.string.equip_weight_value)) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
-                        FilterChip(
-                            selected = loadMode == WeightLoadMode.PER_DUMBBELL,
-                            onClick = { loadMode = WeightLoadMode.PER_DUMBBELL },
-                            label = { Text(stringResource(R.string.equip_weight_mode_per_dumbbell)) }
-                        )
-                        FilterChip(
-                            selected = loadMode == WeightLoadMode.TOTAL_LOAD,
-                            onClick = { loadMode = WeightLoadMode.TOTAL_LOAD },
-                            label = { Text(stringResource(R.string.equip_weight_mode_total)) }
-                        )
-                        }
-                    }
-                }
-
-                if (exercise.category == ExerciseCategory.RESISTANCE_BAND_TRAINING) {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
-                        exercise.supportedBandTypes.take(3).forEach { bt ->
-                            FilterChip(
-                                selected = selectedBandType == bt,
-                                onClick = { selectedBandType = bt },
-                                label = { Text(if (isPersian) bt.labelFa else bt.labelEn) }
-                            )
-                        }
-                    }
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
-                        listOf(ResistanceLevel.LIGHT, ResistanceLevel.MEDIUM, ResistanceLevel.HEAVY).forEach { lvl ->
-                            FilterChip(
-                                selected = selectedBandLevel == lvl,
-                                onClick = { selectedBandLevel = lvl },
-                                label = { Text(if (isPersian) lvl.labelFa else lvl.labelEn) }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        if (exercise.supportedBandTypes.isNotEmpty()) {
-            SectionBlock(
-                title = stringResource(R.string.exercise_equipment),
-                items = exercise.supportedBandTypes.map { if (isPersian) it.labelFa else it.labelEn }
+            Text(
+                text = if (isPersian) exercise.nameFa else exercise.nameEn,
+                style = MaterialTheme.typography.headlineMedium
             )
-        }
+            Text(
+                text = "${categoryLabel(exercise.category)} · ${statusLabel(exercise.implementationStatus)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
 
-        if (exercise.anchorSetupEn != null || exercise.requiresAnchor) {
+            ExerciseDemoMediaView(
+                mediaRef = exercise.demoMedia,
+                exerciseId = exercise.id,
+                downloadedAsset = downloadedAsset
+            )
+
+            TextButton(onClick = onOpenMedia) { Text(stringResource(R.string.exercise_media_actions)) }
+            TextButton(onClick = onOpenCameraGuide) { Text(stringResource(R.string.camera_setup_title)) }
+
+            // Quick Set / Rep / Equipment Setup right inside Exercise Details
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = stringResource(R.string.exercise_band_setup_safety),
+                        text = stringResource(R.string.exercise_quick_configure),
                         style = MaterialTheme.typography.titleMedium
                     )
-                    Spacer(Modifier.height(4.dp))
-                    val specific = if (isPersian) exercise.anchorSetupFa else exercise.anchorSetupEn
-                    if (!specific.isNullOrBlank()) {
-                        Text(specific, style = MaterialTheme.typography.bodyMedium)
-                        Spacer(Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = targetSets,
+                            onValueChange = { targetSets = it.filter(Char::isDigit).take(2) },
+                            label = { Text(stringResource(R.string.equip_sets)) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (exercise.exerciseMode == ExerciseMode.TIMED_HOLD) {
+                            OutlinedTextField(
+                                value = targetHoldSec,
+                                onValueChange = { targetHoldSec = it.filter(Char::isDigit).take(3) },
+                                label = { Text(stringResource(R.string.equip_hold_sec)) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                        } else {
+                            OutlinedTextField(
+                                value = targetReps,
+                                onValueChange = { targetReps = it.filter(Char::isDigit).take(3) },
+                                label = { Text(stringResource(R.string.equip_reps)) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
-                    Text(
-                        text = stringResource(R.string.exercise_band_anchor_warning),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+
+                    if (exercise.category == ExerciseCategory.WEIGHTED_TRAINING) {
+                        Column {
+                            OutlinedTextField(
+                                value = weightText,
+                                onValueChange = { weightText = it.filter { ch -> ch.isDigit() || ch in ".,٫" }.take(8) },
+                                label = { Text(stringResource(R.string.equip_weight_value)) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                            FilterChip(
+                                selected = loadMode == WeightLoadMode.PER_DUMBBELL,
+                                onClick = { loadMode = WeightLoadMode.PER_DUMBBELL },
+                                label = { Text(stringResource(R.string.equip_weight_mode_per_dumbbell)) }
+                            )
+                            FilterChip(
+                                selected = loadMode == WeightLoadMode.TOTAL_LOAD,
+                                onClick = { loadMode = WeightLoadMode.TOTAL_LOAD },
+                                label = { Text(stringResource(R.string.equip_weight_mode_total)) }
+                            )
+                            }
+                        }
+                    }
+
+                    if (exercise.category == ExerciseCategory.RESISTANCE_BAND_TRAINING) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                            exercise.supportedBandTypes.take(3).forEach { bt ->
+                                FilterChip(
+                                    selected = selectedBandType == bt,
+                                    onClick = { selectedBandType = bt },
+                                    label = { Text(if (isPersian) bt.labelFa else bt.labelEn) }
+                                )
+                            }
+                        }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                            listOf(ResistanceLevel.LIGHT, ResistanceLevel.MEDIUM, ResistanceLevel.HEAVY).forEach { lvl ->
+                                FilterChip(
+                                    selected = selectedBandLevel == lvl,
+                                    onClick = { selectedBandLevel = lvl },
+                                    label = { Text(if (isPersian) lvl.labelFa else lvl.labelEn) }
+                                )
+                            }
+                        }
+                    }
                 }
             }
-        }
 
-        TextButton(onClick = { showTechnique = !showTechnique }) {
-            Text(stringResource(if (showTechnique) R.string.setup_hide_technique else R.string.setup_show_technique))
-        }
-        if (showTechnique) {
-            Text(if (isPersian) exercise.descriptionFa else exercise.descriptionEn)
-        SectionBlock(
-            title = stringResource(R.string.exercise_target_muscles),
-            items = if (isPersian) exercise.targetMusclesFa else exercise.targetMusclesEn
-        )
+            if (exercise.supportedBandTypes.isNotEmpty()) {
+                SectionBlock(
+                    title = stringResource(R.string.exercise_equipment),
+                    items = exercise.supportedBandTypes.map { if (isPersian) it.labelFa else it.labelEn }
+                )
+            }
 
-        SectionBlock(
-            title = stringResource(R.string.exercise_instructions),
-            items = if (isPersian) exercise.instructionsFa else exercise.instructionsEn,
-            numbered = true
-        )
+            if (exercise.anchorSetupEn != null || exercise.requiresAnchor) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = stringResource(R.string.exercise_band_setup_safety),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        val specific = if (isPersian) exercise.anchorSetupFa else exercise.anchorSetupEn
+                        if (!specific.isNullOrBlank()) {
+                            Text(specific, style = MaterialTheme.typography.bodyMedium)
+                            Spacer(Modifier.height(4.dp))
+                        }
+                        Text(
+                            text = stringResource(R.string.exercise_band_anchor_warning),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
 
-        SectionBlock(
-            title = stringResource(R.string.exercise_common_mistakes),
-            items = if (isPersian) exercise.commonMistakesFa else exercise.commonMistakesEn
-        )
+            TextButton(onClick = { showTechnique = !showTechnique }) {
+                Text(stringResource(if (showTechnique) R.string.setup_hide_technique else R.string.setup_show_technique))
+            }
+            if (showTechnique) {
+                Text(if (isPersian) exercise.descriptionFa else exercise.descriptionEn)
+                SectionBlock(
+                    title = stringResource(R.string.exercise_target_muscles),
+                    items = if (isPersian) exercise.targetMusclesFa else exercise.targetMusclesEn
+                )
 
-        SectionBlock(
-            title = stringResource(R.string.exercise_tracking_capabilities),
-            items = (if (isPersian) exercise.observableFormChecksFa else exercise.observableFormChecksEn) +
-                (if (isPersian) exercise.limitationsFa else exercise.limitationsEn)
-        )
+                SectionBlock(
+                    title = stringResource(R.string.exercise_instructions),
+                    items = if (isPersian) exercise.instructionsFa else exercise.instructionsEn,
+                    numbered = true
+                )
 
-        }
+                SectionBlock(
+                    title = stringResource(R.string.exercise_common_mistakes),
+                    items = if (isPersian) exercise.commonMistakesFa else exercise.commonMistakesEn
+                )
+
+                SectionBlock(
+                    title = stringResource(R.string.exercise_tracking_capabilities),
+                    items = (if (isPersian) exercise.observableFormChecksFa else exercise.observableFormChecksEn) +
+                        (if (isPersian) exercise.limitationsFa else exercise.limitationsEn)
+                )
+
+            }
         }
     }
 }

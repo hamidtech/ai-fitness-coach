@@ -10,6 +10,10 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.aifitnesscoach.core.motivation.DailyQuoteSelector
+import com.aifitnesscoach.core.motivation.MotivationalQuote
+import com.aifitnesscoach.core.motivation.VerifiedQuoteRepository
+import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlin.math.pow
@@ -349,12 +353,25 @@ class UserPreferencesRepository(private val context: Context) {
         context.dataStore.edit { it[Keys.USE_DYNAMIC_COLOR] = enabled }
     }
 
-    suspend fun saveDailyQuoteSelection(dateIso: String, quoteId: String, recentIds: List<String>) {
+    suspend fun dailyQuote(today: LocalDate, repository: VerifiedQuoteRepository): MotivationalQuote? {
+        var quote: MotivationalQuote? = null
         context.dataStore.edit { prefs ->
-            prefs[Keys.DAILY_QUOTE_DATE] = dateIso
-            prefs[Keys.DAILY_QUOTE_ID] = quoteId
-            prefs[Keys.DAILY_QUOTE_RECENT_IDS] = recentIds.takeLast(14).joinToString(",")
+            val selection = DailyQuoteSelector.selectForDate(
+                repository = repository,
+                today = today,
+                savedDateIso = prefs[Keys.DAILY_QUOTE_DATE],
+                savedQuoteId = prefs[Keys.DAILY_QUOTE_ID],
+                recentIds = prefs[Keys.DAILY_QUOTE_RECENT_IDS].orEmpty().split(",").filter(String::isNotBlank)
+            )
+            quote = selection.quote
+            val chosen = selection.quote
+            if (selection.didChange && chosen != null) {
+                prefs[Keys.DAILY_QUOTE_DATE] = selection.dateIso
+                prefs[Keys.DAILY_QUOTE_ID] = chosen.id
+                prefs[Keys.DAILY_QUOTE_RECENT_IDS] = selection.updatedRecentIds.takeLast(14).joinToString(",")
+            }
         }
+        return quote
     }
 
     suspend fun setMeasurementUnit(unit: MeasurementUnit) {

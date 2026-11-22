@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.database.UserPreferences
 import com.aifitnesscoach.core.database.UserPreferencesRepository
 import com.aifitnesscoach.core.database.WorkoutDao
@@ -104,7 +105,7 @@ fun HealthScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(LayoutSpacing.pagePadding),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Card(

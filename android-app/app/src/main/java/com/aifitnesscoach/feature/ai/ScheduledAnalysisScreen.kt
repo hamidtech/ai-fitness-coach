@@ -36,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.ai.schedule.AnalysisScheduler
 import com.aifitnesscoach.core.database.AiExecutionMode
 import com.aifitnesscoach.core.database.AnalysisFrequency
@@ -89,7 +90,7 @@ fun ScheduledAnalysisScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(LayoutSpacing.pagePadding),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Card(shape = RoundedCornerShape(16.dp)) {

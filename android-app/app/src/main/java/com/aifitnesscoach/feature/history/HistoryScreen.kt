@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.database.WorkoutSessionWithDetails
 import com.aifitnesscoach.core.exercise.ExerciseCategory
 import com.aifitnesscoach.core.exercise.definitions.ExerciseCatalog
@@ -96,7 +97,7 @@ fun HistoryScreen(
             }
         } else {
             LazyColumn(
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(LayoutSpacing.pagePadding),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(filtered, key = { it.session.id }) { item ->

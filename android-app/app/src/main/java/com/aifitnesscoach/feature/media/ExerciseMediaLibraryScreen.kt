@@ -72,6 +72,7 @@ fun ExerciseMediaLibraryScreen(
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    val pending by downloadManager.activeDownloads.collectAsStateWithLifecycle(initialValue = emptySet())
     val items by assetRepository.observeAllAssetItems()
         .collectAsStateWithLifecycle(initialValue = emptyList())
 
@@ -103,11 +104,10 @@ fun ExerciseMediaLibraryScreen(
         storageBytes = assetRepository.computeStorageBytes()
     }
 
-    val downloadableIds = remember(items) {
+    val downloadableIds = remember(items, pending) {
         items.filter {
-            it.effectiveStatus == AssetDownloadStatus.AVAILABLE ||
-                it.effectiveStatus == AssetDownloadStatus.FAILED ||
-                it.effectiveStatus == AssetDownloadStatus.PAUSED
+            it.exercise.id !in pending && it.manifest.primaryUrl != null &&
+                it.effectiveStatus in setOf(AssetDownloadStatus.AVAILABLE, AssetDownloadStatus.FAILED, AssetDownloadStatus.PAUSED)
         }.map { it.exercise.id }
     }
     val downloadedCount = items.count { it.effectiveStatus == AssetDownloadStatus.DOWNLOADED }
@@ -134,7 +134,7 @@ fun ExerciseMediaLibraryScreen(
         }
 
         LazyColumn(
-            contentPadding = PaddingValues(LayoutSpacing.screen),
+            contentPadding = PaddingValues(LayoutSpacing.pagePadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
@@ -187,7 +187,7 @@ fun ExerciseMediaLibraryScreen(
                                         storageBytes = assetRepository.computeStorageBytes()
                                     }
                                 },
-                                enabled = downloadedCount > 0,
+                                enabled = downloadedCount > 0 && pending.isEmpty(),
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text(stringResource(R.string.media_delete_all))
@@ -227,6 +227,8 @@ fun ExerciseMediaLibraryScreen(
             }
 
             items(filtered, key = { it.exercise.id }) { item ->
+                val workPending = item.exercise.id in pending
+                val status = if (workPending) AssetDownloadStatus.DOWNLOADING else item.effectiveStatus
                 Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         ExerciseIllustration(item.exercise.id, Modifier.size(72.dp))
@@ -236,7 +238,7 @@ fun ExerciseMediaLibraryScreen(
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "${categoryLabel(item.exercise.category)} · ${statusDisplay(item.effectiveStatus)}",
+                            text = "${categoryLabel(item.exercise.category)} · ${statusDisplay(status)}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -264,8 +266,8 @@ fun ExerciseMediaLibraryScreen(
                                 }
                             }
                         }
-                        if (item.effectiveStatus == AssetDownloadStatus.DOWNLOADING) {
-                            if (item.totalBytes > 0) {
+                        if (status == AssetDownloadStatus.DOWNLOADING) {
+                            if (item.effectiveStatus == AssetDownloadStatus.DOWNLOADING && item.totalBytes > 0) {
                                 LinearProgressIndicator(
                                     progress = { (item.bytesDownloaded.toFloat() / item.totalBytes).coerceIn(0f, 1f) },
                                     modifier = Modifier.fillMaxWidth()
@@ -280,7 +282,7 @@ fun ExerciseMediaLibraryScreen(
                         }
 
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
-                            when (item.effectiveStatus) {
+                            when (status) {
                                 AssetDownloadStatus.AVAILABLE,
                                 AssetDownloadStatus.PAUSED,
                                 AssetDownloadStatus.FAILED -> {
@@ -313,7 +315,7 @@ fun ExerciseMediaLibraryScreen(
                                 AssetDownloadStatus.LICENSE_RESTRICTED -> Unit
                             }
 
-                            TextButton(enabled = item.effectiveStatus != AssetDownloadStatus.DOWNLOADING, onClick = {
+                            TextButton(enabled = status != AssetDownloadStatus.DOWNLOADING, onClick = {
                                 pendingImportExerciseId = item.exercise.id
                                 importLauncher.launch(arrayOf("video/mp4", "image/*"))
                             }) {

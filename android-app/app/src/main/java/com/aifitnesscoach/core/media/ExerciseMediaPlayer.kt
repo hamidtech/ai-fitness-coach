@@ -13,11 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.OndemandVideo
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -34,12 +30,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.PlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import coil.ImageLoader
@@ -62,20 +57,20 @@ private fun assetExists(context: Context, assetPath: String): Boolean {
  * Offline demonstration media renderer:
  * 1. Renders verified locally downloaded files (MP4 via Media3, GIF via Coil, or animated Start<->Peak WebP posture pair)
  * 2. Otherwise plays bundled app assets if present
- * 3. Otherwise displays an explicit labeled placeholder without substituting unrelated equipment
+ * 3. Shows the exercise-specific offline illustration when a file is missing or unreadable
  */
 @Composable
 fun ExerciseDemoMediaView(
     mediaRef: MediaAssetRef,
-    exerciseId: String? = null,
-    isPersian: Boolean,
+    exerciseId: String,
     downloadedAsset: ExerciseAssetEntity? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val primaryFile = downloadedAsset?.localPrimaryPath?.let(::File)?.takeIf { it.exists() }
     val secondaryFile = downloadedAsset?.localSecondaryPath?.let(::File)?.takeIf { it.exists() }
-    val isDownloaded = downloadedAsset?.status == AssetDownloadStatus.DOWNLOADED.name && primaryFile != null
+    val isDownloaded = primaryFile != null &&
+        resolveEffectiveStatus(ExerciseAssetCatalog.entryFor(exerciseId), downloadedAsset) == AssetDownloadStatus.DOWNLOADED
 
     val hasBundledMp4 = remember(mediaRef.demoVideoAsset) { assetExists(context, mediaRef.demoVideoAsset) }
     val hasBundledGif = remember(mediaRef.demoGifAsset) {
@@ -95,12 +90,15 @@ fun ExerciseDemoMediaView(
             .build()
     }
 
+    var mediaFailed by remember(primaryFile?.absolutePath, downloadedAsset?.updatedAtMs, exerciseId) {
+        mutableStateOf(false)
+    }
     var showPeakPhase by remember(primaryFile?.absolutePath, secondaryFile?.absolutePath) {
         mutableStateOf(false)
     }
 
-    if (isDownloaded && secondaryFile != null) {
-        LaunchedEffect(primaryFile.absolutePath, secondaryFile.absolutePath) {
+    if (isDownloaded && secondaryFile != null && !mediaFailed) {
+        LaunchedEffect(primaryFile?.absolutePath, secondaryFile.absolutePath) {
             while (true) {
                 delay(1600L)
                 showPeakPhase = !showPeakPhase
@@ -119,6 +117,7 @@ fun ExerciseDemoMediaView(
             contentAlignment = Alignment.Center
         ) {
             when {
+                mediaFailed -> ExerciseIllustration(exerciseId, Modifier.fillMaxSize())
                 isDownloaded && downloadedAsset?.mediaType == AssetMediaType.MP4.name && primaryFile != null -> {
                     val exoPlayer = remember(primaryFile.absolutePath) {
                         ExoPlayer.Builder(context).build().apply {
@@ -130,7 +129,15 @@ fun ExerciseDemoMediaView(
                         }
                     }
                     DisposableEffect(exoPlayer) {
-                        onDispose { exoPlayer.release() }
+                        val listener = object : Player.Listener {
+                            override fun onPlayerError(error: PlaybackException) { mediaFailed = true }
+                        }
+                        exoPlayer.addListener(listener)
+                        if (exoPlayer.playerError != null) mediaFailed = true
+                        onDispose {
+                            exoPlayer.removeListener(listener)
+                            exoPlayer.release()
+                        }
                     }
                     AndroidView(
                         factory = { ctx ->
@@ -155,7 +162,8 @@ fun ExerciseDemoMediaView(
                         AsyncImage(
                             model = activeFile,
                             imageLoader = gifImageLoader,
-                            contentDescription = downloadedAsset?.exerciseId ?: mediaRef.thumbnailAsset,
+                            contentDescription = null,
+                            onError = { mediaFailed = true },
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .fillMaxSize()
@@ -199,7 +207,15 @@ fun ExerciseDemoMediaView(
                         }
                     }
                     DisposableEffect(exoPlayer) {
-                        onDispose { exoPlayer.release() }
+                        val listener = object : Player.Listener {
+                            override fun onPlayerError(error: PlaybackException) { mediaFailed = true }
+                        }
+                        exoPlayer.addListener(listener)
+                        if (exoPlayer.playerError != null) mediaFailed = true
+                        onDispose {
+                            exoPlayer.removeListener(listener)
+                            exoPlayer.release()
+                        }
                     }
                     AndroidView(
                         factory = { ctx ->
@@ -217,18 +233,21 @@ fun ExerciseDemoMediaView(
                     AsyncImage(
                         model = "file:///android_asset/$path",
                         imageLoader = gifImageLoader,
-                        contentDescription = mediaRef.thumbnailAsset,
+                        contentDescription = null,
+                        onError = { mediaFailed = true },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
 
                 else -> {
-                    if (exerciseId != null) ExerciseIllustration(exerciseId, Modifier.fillMaxSize())
+                    ExerciseIllustration(exerciseId, Modifier.fillMaxSize())
                 }
             }
         }
 
-        if (isDownloaded && !downloadedAsset?.attribution.isNullOrBlank()) {
+        if (mediaFailed) {
+            Text(stringResource(R.string.exercise_media_unreadable), style = MaterialTheme.typography.labelMedium)
+        } else if (isDownloaded && !downloadedAsset?.attribution.isNullOrBlank()) {
             Text(
                 text = downloadedAsset!!.attribution,
                 style = MaterialTheme.typography.labelSmall,

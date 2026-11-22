@@ -40,6 +40,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.database.FitnessGoal
 import com.aifitnesscoach.core.database.SavedInsightEntity
 import com.aifitnesscoach.core.database.UserProfile
@@ -86,7 +87,7 @@ fun HomeScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(LayoutSpacing.pagePadding),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Section A — Time-Aware Personalized Greeting Header + Profile Shortcut

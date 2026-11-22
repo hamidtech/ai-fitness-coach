@@ -44,6 +44,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.ai.external.AIProviderClient
 import com.aifitnesscoach.core.ai.external.AIProviderRepository
 import com.aifitnesscoach.core.ai.external.ProviderConnectionTestResult
@@ -143,7 +144,7 @@ fun AIProviderSettingsScreen(
         }
 
         LazyColumn(
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(LayoutSpacing.pagePadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {

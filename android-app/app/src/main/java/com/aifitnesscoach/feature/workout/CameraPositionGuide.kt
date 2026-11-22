@@ -96,7 +96,7 @@ internal fun CameraPositionInstructions(exercise: ExerciseDefinition, isPersian:
         Text(stringResource(R.string.camera_setup_height, if (isPersian) guide.heightFa else guide.heightEn))
         Text(stringResource(R.string.guide_frame_range))
         when (exercise.id) {
-            "dumbbell_biceps_curl" -> Text(stringResource(R.string.guide_curl))
+            "dumbbell_biceps_curl", "band_biceps_curl" -> Text(stringResource(R.string.guide_curl))
             "bodyweight_squat" -> Text(stringResource(R.string.guide_squat))
             "forearm_plank" -> Text(stringResource(R.string.guide_plank))
         }

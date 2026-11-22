@@ -1,6 +1,7 @@
 package com.aifitnesscoach.core.media
 
 import com.aifitnesscoach.core.database.ExerciseAssetEntity
+import java.io.File
 import com.aifitnesscoach.core.exercise.ExerciseDefinition
 
 enum class AssetDownloadStatus {
@@ -55,3 +56,17 @@ data class ExerciseAssetUiItem(
     val totalBytes: Long,
     val errorMessage: String?
 )
+
+
+internal fun resolveEffectiveStatus(
+    manifest: ExerciseMediaManifestEntry,
+    entity: ExerciseAssetEntity?,
+    isUsable: (String) -> Boolean = { path -> File(path).let { it.isFile && it.length() > 0 } }
+): AssetDownloadStatus {
+    val status = AssetDownloadStatus.entries.firstOrNull { it.name == entity?.status } ?: manifest.defaultStatus
+    if (entity == null || status != AssetDownloadStatus.DOWNLOADED) return status
+    val primary = entity.localPrimaryPath?.let(isUsable) == true
+    val secondary = entity.mediaType != AssetMediaType.WEBP_IMAGE_PAIR.name ||
+        entity.localSecondaryPath?.let(isUsable) == true
+    return if (primary && secondary) status else manifest.defaultStatus
+}

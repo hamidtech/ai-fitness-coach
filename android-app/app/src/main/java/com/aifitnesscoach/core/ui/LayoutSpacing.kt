@@ -7,12 +7,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalConfiguration
 
 object LayoutSpacing {
     val small = 8.dp
     val screen = 16.dp
-    val wideScreen = 24.dp
-    val section = 24.dp
+    val pagePadding
+        @Composable get() = if (LocalConfiguration.current.screenWidthDp >= 600) 24.dp else screen
     val touchTarget = 48.dp
 }
 

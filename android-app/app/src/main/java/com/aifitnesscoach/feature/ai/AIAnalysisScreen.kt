@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.ai.analysis.AIAnalysisCoordinator
 import com.aifitnesscoach.core.ai.analysis.AnalysisRequestOutcome
 import com.aifitnesscoach.core.ai.analysis.AnalysisType
@@ -132,7 +133,7 @@ fun AIAnalysisScreen(
         }
 
         LazyColumn(
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(LayoutSpacing.pagePadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {

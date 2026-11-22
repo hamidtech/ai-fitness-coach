@@ -88,7 +88,8 @@ class WorkoutViewModel(
     private val workoutDao: WorkoutDao,
     private val coachExplanationProvider: CoachExplanationProvider,
     private val ttsCoachManager: TtsCoachManager,
-    private val healthConnectManager: HealthConnectManager
+    private val healthConnectManager: HealthConnectManager,
+    private val onWorkoutPersisted: () -> Unit = {}
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WorkoutUiState())
@@ -406,6 +407,7 @@ class WorkoutViewModel(
             }
 
             val insertedId = workoutDao.saveFullWorkout(session, sets, observations)
+            onWorkoutPersisted()
 
             if (syncToHealthConnect) {
                 healthConnectManager.writeWorkoutSession(session.copy(id = insertedId), sets)

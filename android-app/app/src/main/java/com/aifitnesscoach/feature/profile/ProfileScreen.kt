@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.database.ExperienceLevel
 import com.aifitnesscoach.core.database.FitnessGoal
 import com.aifitnesscoach.core.database.MeasurementUnit
@@ -125,7 +126,7 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = LayoutSpacing.pagePadding, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(

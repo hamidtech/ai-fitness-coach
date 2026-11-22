@@ -1,10 +1,12 @@
 package com.aifitnesscoach.core.media
 
 import android.content.Context
+import androidx.work.WorkManager
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.NonCancellable
 import kotlin.coroutines.coroutineContext
 import java.util.UUID
 import android.net.Uri
@@ -51,24 +53,14 @@ class ExerciseAssetRepository(
     suspend fun getAssetByExerciseId(exerciseId: String): ExerciseAssetEntity? =
         assetDao.getById(exerciseId)
 
-    fun resolveEffectiveStatus(
-        manifest: ExerciseMediaManifestEntry,
-        entity: ExerciseAssetEntity?
-    ): AssetDownloadStatus {
-        if (entity == null) return manifest.defaultStatus
-        val parsed = runCatching { AssetDownloadStatus.valueOf(entity.status) }
-            .getOrDefault(manifest.defaultStatus)
-        if (parsed == AssetDownloadStatus.DOWNLOADED) {
-            val primaryExists = !entity.localPrimaryPath.isNullOrBlank() && File(entity.localPrimaryPath).exists()
-            if (!primaryExists) return manifest.defaultStatus
-        }
-        return parsed
-    }
-
     suspend fun reconcileOrphanedDownloads() = withContext(Dispatchers.IO) {
         val current = assetDao.getAll()
         current.forEach { entity ->
             if (entity.status == AssetDownloadStatus.DOWNLOADING.name) {
+                val name = ExerciseAssetDownloadManager.uniqueWorkName(entity.exerciseId)
+                if (WorkManager.getInstance(context).getWorkInfosForUniqueWork(name).get().any { !it.state.isFinished }) {
+                    return@forEach
+                }
                 assetDao.upsert(
                     entity.copy(
                         status = AssetDownloadStatus.PAUSED.name,
@@ -76,8 +68,8 @@ class ExerciseAssetRepository(
                     )
                 )
             } else if (entity.status == AssetDownloadStatus.DOWNLOADED.name) {
-                val exists = !entity.localPrimaryPath.isNullOrBlank() && File(entity.localPrimaryPath).exists()
-                if (!exists) {
+                val manifest = ExerciseAssetCatalog.entryFor(entity.exerciseId)
+                if (resolveEffectiveStatus(manifest, entity) != AssetDownloadStatus.DOWNLOADED) {
                     assetDao.deleteById(entity.exerciseId)
                 }
             }
@@ -174,8 +166,10 @@ class ExerciseAssetRepository(
                 errorMessage = null,
                 updatedAtMs = System.currentTimeMillis()
             )
-            assetDao.upsert(entity)
-            staging = null
+            withContext(NonCancellable) {
+                assetDao.upsert(entity)
+                staging = null
+            }
             listOfNotNull(existing?.localPrimaryPath, existing?.localSecondaryPath).forEach { File(it).delete() }
             Result.success(entity)
         } catch (error: CancellationException) {

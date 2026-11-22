@@ -496,4 +496,15 @@
     <string name="wizard_review">Review your profile</string>
     <string name="wizard_review_body">Check your choices. You can change them later in your profile.</string>
     <string name="wizard_review_error">Go back to review the previous steps.</string>
+    <string name="widget_quick_label">Quick Workout &amp; Activity</string>
+    <string name="widget_motivation_label">Workout &amp; Daily Motivation</string>
+    <string name="widget_today">Today’s training</string>
+    <string name="widget_start">Quick start</string>
+    <string name="widget_empty">No workouts completed today</string>
+    <plurals name="widget_activity">
+        <item quantity="one">%1$d workout · %2$d min</item>
+        <item quantity="other">%1$d workouts · %2$d min</item>
+    </plurals>
+    <string name="workout_manual_only">Manual workout · Camera off</string>
+    <string name="exercise_media_unreadable">This file could not be opened. Replace it from the media library.</string>
 </resources>

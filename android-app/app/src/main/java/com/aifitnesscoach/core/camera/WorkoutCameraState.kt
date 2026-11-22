@@ -22,3 +22,14 @@ fun workoutCameraState(
     !poseReady -> WorkoutCameraState.INITIALIZING_POSE
     else -> WorkoutCameraState.WORKOUT_READY
 }
+
+enum class CameraPermissionState {
+    REQUIRED, DENIED, SETTINGS_REQUIRED, GRANTED
+}
+
+fun cameraPermissionState(granted: Boolean, requested: Boolean, showRationale: Boolean): CameraPermissionState = when {
+    granted -> CameraPermissionState.GRANTED
+    !requested -> CameraPermissionState.REQUIRED
+    showRationale -> CameraPermissionState.DENIED
+    else -> CameraPermissionState.SETTINGS_REQUIRED
+}

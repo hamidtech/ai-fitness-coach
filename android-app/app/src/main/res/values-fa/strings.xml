@@ -496,4 +496,15 @@
     <string name="wizard_review">مرور پروفایل</string>
     <string name="wizard_review_body">انتخاب‌هایتان را مرور کنید. بعداً می‌توانید آن‌ها را در پروفایل تغییر دهید.</string>
     <string name="wizard_review_error">به مرحله‌های قبل برگردید و ورودی‌ها را بررسی کنید.</string>
+    <string name="widget_quick_label">تمرین سریع و فعالیت</string>
+    <string name="widget_motivation_label">تمرین و انگیزهٔ روزانه</string>
+    <string name="widget_today">تمرین امروز</string>
+    <string name="widget_start">شروع سریع</string>
+    <string name="widget_empty">امروز تمرینی ثبت نشده است</string>
+    <plurals name="widget_activity">
+        <item quantity="one">%1$d تمرین · %2$d دقیقه</item>
+        <item quantity="other">%1$d تمرین · %2$d دقیقه</item>
+    </plurals>
+    <string name="workout_manual_only">تمرین دستی · دوربین خاموش است</string>
+    <string name="exercise_media_unreadable">این فایل باز نشد. آن را از کتابخانهٔ رسانه جایگزین کنید.</string>
 </resources>
