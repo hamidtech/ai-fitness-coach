@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.aifitnesscoach"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.aifitnesscoach"
