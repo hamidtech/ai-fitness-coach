@@ -187,12 +187,14 @@ fun ExerciseMediaLibraryScreen(
                             label = { Text(stringResource(R.string.exercises_all_categories)) }
                         )
                     }
-                    listOf(
-                        AssetDownloadStatus.AVAILABLE to R.string.media_status_available,
-                        AssetDownloadStatus.DOWNLOADED to R.string.media_status_downloaded,
-                        AssetDownloadStatus.NOT_AVAILABLE to R.string.media_status_not_available,
-                        AssetDownloadStatus.FAILED to R.string.media_status_failed
-                    ).forEach { (st, labelRes) ->
+                    items(
+                        listOf(
+                            AssetDownloadStatus.AVAILABLE to R.string.media_status_available,
+                            AssetDownloadStatus.DOWNLOADED to R.string.media_status_downloaded,
+                            AssetDownloadStatus.NOT_AVAILABLE to R.string.media_status_not_available,
+                            AssetDownloadStatus.FAILED to R.string.media_status_failed
+                        )
+                    ) { (st, labelRes) ->
                         FilterChip(
                             selected = statusFilter == st,
                             onClick = { statusFilter = if (statusFilter == st) null else st },
