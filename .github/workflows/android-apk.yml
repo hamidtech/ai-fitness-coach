@@ -129,11 +129,25 @@ jobs:
           sudo chmod a+rw /dev/kvm
           sdkmanager --install 'emulator' 'system-images;android-35;google_apis;x86_64'
           avdmanager create avd --name fitness-ci --package 'system-images;android-35;google_apis;x86_64' --force <<< no
-          emulator -avd fitness-ci -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > emulator.log 2>&1 &
+          emulator_bin="$ANDROID_SDK_ROOT/emulator/emulator"
+          test -x "$emulator_bin"
+          "$emulator_bin" -avd fitness-ci -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > emulator.log 2>&1 &
           emulator_pid=$!
           trap 'adb emu kill || kill "$emulator_pid" || true' EXIT
-          timeout 240 adb wait-for-device
-          timeout 300 bash -c 'until [[ "$(adb shell getprop sys.boot_completed | tr -d "\r")" = 1 ]]; do sleep 2; done'
+          for attempt in {1..120}; do
+            if ! kill -0 "$emulator_pid" 2>/dev/null; then
+              cat emulator.log
+              exit 1
+            fi
+            if [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]]; then
+              break
+            fi
+            sleep 2
+          done
+          if [[ "${attempt}" = 120 && "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != 1 ]]; then
+            cat emulator.log
+            exit 1
+          fi
           adb shell input keyevent 82
           bash ./gradlew :app:connectedDebugAndroidTest --stacktrace --no-daemon
           python3 ci/capture-screens.py || echo 'Some screen captures could not be collected.'
