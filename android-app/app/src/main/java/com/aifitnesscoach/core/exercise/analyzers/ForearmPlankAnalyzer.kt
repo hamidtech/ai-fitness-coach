@@ -25,7 +25,7 @@ class ForearmPlankAnalyzer : ExerciseAnalyzer {
     private var phase: MovementPhase = MovementPhase.IDLE
     private var lastFrameTimestampMs: Long? = null
     private var accumulatedHoldMs: Long = 0L
-    private var lastWarningRecordedMs: Long = 0L
+    private var lastWarningRecordedMs: Long? = null
     private var activeFeedback: CoachingMessageKey = CoachingMessageKey.READY
     private val observations = mutableListOf<FormObservation>()
 
@@ -41,7 +41,7 @@ class ForearmPlankAnalyzer : ExerciseAnalyzer {
         phase = MovementPhase.IDLE
         lastFrameTimestampMs = null
         accumulatedHoldMs = 0L
-        lastWarningRecordedMs = 0L
+        lastWarningRecordedMs = null
         activeFeedback = CoachingMessageKey.READY
         observations.clear()
     }
@@ -108,7 +108,7 @@ class ForearmPlankAnalyzer : ExerciseAnalyzer {
                 CoachingMessageKey.PLANK_HIP_HIGH
             }
             activeFeedback = feedbackKey
-            if (frame.timestampMs - lastWarningRecordedMs >= WARNING_COOLDOWN_MS) {
+            if (lastWarningRecordedMs == null || frame.timestampMs - lastWarningRecordedMs!! >= WARNING_COOLDOWN_MS) {
                 lastWarningRecordedMs = frame.timestampMs
                 recordObservation(
                     key = feedbackKey,
