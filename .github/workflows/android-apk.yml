@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -48,6 +52,15 @@ jobs:
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
+      - name: Resolve and inspect dependency graph
+        run: |
+          bash ./gradlew :app:dependencies --configuration debugCompileClasspath --no-daemon > dependencies-compile.txt
+          bash ./gradlew :app:dependencies --configuration debugRuntimeClasspath --no-daemon > dependencies-runtime.txt
+          if grep -E -- '--- FAILED|Could not resolve' dependencies-compile.txt dependencies-runtime.txt; then
+            echo 'Unresolved entries in the dependency report.'
+            exit 1
+          fi
+
       - name: Unit tests
         run: bash ./gradlew testDebugUnitTest --stacktrace --no-daemon
 
@@ -61,6 +74,17 @@ jobs:
           name: ai-fitness-coach-debug-apk
           path: android-app/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload resolved dependency reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-dependency-reports
+          path: |
+            android-app/dependencies-compile.txt
+            android-app/dependencies-runtime.txt
+          if-no-files-found: ignore
           retention-days: 14
 
       - name: Upload test reports on failure
