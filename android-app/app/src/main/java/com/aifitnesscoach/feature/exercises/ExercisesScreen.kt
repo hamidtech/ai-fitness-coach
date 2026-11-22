@@ -76,6 +76,7 @@ fun ExercisesScreen(
     isPersian: Boolean,
     downloadedAssets: Map<String, ExerciseAssetEntity> = emptyMap(),
     initialCategoryFilter: ExerciseCategory? = null,
+    onCloseQuickPicker: (() -> Unit)? = null,
     selectedExerciseForDetail: ExerciseDefinition? = null,
     onSelectExerciseForDetail: (ExerciseDefinition?) -> Unit,
     onOpenMedia: (String) -> Unit,
@@ -85,7 +86,8 @@ fun ExercisesScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedCategory by rememberSaveable(initialCategoryFilter) { mutableStateOf(initialCategoryFilter) }
 
-    val filtered = remember(searchQuery, selectedCategory) {
+    val quickPicker = onCloseQuickPicker != null
+    val filtered = remember(searchQuery, selectedCategory, quickPicker) {
         ExerciseCatalog.allExercises.filter { ex ->
             val catMatch = selectedCategory == null || ex.category == selectedCategory
             val q = searchQuery.trim().lowercase()
@@ -95,7 +97,7 @@ fun ExercisesScreen(
                 ex.targetMusclesEn.any { it.lowercase().contains(q) } ||
                 ex.targetMusclesFa.any { it.lowercase().contains(q) }
             catMatch && queryMatch
-        }
+        }.let { list -> if (quickPicker) list.sortedByDescending { it.analyzerId != null } else list }
     }
 
     if (selectedExerciseForDetail != null) {
@@ -109,15 +111,20 @@ fun ExercisesScreen(
             onBack = close,
             onOpenMedia = { onOpenMedia(exercise.id) },
             onOpenCameraGuide = { onOpenCameraGuide(exercise.id) },
-            onStartWorkout = { configured ->
-                close()
-                onStartWorkoutWithItem(configured)
-            }
+            onStartWorkout = onStartWorkoutWithItem
         )
         return
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        if (onCloseQuickPicker != null) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = LayoutSpacing.small), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onCloseQuickPicker) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.common_back))
+                }
+                Text(stringResource(R.string.widget_start), style = MaterialTheme.typography.headlineSmall)
+            }
+        }
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -213,17 +220,17 @@ private fun ExerciseWorkoutSetup(
     }
     var selectedBandLevel by rememberSaveable(exercise.id) { mutableStateOf(ResistanceLevel.MEDIUM) }
 
-    val sets = targetSets.toIntOrNull()?.takeIf { it in 1..20 }
-    val reps = targetReps.toIntOrNull()?.takeIf { it in 1..100 }
-    val hold = targetHoldSec.toIntOrNull()?.takeIf { it in 5..600 }
+    val sets = targetSets.toIntOrNull()
+    val reps = targetReps.toIntOrNull()
+    val hold = targetHoldSec.toIntOrNull()
     val weight = weightText.map { it.digitToIntOrNull()?.digitToChar() ?: if (it == '٫' || it == ',') '.' else it }.joinToString("")
         .toFloatOrNull()?.takeIf { it.isFinite() && it >= 0f }
-    val problem = when {
-        sets == null -> R.string.setup_valid_sets
-        exercise.exerciseMode == ExerciseMode.TIMED_HOLD && hold == null -> R.string.setup_valid_hold
-        exercise.exerciseMode != ExerciseMode.TIMED_HOLD && reps == null -> R.string.setup_valid_reps
-        exercise.category == ExerciseCategory.WEIGHTED_TRAINING && weight == null -> R.string.setup_valid_weight
-        else -> null
+    val problem = when (workoutSetupProblem(exercise.exerciseMode, exercise.category, sets, reps, hold, weight)) {
+        WorkoutSetupProblem.SETS -> R.string.setup_valid_sets
+        WorkoutSetupProblem.HOLD -> R.string.setup_valid_hold
+        WorkoutSetupProblem.REPS -> R.string.setup_valid_reps
+        WorkoutSetupProblem.WEIGHT -> R.string.setup_valid_weight
+        null -> null
     }
     var launching by remember(exercise.id) { mutableStateOf(false) }
     var showTechnique by rememberSaveable(exercise.id) { mutableStateOf(false) }

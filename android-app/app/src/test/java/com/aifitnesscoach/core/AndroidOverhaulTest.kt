@@ -2,14 +2,18 @@ package com.aifitnesscoach.core
 
 import com.aifitnesscoach.app.MainDestination
 import com.aifitnesscoach.app.routeForLaunchExtra
-import com.aifitnesscoach.app.startDestination
+import com.aifitnesscoach.app.initialAppRoute
 import com.aifitnesscoach.core.camera.CameraPermissionState
 import com.aifitnesscoach.core.camera.WorkoutCameraState
 import com.aifitnesscoach.core.camera.cameraPermissionState
 import com.aifitnesscoach.core.camera.workoutCameraState
 import com.aifitnesscoach.core.database.ExerciseAssetEntity
 import com.aifitnesscoach.core.database.UserProfile
+import com.aifitnesscoach.core.exercise.ExerciseCategory
+import com.aifitnesscoach.core.exercise.ExerciseMode
 import com.aifitnesscoach.core.exercise.definitions.ExerciseCatalog
+import com.aifitnesscoach.feature.exercises.WorkoutSetupProblem
+import com.aifitnesscoach.feature.exercises.workoutSetupProblem
 import com.aifitnesscoach.core.media.AssetDownloadStatus
 import com.aifitnesscoach.core.media.AssetMediaType
 import com.aifitnesscoach.core.media.ExerciseAssetCatalog
@@ -44,8 +48,8 @@ class AndroidOverhaulTest {
     fun emptyOptionalProfileIsValidAndCompletedProfilesGoHome() {
         assertTrue(OnboardingDraft().validate(UserProfile()) is ProfileValidationResult.Valid)
         assertTrue(OnboardingDraft(height = "invalid").validate(UserProfile()) is ProfileValidationResult.Invalid)
-        assertEquals(MainDestination.Onboarding.route, startDestination(UserProfile()))
-        assertEquals(MainDestination.Home.route, startDestination(UserProfile(hasCompletedOnboarding = true)))
+        assertEquals(MainDestination.Onboarding.route, initialAppRoute(UserProfile()))
+        assertEquals(MainDestination.Home.route, initialAppRoute(UserProfile(hasCompletedOnboarding = true)))
     }
 
     @Test
@@ -99,12 +103,26 @@ class AndroidOverhaulTest {
     }
 
     @Test
+    fun workoutSetupRequiresOnlyRelevantValidTargets() {
+        val timed = ExerciseMode.TIMED_HOLD
+        val reps = requireNotNull(ExerciseCatalog.findById("bodyweight_squat")).exerciseMode
+        val core = ExerciseCategory.CORE_TRAINING
+        val weighted = ExerciseCategory.WEIGHTED_TRAINING
+        assertNull(workoutSetupProblem(timed, core, 3, null, 30, null))
+        assertEquals(WorkoutSetupProblem.HOLD, workoutSetupProblem(timed, core, 3, 10, 0, null))
+        assertEquals(WorkoutSetupProblem.SETS, workoutSetupProblem(reps, weighted, 0, 10, null, 5f))
+        assertEquals(WorkoutSetupProblem.REPS, workoutSetupProblem(reps, weighted, 2, 101, null, 5f))
+        assertEquals(WorkoutSetupProblem.WEIGHT, workoutSetupProblem(reps, weighted, 2, 10, null, Float.NaN))
+        assertNull(workoutSetupProblem(reps, weighted, 2, 10, null, 5f))
+    }
+
+    @Test
     fun widgetDayHandlesDstAndDeepLinksAreAllowlisted() {
         val spring = WidgetDay.of(LocalDate.of(2026, 3, 8), ZoneId.of("America/New_York"))
         assertEquals(23L * 60 * 60 * 1000, spring.endMs - spring.startMs)
         assertEquals(0L, WidgetActivity(0, 0).activeMinutes)
         assertEquals(2L, WidgetActivity(1, 61000).activeMinutes)
-        assertEquals(MainDestination.Exercises.route, routeForLaunchExtra(WorkoutWidgetRoutes.QUICK_START))
+        assertEquals(MainDestination.QuickWorkout.route, routeForLaunchExtra(WorkoutWidgetRoutes.QUICK_START))
         assertEquals(MainDestination.History.route, routeForLaunchExtra(WorkoutWidgetRoutes.ACTIVITY))
         assertEquals(MainDestination.Home.route, routeForLaunchExtra(WorkoutWidgetRoutes.MOTIVATION))
         assertNull(routeForLaunchExtra("workout"))

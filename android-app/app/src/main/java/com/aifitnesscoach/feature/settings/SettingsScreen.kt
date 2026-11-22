@@ -3,7 +3,17 @@ package com.aifitnesscoach.feature.settings
 import android.Manifest
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.PersonOutline
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.Icon
@@ -68,15 +78,15 @@ import com.aifitnesscoach.core.security.SecretStore
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-enum class SettingsPage(val title: Int, val description: Int) {
-    PROFILE(R.string.profile_title, R.string.settings_profile_description),
-    APPEARANCE(R.string.settings_appearance_language, R.string.settings_appearance_description),
-    WORKOUT(R.string.settings_section_b_workout, R.string.settings_workout_description),
-    NOTIFICATIONS(R.string.settings_notifications_master, R.string.settings_notifications_description),
-    HEALTH(R.string.nav_health, R.string.settings_health_disabled_sub),
-    AI(R.string.settings_section_d_ai, R.string.settings_insights_sub),
-    STORAGE(R.string.settings_section_e_storage, R.string.settings_storage_description),
-    PRIVACY(R.string.settings_section_f_privacy, R.string.settings_privacy_description)
+enum class SettingsPage(@StringRes val title: Int, @StringRes val description: Int, val icon: ImageVector) {
+    PROFILE(R.string.profile_title, R.string.settings_profile_description, Icons.Outlined.PersonOutline),
+    APPEARANCE(R.string.settings_appearance_language, R.string.settings_appearance_description, Icons.Outlined.Palette),
+    WORKOUT(R.string.settings_section_b_workout, R.string.settings_workout_description, Icons.Outlined.FitnessCenter),
+    NOTIFICATIONS(R.string.settings_notifications_master, R.string.settings_notifications_description, Icons.Outlined.Notifications),
+    HEALTH(R.string.nav_health, R.string.settings_health_disabled_sub, Icons.Outlined.FavoriteBorder),
+    AI(R.string.settings_section_d_ai, R.string.settings_insights_sub, Icons.Outlined.AutoAwesome),
+    STORAGE(R.string.settings_section_e_storage, R.string.settings_storage_description, Icons.Outlined.FolderOpen),
+    PRIVACY(R.string.settings_section_f_privacy, R.string.settings_privacy_description, Icons.Outlined.Lock)
 }
 
 @Composable
@@ -87,7 +97,7 @@ fun SettingsHome(onOpenPage: (SettingsPage) -> Unit) {
     ) {
         Text(stringResource(R.string.nav_settings), style = MaterialTheme.typography.headlineMedium)
         SettingsPage.entries.forEach { page ->
-            SettingsNavCard(stringResource(page.title), stringResource(page.description)) { onOpenPage(page) }
+            SettingsNavCard(stringResource(page.title), stringResource(page.description), page.icon) { onOpenPage(page) }
         }
     }
 }
@@ -479,6 +489,7 @@ fun SettingsScreen(
 private fun SettingsNavCard(
     title: String,
     subtitle: String,
+    icon: ImageVector? = null,
     onClick: () -> Unit
 ) {
     Card(shape = RoundedCornerShape(16.dp), onClick = onClick) {
@@ -486,9 +497,10 @@ private fun SettingsNavCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (icon != null) Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -106,11 +106,12 @@ class WorkoutWidgetWorker(context: Context, params: WorkerParameters) : Coroutin
             repository.dailyQuote(date, VerifiedQuoteRepository())?.let { "${it.quoteTextEn}\n— ${it.author}" }
 
         val manager = AppWidgetManager.getInstance(context)
-        if (compact.isNotEmpty()) manager.updateAppWidget(compact, views(localized, activity, false, null, 0))
+        val fixedTheme = prefs.themeMode != AppThemeMode.SYSTEM
+        if (compact.isNotEmpty()) manager.updateAppWidget(compact, views(localized, activity, false, null, 0, fixedTheme))
         extended.forEach { id ->
             val height = manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
             val quoteLines = if (height in 1..195) 3 else 5
-            manager.updateAppWidget(id, views(localized, activity, true, motivation, quoteLines))
+            manager.updateAppWidget(id, views(localized, activity, true, motivation, quoteLines, fixedTheme))
         }
         WorkoutWidgetRefresh.scheduleNextDay(context, now)
         return Result.success()
@@ -121,21 +122,24 @@ class WorkoutWidgetWorker(context: Context, params: WorkerParameters) : Coroutin
         data: WidgetActivity,
         extended: Boolean,
         quote: String?,
-        quoteLines: Int
+        quoteLines: Int,
+        fixedTheme: Boolean
     ): RemoteViews {
         val resources = context.resources
         return RemoteViews(context.packageName, if (extended) R.layout.fitness_widget_motivation else R.layout.fitness_widget).apply {
             setInt(R.id.widget_root, "setLayoutDirection", resources.configuration.layoutDirection)
-            val isDark = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
-            setInt(R.id.widget_root, "setBackgroundResource", if (isDark) R.drawable.widget_background_dark else R.drawable.widget_background)
             setViewVisibility(R.id.widget_quote, if (extended && quote != null) View.VISIBLE else View.GONE)
             if (extended) setInt(R.id.widget_quote, "setMaxLines", quoteLines)
-            val ink = if (isDark) 0xFFEAF2FF.toInt() else 0xFF142743.toInt()
-            val accent = if (isDark) 0xFFADC6FF.toInt() else 0xFF254A92.toInt()
-            setTextColor(R.id.widget_heading, ink)
-            setTextColor(R.id.widget_activity, ink)
-            setTextColor(R.id.widget_quote, ink)
-            setTextColor(R.id.widget_quick_start, accent)
+            if (fixedTheme) {
+                val isDark = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+                setInt(R.id.widget_root, "setBackgroundResource", if (isDark) R.drawable.widget_background_dark else R.drawable.widget_background_light)
+                val ink = if (isDark) 0xFFEAF2FF.toInt() else 0xFF142743.toInt()
+                val accent = if (isDark) 0xFFADC6FF.toInt() else 0xFF254A92.toInt()
+                setTextColor(R.id.widget_heading, ink)
+                setTextColor(R.id.widget_activity, ink)
+                setTextColor(R.id.widget_quote, ink)
+                setTextColor(R.id.widget_quick_start, accent)
+            }
             setTextViewText(R.id.widget_heading, context.getString(R.string.widget_today))
             setTextViewText(R.id.widget_quick_start, context.getString(R.string.widget_start))
             setTextViewText(R.id.widget_activity, if (data.workouts == 0) {
