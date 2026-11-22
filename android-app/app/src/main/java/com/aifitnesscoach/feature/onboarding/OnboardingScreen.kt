@@ -209,6 +209,13 @@ fun OnboardingScreen(
                     }
                     OnboardingStep.REVIEW -> {
                         if (draft.name.isNotBlank()) Text(draft.name, style = MaterialTheme.typography.titleLarge)
+                        listOf(
+                            draft.age to R.string.profile_age_optional_label,
+                            draft.height to R.string.profile_height_optional_label,
+                            draft.weight to R.string.profile_weight_optional_label
+                        ).filter { it.first.isNotBlank() }.forEach { (value, label) ->
+                            Text(stringResource(R.string.wizard_review_value, stringResource(label), value))
+                        }
                         goalLabels.firstOrNull { it.first == draft.goal }?.second?.let {
                             Text(draft.custom.takeIf { draft.goal == FitnessGoal.CUSTOM.name } ?: stringResource(it))
                         }

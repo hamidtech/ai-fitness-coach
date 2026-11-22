@@ -164,6 +164,20 @@ fun ExercisesScreen(
             }
         }
 
+        if (filtered.isEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(LayoutSpacing.pagePadding),
+                verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)
+            ) {
+                Icon(Icons.Outlined.Search, contentDescription = null)
+                Text(stringResource(R.string.exercise_search_empty), style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = {
+                    searchQuery = ""
+                    selectedCategory = null
+                }) { Text(stringResource(R.string.common_clear)) }
+            }
+        }
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(LayoutSpacing.pagePadding),

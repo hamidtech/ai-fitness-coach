@@ -750,14 +750,14 @@ private fun LiveTrackingWorkoutView(
                 Button(onClick = { cameraAttempt++ }) { Text(stringResource(R.string.camera_retry)) }
             }
 
-            if (preferences.developerMetricsEnabled) {
+            if (preferences.developerMetricsEnabled && cameraState == WorkoutCameraState.WORKOUT_READY) {
                 val avgConfPct = uiState.latestPoseFrame
                     ?.averageConfidence(item.exercise.requiredLandmarks)
                     ?.times(100f)
                     ?.roundToInt() ?: 0
                 val phaseLabel = analysis?.phase?.name ?: "IDLE"
                 Text(
-                    text = "FPS: ${uiState.liveFps.toInt()} · Inf: ${uiState.latestPoseFrame?.inferenceTimeMs ?: 0}ms · Conf: $avgConfPct% · $phaseLabel · ${if (uiState.isUsingGpu) "GPU" else "CPU"}",
+                    text = "FPS: ${uiState.liveFps.toInt()} · Inf: ${uiState.latestPoseFrame?.inferenceTimeMs ?: 0}ms · Conf: $avgConfPct% · $phaseLabel · CPU",
                     color = Color.White.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.bodySmall
                 )

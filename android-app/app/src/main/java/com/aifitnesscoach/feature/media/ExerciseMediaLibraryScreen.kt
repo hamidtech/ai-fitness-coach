@@ -229,6 +229,11 @@ fun ExerciseMediaLibraryScreen(
             items(filtered, key = { it.exercise.id }) { item ->
                 val workPending = item.exercise.id in pending
                 val status = if (workPending) AssetDownloadStatus.DOWNLOADING else item.effectiveStatus
+                val statusText = if (workPending && item.effectiveStatus != AssetDownloadStatus.DOWNLOADING) {
+                    stringResource(R.string.media_waiting_download)
+                } else {
+                    statusDisplay(status)
+                }
                 Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         ExerciseIllustration(item.exercise.id, Modifier.size(72.dp))
@@ -238,7 +243,7 @@ fun ExerciseMediaLibraryScreen(
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "${categoryLabel(item.exercise.category)} · ${statusDisplay(status)}",
+                            text = "${categoryLabel(item.exercise.category)} · $statusText",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary
                         )

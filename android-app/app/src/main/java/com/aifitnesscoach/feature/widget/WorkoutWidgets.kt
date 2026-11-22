@@ -126,7 +126,13 @@ class WorkoutWidgetWorker(context: Context, params: WorkerParameters) : Coroutin
         fixedTheme: Boolean
     ): RemoteViews {
         val resources = context.resources
-        return RemoteViews(context.packageName, if (extended) R.layout.fitness_widget_motivation else R.layout.fitness_widget).apply {
+        val layout = when {
+            extended && fixedTheme -> R.layout.fitness_widget_motivation_override
+            extended -> R.layout.fitness_widget_motivation
+            fixedTheme -> R.layout.fitness_widget_override
+            else -> R.layout.fitness_widget
+        }
+        return RemoteViews(context.packageName, layout).apply {
             setInt(R.id.widget_root, "setLayoutDirection", resources.configuration.layoutDirection)
             setViewVisibility(R.id.widget_quote, if (extended && quote != null) View.VISIBLE else View.GONE)
             if (extended) setInt(R.id.widget_quote, "setMaxLines", quoteLines)

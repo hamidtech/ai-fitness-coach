@@ -77,8 +77,6 @@ data class WorkoutUiState(
     val latestPoseFrame: PoseFrame? = null,
     val latestAnalysis: AnalysisResult? = null,
     val liveFps: Float = 0f,
-    val isUsingGpu: Boolean = true,
-    val poseInitError: String? = null,
     val manualRepAdjustment: Int = 0,
     val manualHoldStartedAtMs: Long? = null,
     val manualHoldAccumulatedMs: Long = 0L,
@@ -264,10 +262,6 @@ class WorkoutViewModel(
 
     fun onFpsUpdated(fps: Float) {
         _uiState.update { it.copy(liveFps = fps) }
-    }
-
-    fun onPoseInitStatus(usingGpu: Boolean, error: String?) {
-        _uiState.update { it.copy(isUsingGpu = usingGpu, poseInitError = error) }
     }
 
     fun completeCurrentSet() {

@@ -514,4 +514,7 @@
     <string name="guide_portrait">برای حرکات ایستاده، گوشی را عمودی بگذارید. اگر دست یا پا به لبهٔ کادر می‌رسد، کمی عقب‌تر بروید.</string>
     <string name="camera_access_denied">دسترسی دوربین رد شد</string>
     <string name="media_import_failed">فایل وارد نشد. تصویر، GIF یا MP4 پشتیبانی‌شده تا حجم ۵۰ مگابایت انتخاب کنید.</string>
+    <string name="media_waiting_download">در صف دانلود</string>
+    <string name="exercise_search_empty">حرکتی با این فیلترها پیدا نشد</string>
+    <string name="wizard_review_value">%1$s · %2$s</string>
 </resources>

@@ -514,4 +514,7 @@
     <string name="guide_portrait">Start with the phone upright for standing movements. Step back if hands or feet reach the edge.</string>
     <string name="camera_access_denied">Camera access denied</string>
     <string name="media_import_failed">Could not import the file. Choose a supported image, GIF or MP4 up to 50 MB.</string>
+    <string name="media_waiting_download">Download queued</string>
+    <string name="exercise_search_empty">No exercises match these filters</string>
+    <string name="wizard_review_value">%1$s · %2$s</string>
 </resources>
