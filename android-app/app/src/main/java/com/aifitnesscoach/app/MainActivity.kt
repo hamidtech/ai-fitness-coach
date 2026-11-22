@@ -321,17 +321,16 @@ private fun AIFitnessCoachAppRoot(
                         OnboardingScreen(
                             initialProfile = preferences.profile,
                             initialLanguage = preferences.language,
+                            savedDraft = preferences.onboardingDraft,
+                            onSaveDraft = container.preferencesRepository::saveOnboardingDraft,
                             onLanguageSelected = { lang ->
                                 scope.launch { container.preferencesRepository.setLanguage(lang) }
                             },
                             onCompleteOnboarding = { profile ->
-                                scope.launch {
-                                    container.preferencesRepository.saveProfile(
-                                        profile.copy(hasCompletedOnboarding = true)
-                                    )
-                                    navController.navigate(MainDestination.Home.route) {
-                                        popUpTo(MainDestination.Onboarding.route) { inclusive = true }
-                                    }
+                                container.preferencesRepository.saveProfile(profile.copy(hasCompletedOnboarding = true))
+                                navController.navigate(MainDestination.Home.route) {
+                                    popUpTo(MainDestination.Onboarding.route) { inclusive = true }
+                                    launchSingleTop = true
                                 }
                             }
                         )

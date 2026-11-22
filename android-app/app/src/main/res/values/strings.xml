@@ -486,4 +486,14 @@
     <string name="guide_curl">Keep the shoulder, elbow and wrist of the working arm visible at both ends of the curl.</string>
     <string name="guide_squat">Keep your shoulders, hips, knees and ankles in frame at standing height and at the bottom of the squat.</string>
     <string name="guide_plank">Use the side view and keep a clear line of sight from the shoulder through the hip to the ankle.</string>
+    <string name="wizard_progress">Step %1$d of %2$d</string>
+    <string name="wizard_identity">Make it yours</string>
+    <string name="wizard_identity_body">Your name personalizes greetings. A gender preference can personalize the theme. Both are optional.</string>
+    <string name="wizard_metrics_body">These optional details help personalize your profile. Height and weight let the profile show BMI.</string>
+    <string name="wizard_goals">Set your training goal</string>
+    <string name="wizard_goals_body">Choose a goal and experience level. The exercise library includes bodyweight, dumbbell and resistance-band movements.</string>
+    <string name="wizard_privacy_body">Workouts and profiles stay on this device by default. You can connect Health Connect later in Settings. Camera access is requested when you open a camera workout.</string>
+    <string name="wizard_review">Review your profile</string>
+    <string name="wizard_review_body">Check your choices. You can change them later in your profile.</string>
+    <string name="wizard_review_error">Go back to review the previous steps.</string>
 </resources>

@@ -120,6 +120,7 @@ data class UserPreferences(
     val useDynamicColor: Boolean = false,
     val measurementUnit: MeasurementUnit = MeasurementUnit.METRIC,
     val cameraLens: CameraLensPreference = CameraLensPreference.FRONT,
+    val onboardingDraft: String? = null,
     val cameraGuideAcknowledged: Boolean = false,
     val voiceFeedbackEnabled: Boolean = true,
     val skeletonOverlayEnabled: Boolean = true,
@@ -177,6 +178,7 @@ class UserPreferencesRepository(private val context: Context) {
         val FITNESS_GOAL = stringPreferencesKey("person_fitness_goal")
         val CUSTOM_GOAL_LABEL = stringPreferencesKey("person_custom_goal_label")
         val EXPERIENCE_LEVEL = stringPreferencesKey("person_experience_level")
+        val ONBOARDING_DRAFT = stringPreferencesKey("onboarding_draft")
         val PROFILE_COMPLETED = booleanPreferencesKey("profile_completed")
 
         val LANGUAGE = stringPreferencesKey("app_language")
@@ -244,6 +246,7 @@ class UserPreferencesRepository(private val context: Context) {
                 experienceLevel = enumOrDefault(prefs[Keys.EXPERIENCE_LEVEL], ExperienceLevel.BEGINNER),
                 hasCompletedOnboarding = prefs[Keys.PROFILE_COMPLETED] ?: false
             ),
+            onboardingDraft = prefs[Keys.ONBOARDING_DRAFT],
             language = enumOrDefault(prefs[Keys.LANGUAGE], AppLanguage.SYSTEM),
             themeMode = enumOrDefault(prefs[Keys.THEME_MODE], AppThemeMode.SYSTEM),
             colorPalette = enumOrDefault(prefs[Keys.COLOR_PALETTE], AppColorPalette.AUTO),
@@ -295,6 +298,12 @@ class UserPreferencesRepository(private val context: Context) {
         )
     }
 
+    suspend fun saveOnboardingDraft(encoded: String) {
+        context.dataStore.edit { prefs ->
+            if (prefs[Keys.PROFILE_COMPLETED] != true) prefs[Keys.ONBOARDING_DRAFT] = encoded
+        }
+    }
+
     suspend fun saveProfile(profile: UserProfile) {
         context.dataStore.edit { prefs ->
             prefs[Keys.PERSON_NAME] = profile.name.trim()
@@ -307,12 +316,14 @@ class UserPreferencesRepository(private val context: Context) {
             prefs[Keys.CUSTOM_GOAL_LABEL] = profile.customGoalLabel.trim()
             prefs[Keys.EXPERIENCE_LEVEL] = profile.experienceLevel.name
             prefs[Keys.PROFILE_COMPLETED] = true
+            prefs.remove(Keys.ONBOARDING_DRAFT)
         }
     }
 
     suspend fun markOnboardingSkipped() {
         context.dataStore.edit { prefs ->
             prefs[Keys.PROFILE_COMPLETED] = true
+            prefs.remove(Keys.ONBOARDING_DRAFT)
         }
     }
 

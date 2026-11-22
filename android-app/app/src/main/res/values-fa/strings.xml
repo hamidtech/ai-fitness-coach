@@ -486,4 +486,14 @@
     <string name="guide_curl">شانه، آرنج و مچ دست فعال را در ابتدا و انتهای حرکت در کادر نگه دارید.</string>
     <string name="guide_squat">شانه، لگن، زانو و مچ پا را در حالت ایستاده و پایین‌ترین نقطهٔ اسکوات در کادر نگه دارید.</string>
     <string name="guide_plank">از نمای کنار استفاده کنید و مسیر شانه، لگن تا مچ پا را در تصویر بدون مانع نگه دارید.</string>
+    <string name="wizard_progress">مرحلهٔ %1$d از %2$d</string>
+    <string name="wizard_identity">شخصی‌سازی پروفایل</string>
+    <string name="wizard_identity_body">نام شما در خوشامدگویی به کار می‌رود. جنسیت می‌تواند ظاهر برنامه را شخصی کند. هر دو اختیاری‌اند.</string>
+    <string name="wizard_metrics_body">این داده‌ها اختیاری‌اند. قد و وزن برای نمایش شاخص تودهٔ بدنی در پروفایل استفاده می‌شوند.</string>
+    <string name="wizard_goals">هدف تمرینی‌تان را مشخص کنید</string>
+    <string name="wizard_goals_body">هدف و سطح تجربه‌تان را انتخاب کنید. کتابخانه شامل حرکات وزن بدن، دمبل و کش مقاومتی است.</string>
+    <string name="wizard_privacy_body">تمرین‌ها و پروفایل به‌طور پیش‌فرض روی همین دستگاه می‌مانند. می‌توانید بعداً Health Connect را در تنظیمات متصل کنید. دسترسی دوربین هنگام تمرین با دوربین درخواست می‌شود.</string>
+    <string name="wizard_review">مرور پروفایل</string>
+    <string name="wizard_review_body">انتخاب‌هایتان را مرور کنید. بعداً می‌توانید آن‌ها را در پروفایل تغییر دهید.</string>
+    <string name="wizard_review_error">به مرحله‌های قبل برگردید و ورودی‌ها را بررسی کنید.</string>
 </resources>
