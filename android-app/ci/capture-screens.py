@@ -21,9 +21,15 @@ def label(name):
 
 
 def find_node(text):
-    for _ in range(5):
-        adb("shell", "uiautomator", "dump", "/sdcard/fitness-screen.xml")
-        tree = ET.fromstring(adb("shell", "cat", "/sdcard/fitness-screen.xml"))
+    xml_path = "/data/local/tmp/fitness-screen.xml"
+    for _ in range(10):
+        adb("shell", "rm", "-f", xml_path)
+        try:
+            adb("shell", "uiautomator", "dump", xml_path)
+            tree = ET.fromstring(adb("shell", "cat", xml_path))
+        except (subprocess.CalledProcessError, ET.ParseError):
+            sleep(0.5)
+            continue
         for node in tree.iter("node"):
             labels = [node.get("text", ""), node.get("content-desc", "")]
             if any(value == text or value.startswith((text + ",", text + "\n")) for value in labels):
@@ -46,7 +52,13 @@ def capture(filename, expected_label):
 def main():
     OUTPUT.mkdir(exist_ok=True)
     adb("install", "-r", "app/build/outputs/apk/debug/app-debug.apk")
-    adb("shell", "am", "start", "-W", "-n", COMPONENT)
+    adb("shell", "svc", "power", "stayon", "true")
+    adb("shell", "input", "keyevent", "KEYCODE_WAKEUP")
+    adb("shell", "wm", "dismiss-keyguard")
+    launch = adb("shell", "am", "start", "-W", "-n", COMPONENT).decode()
+    print(launch)
+    if "Status: ok" not in launch:
+        raise RuntimeError("The emulator could not launch AI Fitness Coach")
     capture("01-welcome.png", label("onboarding_welcome_title"))
     tap(label("onboarding_get_started"))
     for _ in range(3):

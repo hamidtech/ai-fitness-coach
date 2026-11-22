@@ -207,9 +207,14 @@ jobs:
             cat emulator.log
             exit 1
           fi
-          adb shell input keyevent 82
+          adb shell svc power stayon true
+          adb shell input keyevent KEYCODE_WAKEUP
+          adb shell wm dismiss-keyguard
           bash ./gradlew :app:connectedDebugAndroidTest --stacktrace --no-daemon
-          python3 ci/capture-screens.py || echo 'Some screen captures could not be collected.'
+          if ! python3 ci/capture-screens.py; then
+            adb logcat -d -t 300 -s AndroidRuntime ActivityTaskManager > preview-logcat.txt
+            echo 'Some screen captures could not be collected.'
+          fi
 
       - name: Upload emulator results and previews
         if: always()
@@ -220,6 +225,7 @@ jobs:
             android-app/app/build/reports/androidTests/
             android-app/app/build/outputs/androidTest-results/
             android-app/emulator.log
+            android-app/preview-logcat.txt
             android-app/screenshots/*.png
           if-no-files-found: ignore
           retention-days: 7
