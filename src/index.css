@@ -1,0 +1,72 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --font-display: "Plus Jakarta Sans", "Vazirmatn", system-ui, sans-serif;
+  --font-sans: "DM Sans", "Vazirmatn", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Default Neutral Theme Tokens (Emerald) */
+  --accent: #059669;
+  --accent-hover: #047857;
+  --accent-soft: #d1fae5;
+  --accent-on-soft: #064e3b;
+  --surface-tint: #f8faf9;
+}
+
+:root[data-gender="male"] {
+  --accent: #1d4ed8;
+  --accent-hover: #1e40af;
+  --accent-soft: #dbeafe;
+  --accent-on-soft: #0f2b6b;
+  --surface-tint: #f8fafc;
+}
+
+:root[data-gender="female"] {
+  --accent: #be185d;
+  --accent-hover: #9d174d;
+  --accent-soft: #fce7f3;
+  --accent-on-soft: #500724;
+  --surface-tint: #fff8fa;
+}
+
+:root.dark {
+  --accent: #34d399;
+  --accent-hover: #10b981;
+  --accent-soft: #064e3b;
+  --accent-on-soft: #d1fae5;
+  --surface-tint: #0b110f;
+}
+
+:root.dark[data-gender="male"] {
+  --accent: #60a5fa;
+  --accent-hover: #3b82f6;
+  --accent-soft: #1e3a8a;
+  --accent-on-soft: #dbeafe;
+  --surface-tint: #0b1120;
+}
+
+:root.dark[data-gender="female"] {
+  --accent: #f472b6;
+  --accent-hover: #ec4899;
+  --accent-soft: #831843;
+  --accent-on-soft: #fce7f3;
+  --surface-tint: #160d14;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--surface-tint);
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+}
+
+code, pre, .font-mono {
+  font-family: var(--font-mono);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

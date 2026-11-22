@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AI Fitness Coach</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_exercises">Exercises</string>
+    <string name="nav_history">History</string>
+    <string name="nav_health">Health</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Profile & Gender-Adaptive Theme -->
+    <string name="profile_title">Athlete Profile</string>
+    <string name="profile_setup_subtitle">Personalize your profile. Your theme adapts to your selected sex/gender.</string>
+    <string name="profile_greeting">Hello, %1$s</string>
+    <string name="profile_greeting_default">Welcome, Athlete</string>
+    <string name="profile_name_label">Full Name</string>
+    <string name="profile_name_hint">Enter your name</string>
+    <string name="profile_gender_label">Sex / Gender</string>
+    <string name="gender_male">Male</string>
+    <string name="gender_female">Female</string>
+    <string name="gender_neutral">Prefer not to say / Neutral</string>
+    <string name="gender_theme_male">Athletic Cobalt Theme</string>
+    <string name="gender_theme_female">Studio Rose-Plum Theme</string>
+    <string name="gender_theme_neutral">Performance Emerald Theme</string>
+    <string name="profile_age_label">Age (years)</string>
+    <string name="profile_height_label">Height (cm)</string>
+    <string name="profile_weight_label">Weight (kg)</string>
+    <string name="profile_bmi_info">Calculated BMI: %1$s kg/m² (informational only)</string>
+    <string name="profile_save">Save Profile</string>
+    <string name="profile_edit">Edit Profile</string>
+    <string name="profile_skip">Skip for now</string>
+    <string name="profile_validation_error">Please enter realistic values (Age 10–110, Height 90–250 cm, Weight 25–300 kg).</string>
+
+    <!-- Home -->
+    <string name="home_start_workout">Start Workout</string>
+    <string name="home_quick_exercise">Quick Exercise</string>
+    <string name="home_build_session">Build Multi-Exercise Session</string>
+    <string name="home_continue_previous">Continue Previous Workout</string>
+    <string name="home_categories_title">Exercise Categories</string>
+    <string name="home_recent_exercises">Recently Used Exercises</string>
+    <string name="home_last_workout">Last Completed Workout</string>
+    <string name="home_weekly_summary">Weekly Summary</string>
+    <string name="home_weekly_sessions">%1$d sessions</string>
+    <string name="home_weekly_minutes">%1$d min</string>
+    <string name="home_no_workouts_yet">No workouts recorded yet. Select an exercise to begin.</string>
+
+    <!-- Categories -->
+    <string name="cat_weighted">Weighted Training</string>
+    <string name="cat_bodyweight">Bodyweight Training</string>
+    <string name="cat_core">Core Training</string>
+    <string name="cat_resistance_band">Resistance Band Training</string>
+
+    <!-- Exercises -->
+    <string name="exercises_search_hint">Search exercises or muscles…</string>
+    <string name="exercises_all_categories">All</string>
+    <string name="exercise_target_muscles">Target Muscles</string>
+    <string name="exercise_equipment">Required Equipment</string>
+    <string name="exercise_instructions">Step-by-Step Instructions</string>
+    <string name="exercise_common_mistakes">Common Mistakes</string>
+    <string name="exercise_camera_guide">Camera Positioning Guide</string>
+    <string name="exercise_tracking_capabilities">Tracking Capabilities &amp; Limitations</string>
+    <string name="exercise_band_setup_safety">Equipment &amp; Anchor Guidance</string>
+    <string name="exercise_band_anchor_warning">Ensure the band is attached to a secure, stationary anchor and inspect the band for tears or wear before use. The camera cannot verify anchor strength or band integrity.</string>
+    <string name="exercise_demo_placeholder_title">Offline Demonstration Placeholder</string>
+    <string name="exercise_demo_placeholder_desc">Expected local asset: %1$s (%2$s view). Replace in app assets without modifying the analyzer.</string>
+
+    <!-- Implementation Status -->
+    <string name="status_implemented">Implemented — needs validation</string>
+    <string name="status_experimental">Experimental</string>
+    <string name="status_coming_soon">Coming Soon</string>
+
+    <!-- Equipment & Resistance Bands -->
+    <string name="equip_weight_mode_per_dumbbell">Per Dumbbell</string>
+    <string name="equip_weight_mode_total">Total Load</string>
+    <string name="equip_weight_value">Weight</string>
+    <string name="equip_sets">Target Sets</string>
+    <string name="equip_reps">Target Reps</string>
+    <string name="equip_hold_sec">Hold Duration (sec)</string>
+    <string name="equip_rest_sec">Rest Duration (sec)</string>
+    <string name="band_type_label">Resistance Band Type</string>
+    <string name="band_type_long_loop">Long Loop Resistance Band</string>
+    <string name="band_type_mini_loop">Mini Loop Band</string>
+    <string name="band_type_tube">Tube Resistance Band with Handles</string>
+    <string name="band_type_flat">Flat Therapy Band</string>
+    <string name="band_brand_label">Band Brand (Optional)</string>
+    <string name="band_mfg_label">Manufacturer Label (Optional)</string>
+    <string name="band_level_label">Resistance Level</string>
+    <string name="band_level_extra_light">Extra Light</string>
+    <string name="band_level_light">Light</string>
+    <string name="band_level_medium">Medium</string>
+    <string name="band_level_heavy">Heavy</string>
+    <string name="band_level_extra_heavy">Extra Heavy</string>
+    <string name="band_level_custom">Custom</string>
+    <string name="band_color_label">Band Color (Note: colors are not standardized)</string>
+    <string name="band_count_label">Number of Bands Used</string>
+    <string name="band_range_label">Manufacturer Range (Metadata, not measured force)</string>
+    <string name="band_metadata_disclaimer">Entered resistance is equipment metadata only. Camera pose analysis tracks body movement, not band tension or force.</string>
+
+    <!-- Camera & Workout -->
+    <string name="camera_permission_title">Camera Permission Required</string>
+    <string name="camera_permission_rationale">AI Fitness Coach processes video frames locally on your device to track exercise form and count repetitions. No video is uploaded or saved.</string>
+    <string name="camera_grant_permission">Grant Camera Access</string>
+    <string name="camera_setup_title">Camera Setup Guide</string>
+    <string name="camera_setup_distance">Distance: %1$s</string>
+    <string name="camera_setup_height">Height: %1$s</string>
+    <string name="camera_setup_landmarks">Required visible landmarks: %1$s</string>
+    <string name="camera_setup_instruction">Position your full target body segment inside the frame, then tap Start Tracking.</string>
+    <string name="camera_start_tracking">Start Tracking</string>
+    <string name="camera_switch">Switch Camera</string>
+    <string name="workout_pause">Pause</string>
+    <string name="workout_resume">Resume</string>
+    <string name="workout_finish">Finish Workout</string>
+    <string name="workout_next_set">Complete Set</string>
+    <string name="workout_skip_rest">Skip Rest</string>
+    <string name="workout_rest_remaining">Rest: %1$ds</string>
+    <string name="workout_reps_label">REPS</string>
+    <string name="workout_hold_label">HOLD</string>
+    <string name="workout_set_label">Set %1$d / %2$d</string>
+    <string name="workout_tracking_ok">Tracking Active</string>
+    <string name="workout_tracking_low_conf">Low Landmark Confidence — Adjust Lighting or Framing</string>
+    <string name="workout_tracking_lost">Tracking Lost — Step Back Into Frame</string>
+    <string name="workout_no_analyzer_notice">Automated pose counting is not yet available for this exercise (%1$s). You can still log sets and timers manually.</string>
+    <string name="workout_summary_title">Workout Summary</string>
+    <string name="workout_save_session">Save Workout Session</string>
+    <string name="workout_discard">Discard</string>
+
+    <!-- Feedback Messages -->
+    <string name="fb_ready">Position ready. Begin movement.</string>
+    <string name="fb_squat_descending">Lowering… keep chest lifted.</string>
+    <string name="fb_squat_good_depth">Good squat depth. Drive up smoothly.</string>
+    <string name="fb_squat_shallow">Incomplete rep — lower hips slightly deeper if comfortable.</string>
+    <string name="fb_curl_flexing">Curling up smoothly.</string>
+    <string name="fb_curl_top">Full flexion reached. Lower with control.</string>
+    <string name="fb_curl_partial">Incomplete curl — aim for full flexion and extension.</string>
+    <string name="fb_curl_elbow_drift">Keep upper arm steadier near your torso.</string>
+    <string name="fb_plank_holding">Holding plank — keep body line steady.</string>
+    <string name="fb_plank_hip_sag">Hips appear low — gently brace core to align shoulders, hips, ankles.</string>
+    <string name="fb_plank_hip_high">Hips appear high — lower hips toward a straight line.</string>
+    <string name="fb_tracking_paused">Counting paused until required landmarks are clearly visible.</string>
+
+    <!-- History -->
+    <string name="history_empty">No completed workouts saved yet.</string>
+    <string name="history_duration_min">%1$d min</string>
+    <string name="history_observations">Form Observations</string>
+
+    <!-- Health Connect -->
+    <string name="health_status_available">Health Connect Available</string>
+    <string name="health_status_unavailable">Health Connect Not Installed or Unsupported</string>
+    <string name="health_status_update_required">Health Connect Update Required</string>
+    <string name="health_enable_toggle">Enable Health Connect Sync</string>
+    <string name="health_features_title">Enabled Health Connect Features</string>
+    <string name="health_features_hint">Only permissions for the features you enable below will be requested.</string>
+    <string name="health_feat_write_workouts">Write Completed Workouts</string>
+    <string name="health_feat_auto_sync">Auto-Sync After Workout</string>
+    <string name="health_feat_read_workouts">Read Recent Exercise Sessions</string>
+    <string name="health_feat_read_steps">Read Today\'s Steps</string>
+    <string name="health_feat_read_sleep">Read Recent Sleep Duration</string>
+    <string name="health_feat_read_heart_rate">Read Recent Heart Rate</string>
+    <string name="health_permissions_summary">Granted for enabled features: %1$d / %2$d</string>
+    <string name="health_select_feature_first">Enable at least one feature above before requesting permissions.</string>
+    <string name="health_request_permissions">Grant Selected Permissions</string>
+    <string name="health_sync_now">Sync Completed Workouts</string>
+    <string name="health_sync_result">Synced %1$d workout(s).</string>
+    <string name="health_synced_count">Synced Workouts: %1$d</string>
+    <string name="health_last_sync">Last Sync: %1$s</string>
+    <string name="health_never_synced">Not synced yet</string>
+    <string name="health_heart_rate">Recent Heart Rate Samples</string>
+    <string name="health_sleep">Recent Sleep Duration</string>
+    <string name="health_steps">Today\'s Steps</string>
+    <string name="health_imported_sessions">Health Connect Sessions</string>
+    <string name="health_feature_disabled">Feature disabled — turn it on above to read this metric.</string>
+    <string name="health_no_data">No real data available or permission not granted.</string>
+    <string name="health_personal_apps_note">Optional integration. All core workout and pose tracking features work fully offline without Health Connect.</string>
+
+    <!-- Settings & Privacy -->
+    <string name="settings_language">Language</string>
+    <string name="lang_system">Device Default</string>
+    <string name="lang_en">English</string>
+    <string name="lang_fa">فارسی (Persian)</string>
+    <string name="settings_theme">App Appearance</string>
+    <string name="theme_system">System Default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="settings_camera">Default Camera</string>
+    <string name="camera_front">Front Camera</string>
+    <string name="camera_back">Rear Camera</string>
+    <string name="settings_voice_feedback">Voice Coaching (Offline TTS)</string>
+    <string name="settings_skeleton_overlay">Show Pose Skeleton Overlay</string>
+    <string name="settings_dev_metrics">Show Developer Metrics (FPS / Inference ms)</string>
+    <string name="settings_privacy">Privacy &amp; On-Device Processing</string>
+    <string name="settings_delete_data">Delete All Local Workout Data</string>
+    <string name="settings_delete_confirm">Are you sure you want to permanently delete all local workout sessions, sets, and preferences?</string>
+    <string name="privacy_body">• Camera frames are analyzed strictly in memory on your device using MediaPipe Pose Landmarker.\n• Raw video and photos are never uploaded or saved.\n• Workout history, profile data, and equipment notes are stored locally using Room and DataStore.\n• No cloud inference, analytics, or advertising SDKs are included.\n• Health Connect integration is strictly optional and under your control.</string>
+
+    <!-- Common -->
+    <string name="common_back">Back</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_clear">Clear</string>
+    <string name="common_confirm">Confirm</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_download">Download</string>
+    <string name="common_edit">Edit</string>
+    <string name="common_none">None</string>
+    <string name="common_ok">OK</string>
+    <string name="common_resume">Resume</string>
+    <string name="common_retry">Retry</string>
+    <string name="common_save">Save</string>
+    <string name="common_set_active">Set Active</string>
+    <string name="common_wifi_only">Download on Wi-Fi Only</string>
+
+    <!-- Onboarding & Fitness Goals -->
+    <string name="onboarding_welcome_title">Welcome to AI Fitness Coach</string>
+    <string name="onboarding_welcome_body">Track repetitions, timed holds, and exercise form using your smartphone camera — privately and directly on your device.</string>
+    <string name="onboarding_get_started">Get Started</string>
+    <string name="onboarding_capabilities_title">Four Training Categories</string>
+    <string name="onboarding_capabilities_body">• Weighted Training, Bodyweight Training, Core Training, and Resistance Band Training.\n• Real-time camera repetition counting and hold tracking.\n• Local workout history and progress tracking.\n• Optional on-device or custom external AI workout reviews.</string>
+    <string name="onboarding_continue">Continue</string>
+    <string name="onboarding_privacy_title">Your Data Stays Yours</string>
+    <string name="onboarding_privacy_body">• Camera pose analysis runs locally on your device.\n• Camera video and photos are never uploaded.\n• External AI providers are completely optional and off by default.\n• Health Connect sync is optional and under your control.</string>
+    <string name="onboarding_language_title">Choose Your Language</string>
+    <string name="onboarding_language_subtitle">You can switch between English, Persian (Farsi), or Device Default anytime in Settings.</string>
+    <string name="onboarding_profile_title">Personalize Your Profile</string>
+    <string name="onboarding_profile_subtitle">Tell us a bit about yourself so your theme, measurements, and coaching goals fit you.</string>
+    <string name="onboarding_name_required_label">Your Name *</string>
+    <string name="onboarding_name_required">Please enter your name to continue.</string>
+    <string name="onboarding_optional_body_metrics">Optional Body Metrics</string>
+    <string name="profile_age_optional_label">Age (optional)</string>
+    <string name="profile_height_optional_label">Height cm (optional)</string>
+    <string name="profile_weight_optional_label">Weight kg (optional)</string>
+    <string name="onboarding_goal_label">Fitness Goal</string>
+    <string name="onboarding_experience_label">Experience Level</string>
+    <string name="onboarding_permissions_later_note">Camera, Health Connect, and notification permissions will only be requested later if and when you choose to use those features.</string>
+    <string name="onboarding_finish">Start Training</string>
+
+    <string name="goal_general_fitness">General Fitness</string>
+    <string name="goal_strength">Strength</string>
+    <string name="goal_muscle">Muscle Building</string>
+    <string name="goal_mobility">Mobility</string>
+    <string name="goal_core">Core Stability</string>
+    <string name="goal_weight_mgmt">Weight Management</string>
+    <string name="goal_custom">Custom Goal</string>
+    <string name="goal_custom_hint">Enter your custom fitness goal</string>
+    <string name="exp_beginner">Beginner</string>
+    <string name="exp_intermediate">Intermediate</string>
+    <string name="exp_advanced">Advanced</string>
+
+    <!-- Home & Exercises & Workout Additions -->
+    <string name="home_category_count">%1$d exercises</string>
+    <string name="home_ai_insight_title">Latest AI Coaching Insight</string>
+    <string name="home_ai_insight_empty_no_workouts">Complete your first workout to unlock rule-based or optional AI coaching reviews.</string>
+    <string name="home_ai_insight_empty_ready">Your workouts are ready to analyze locally or via your preferred AI provider.</string>
+    <string name="exercise_quick_configure">Quick Workout Setup</string>
+    <string name="exercise_start_camera_workout">Start Camera Workout</string>
+    <string name="workout_save_and_analyze">Save &amp; Analyze</string>
+
+    <!-- Settings Sections & Preferences -->
+    <string name="settings_section_a_profile">A. Profile &amp; Appearance</string>
+    <string name="settings_section_b_workout">B. Workout Preferences</string>
+    <string name="settings_section_c_health">C. Health &amp; Synchronization</string>
+    <string name="settings_section_d_ai">D. AI &amp; Analysis</string>
+    <string name="settings_section_e_storage">E. Downloads &amp; Storage</string>
+    <string name="settings_section_f_privacy">F. Privacy &amp; Data</string>
+    <string name="settings_profile_unset_sub">Name, gender, body metrics &amp; goals</string>
+    <string name="settings_open_action">Open</string>
+    <string name="settings_units">Measurement Units</string>
+    <string name="units_metric">Metric (kg / cm)</string>
+    <string name="units_imperial">Imperial (lb / in)</string>
+    <string name="settings_notifications_master">Enable App Notifications</string>
+    <string name="settings_notif_analysis">Scheduled Analysis Ready</string>
+    <string name="settings_notif_downloads">Download Completed / Failed</string>
+    <string name="settings_notif_reminders">Workout Reminders</string>
+    <string name="settings_health_enabled_sub">Connected — manage Health Connect permissions &amp; sync</string>
+    <string name="settings_health_disabled_sub">Optional integration is currently off</string>
+    <string name="settings_media_sub">Manage offline exercise demos · Stored: %1$s</string>
+    <string name="settings_local_ai_sub">Active model: %1$s · Stored: %2$s</string>
+    <string name="settings_external_ai_sub">Configure optional OpenAI-compatible or local LAN endpoints</string>
+    <string name="settings_schedule_active_sub">Scheduled around %1$s</string>
+    <string name="settings_schedule_off_sub">Automated workout summaries are disabled</string>
+    <string name="settings_insights_sub">View saved workout insights &amp; run manual coaching analysis</string>
+    <string name="settings_storage_breakdown">Workouts saved: %1$d · Exercise media: %2$s · Local models: %3$s</string>
+    <string name="settings_allow_external_ai_sharing">Allow External AI Workout Summaries</string>
+    <string name="settings_export_workouts">Export Workout History (JSON)</string>
+    <string name="settings_export_ready">Workout JSON export ready to share.</string>
+
+    <!-- Exercise Media Library -->
+    <string name="media_library_title">Exercise Media Library</string>
+    <string name="media_library_summary">Downloaded: %1$d / %2$d · Storage used: %3$s</string>
+    <string name="media_library_repdb_note">Clean vector/WebP frames downloaded only on demand.</string>
+    <string name="media_download_all">Download All Available</string>
+    <string name="media_delete_all">Delete Downloaded</string>
+    <string name="media_import_local">Import Local Media</string>
+    <string name="media_phase_start">Start</string>
+    <string name="media_phase_peak">Peak</string>
+    <string name="media_status_available">Available</string>
+    <string name="media_status_downloading">Downloading…</string>
+    <string name="media_status_paused">Paused</string>
+    <string name="media_status_downloaded">Downloaded</string>
+    <string name="media_status_failed">Failed</string>
+    <string name="media_status_not_available">Unavailable</string>
+    <string name="media_status_license_restricted">License Restricted</string>
+
+    <!-- Local LLM Model Manager -->
+    <string name="local_models_title">Local On-Device AI Models</string>
+    <string name="local_models_device_resources">Device RAM: %1$d MB · Free Storage: %2$s · ABI: %3$s</string>
+    <string name="local_models_runtime_note">Runs offline via Google LiteRT-LM (.litertlm). Pose tracking takes priority while camera is live.</string>
+    <string name="local_models_hf_token_title">Hugging Face Token (Optional)</string>
+    <string name="local_models_hf_token_hint">Required only if downloading gated Gemma 3 models after accepting the license on Hugging Face. Stored encrypted in Android Keystore.</string>
+    <string name="local_models_hf_token_saved">Hugging Face token saved securely in Android Keystore.</string>
+    <string name="local_models_hf_token_label">Hugging Face Access Token</string>
+    <string name="local_models_low_storage_warning">Warning: Available storage may be insufficient for this model.</string>
+    <string name="local_models_low_ram_warning">Warning: Total RAM may be below recommended %1$d MB.</string>
+    <string name="local_model_status_not_downloaded">Not Downloaded</string>
+    <string name="local_model_status_downloading">Downloading…</string>
+    <string name="local_model_status_paused">Paused</string>
+    <string name="local_model_status_verifying">Verifying SHA-256…</string>
+    <string name="local_model_status_downloaded_untested">Downloaded (Untested)</string>
+    <string name="local_model_status_verified">Verified &amp; Ready</string>
+    <string name="local_model_status_test_failed">Compatibility Test Failed</string>
+    <string name="local_model_status_failed">Download Failed</string>
+    <string name="local_model_test_btn">Test Model</string>
+    <string name="local_model_testing">Testing…</string>
+    <string name="local_model_benchmark_line">Init: %1$dms · Latency: %2$dms · Heap: %3$d MB</string>
+    <string name="local_model_run_test_prompt">Downloaded. Running compatibility benchmark…</string>
+
+    <!-- External AI Providers -->
+    <string name="external_ai_title">External AI Providers</string>
+    <string name="external_ai_security_note">HTTPS is enforced for public endpoints. API keys are encrypted in Android Keystore and excluded from backups and exports.</string>
+    <string name="external_ai_add_preset">Add Provider From Preset</string>
+    <string name="external_ai_empty">No external AI providers configured yet. Add one above or use offline Rule-Based / Local LLM coaching.</string>
+    <string name="external_ai_key_status">API Key: %1$s</string>
+    <string name="external_ai_key_stored_masked">Stored in Keystore (••••)</string>
+    <string name="external_ai_test_btn">Test Connection</string>
+    <string name="external_ai_testing">Testing…</string>
+    <string name="external_ai_test_ok">Connected (%1$dms) — %2$s</string>
+    <string name="external_ai_test_failed">Connection failed: %1$s</string>
+    <string name="external_ai_editor_title">Configure AI Provider</string>
+    <string name="external_ai_name_label">Display Name</string>
+    <string name="external_ai_base_url_label">Base URL</string>
+    <string name="external_ai_path_label">Chat Completions Path</string>
+    <string name="external_ai_model_label">Model Identifier</string>
+    <string name="external_ai_apikey_label">API Key (leave blank to keep existing)</string>
+    <string name="external_ai_timeout_label">Timeout (sec)</string>
+    <string name="external_ai_max_tokens_label">Max Tokens</string>
+    <string name="external_ai_allow_lan_http">Allow Unencrypted Local LAN HTTP</string>
+    <string name="external_ai_enabled_toggle">Enable This Provider</string>
+    <string name="external_ai_lan_http_warn_title">Unencrypted LAN HTTP Warning</string>
+    <string name="external_ai_lan_http_warn_body">Plain HTTP does not encrypt data on your local network. Only enable this for trusted local servers such as Ollama or LM Studio on your own private LAN.</string>
+
+    <!-- AI Analysis & Insights -->
+    <string name="ai_coach_insights_title">AI Coach Insights</string>
+    <string name="ai_analyze_history_btn">Analyze Workouts</string>
+    <string name="ai_analyze_this_workout">Analyze Workout</string>
+    <string name="ai_open_insights">Open Insights</string>
+    <string name="ai_range_selected_workout">Selected Workout</string>
+    <string name="ai_range_last_7_days">Last 7 Days</string>
+    <string name="ai_provider_mode_label">Execution Mode</string>
+    <string name="ai_mode_rule_based">Rule-Based (Offline)</string>
+    <string name="ai_mode_local_llm">Local LLM (On-Device)</string>
+    <string name="ai_mode_external_api">External AI API</string>
+    <string name="ai_question_label">Ask About Your Workouts (Optional)</string>
+    <string name="ai_question_hint">e.g. How was my squat depth trend this week?</string>
+    <string name="ai_run_analysis_btn">Analyze Now</string>
+    <string name="ai_analyzing_now">Analyzing workouts…</string>
+    <string name="ai_fallback_rule_based">Use Rule-Based Fallback</string>
+    <string name="ai_fallback_local_llm">Use Local LLM Fallback</string>
+    <string name="ai_saved_insights_header">Saved Coaching Insights</string>
+    <string name="ai_saved_insights_empty">No saved insights yet. Run an analysis above to save structured feedback.</string>
+    <string name="ai_external_consent_title">Send Workout Summary to External AI?</string>
+    <string name="ai_external_consent_body">Only normalized workout summary metrics from %1$d workout(s) (%2$s) will be sent to your configured provider. No camera images or API secrets are ever shared.</string>
+    <string name="ai_external_consent_send_once">Send &amp; Analyze</string>
+
+    <!-- Scheduled Analysis & Notifications -->
+    <string name="schedule_title">Scheduled Analysis</string>
+    <string name="schedule_enable_toggle">Enable Automated Workout Analysis</string>
+    <string name="schedule_time_window_label">Preferred Evening Time</string>
+    <string name="schedule_hour_label">Hour (0–23)</string>
+    <string name="schedule_minute_label">Minute (0–59)</string>
+    <string name="schedule_frequency_label">Frequency</string>
+    <string name="schedule_freq_daily">Daily</string>
+    <string name="schedule_freq_weekly">Weekly</string>
+    <string name="schedule_scope_label">Workout Range</string>
+    <string name="schedule_scope_since_last">Since Last Analysis</string>
+    <string name="schedule_scope_last_day">Last 24 Hours</string>
+    <string name="schedule_scope_last_7_days">Last 7 Days</string>
+    <string name="schedule_charging_only">Require Device Charging</string>
+    <string name="schedule_notify_toggle">Notify When Analysis Is Ready</string>
+    <string name="schedule_workmanager_note">Scheduled via Android WorkManager. Execution respects battery, memory, and network constraints.</string>
+    <string name="schedule_run_now_btn">Run Analysis Now</string>
+    <string name="schedule_run_queued_msg">Background analysis queued.</string>
+    <string name="schedule_status_header">Schedule Status</string>
+    <string name="schedule_last_run">Last run: %1$s (%2$d workout(s) analyzed)</string>
+    <string name="schedule_local_deferred_msg">Local LLM scheduled run deferred due to low battery or low available memory.</string>
+
+    <string name="notif_channel_analysis_name">Workout Coaching Analysis</string>
+    <string name="notif_channel_analysis_desc">Notifications when scheduled or manual coaching insights are ready.</string>
+    <string name="notif_channel_downloads_name">Downloads</string>
+    <string name="notif_channel_downloads_desc">Progress and completion alerts for exercise media and local AI models.</string>
+    <string name="notif_channel_reminders_name">Workout Reminders</string>
+    <string name="notif_channel_reminders_desc">Optional workout and goal reminders.</string>
+    <string name="notif_analysis_ready_title">Coaching Analysis Ready</string>
+    <string name="notif_download_complete_title">Download Complete</string>
+    <string name="notif_download_failed_title">Download Failed</string>
+
+    <!-- Personal Profile Editor & Units -->
+    <string name="profile_edit_subtitle">Update your identity, optional body metrics, fitness goal, and experience level anytime.</string>
+    <string name="profile_saved_success">Profile saved.</string>
+    <string name="profile_gender_optional_label">Sex / Gender (Optional)</string>
+    <string name="profile_age_birth_section">Age or Birth Year (Optional)</string>
+    <string name="profile_mode_age">Age</string>
+    <string name="profile_mode_birth_year">Birth Year</string>
+    <string name="profile_birth_year_optional_label">Birth Year (optional)</string>
+    <string name="profile_height_imperial_label">Height (in)</string>
+    <string name="profile_weight_imperial_label">Weight (lb)</string>
+    <string name="profile_clear_optional_metrics">Clear optional body metrics</string>
+    <string name="profile_custom_goal_error">Please enter a custom goal description.</string>
+    <string name="profile_validation_error_imperial">Please enter realistic values (Age 10–110, Height 35–99 in, Weight 55–660 lb).</string>
+
+    <!-- Theme & Color Palettes -->
+    <string name="theme_screen_title">Appearance &amp; Color Palette</string>
+    <string name="theme_appearance_subtitle">Switch smoothly between System, Light, and Dark modes.</string>
+    <string name="theme_palette_title">Color Palette</string>
+    <string name="theme_palette_subtitle">Choose Auto to adapt from your profile, or lock in your preferred palette.</string>
+    <string name="palette_auto">Auto (Profile Suggested)</string>
+    <string name="palette_auto_desc">Currently suggests: %1$s</string>
+    <string name="palette_cobalt">Athletic Cobalt</string>
+    <string name="palette_cobalt_desc">Crisp athletic blue and cyan-teal accents</string>
+    <string name="palette_teal">Ocean Teal</string>
+    <string name="palette_teal_desc">Focused emerald-teal with crisp slate surfaces</string>
+    <string name="palette_violet">Studio Violet</string>
+    <string name="palette_violet_desc">Energetic violet paired with berry-rose highlights</string>
+    <string name="palette_neutral">Neutral Performance</string>
+    <string name="palette_neutral_desc">Balanced slate &amp; emerald monochrome palette</string>
+    <string name="theme_dynamic_color_title">Material You Dynamic Color</string>
+    <string name="theme_dynamic_color_desc">Use Android 12+ wallpaper colors across surfaces and accents.</string>
+    <string name="theme_dynamic_color_unsupported">Requires Android 12 or higher.</string>
+
+    <!-- Daily Motivation & Home/Workout Polish -->
+    <string name="daily_quote_copy">Copy Quote</string>
+    <string name="daily_quote_share">Share Quote</string>
+    <string name="daily_quote_copied">Copied</string>
+    <string name="daily_quote_source">Source</string>
+    <string name="daily_quote_unavailable">No verified daily motivation quote is currently available.</string>
+    <string name="home_last_workout_meta">%1$s · %2$d set(s)</string>
+    <string name="common_selected">Selected</string>
+    <string name="common_active_badge">Active</string>
+    <string name="workout_add_exercise_all_categories">Add Exercise (All 4 Categories)</string>
+    <string name="workout_move_up">Move up</string>
+    <string name="workout_move_down">Move down</string>
+    <string name="workout_hold_target_format">%1$s · Target %2$ds</string>
+    <string name="workout_summary_set_header">%1$s · Set %2$d</string>
+    <string name="workout_hold_seconds_format">%1$ds</string>
+    <string name="workout_reps_count_format">%1$d reps</string>
+    <string name="history_reps_ratio_format">%1$d/%2$d reps</string>
+    <string name="history_set_line_format">• %1$s — Set %2$d: %3$s</string>
+</resources>

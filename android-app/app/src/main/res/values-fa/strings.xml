@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">مربی هوشمند تناسب اندام</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">خانه</string>
+    <string name="nav_exercises">تمرین‌ها</string>
+    <string name="nav_history">تاریخچه</string>
+    <string name="nav_health">سلامت</string>
+    <string name="nav_settings">تنظیمات</string>
+
+    <!-- Profile & Gender-Adaptive Theme -->
+    <string name="profile_title">پروفایل ورزشکار</string>
+    <string name="profile_setup_subtitle">مشخصات خود را وارد کنید. تم رنگی برنامه بر اساس جنسیت انتخابی تنظیم می‌شود.</string>
+    <string name="profile_greeting">سلام، %1$s</string>
+    <string name="profile_greeting_default">خوش آمدید، ورزشکار</string>
+    <string name="profile_name_label">نام و نام خانوادگی</string>
+    <string name="profile_name_hint">نام خود را وارد کنید</string>
+    <string name="profile_gender_label">جنسیت</string>
+    <string name="gender_male">مرد</string>
+    <string name="gender_female">زن</string>
+    <string name="gender_neutral">ترجیح می‌دهم نگویم / خنثی</string>
+    <string name="gender_theme_male">تم آبی ورزشی (مردانه)</string>
+    <string name="gender_theme_female">تم رز و آلبالویی استودیویی (زنانه)</string>
+    <string name="gender_theme_neutral">تم زمردی متعادل (خنثی)</string>
+    <string name="profile_age_label">سن (سال)</string>
+    <string name="profile_height_label">قد (سانتی‌متر)</string>
+    <string name="profile_weight_label">وزن (کیلوگرم)</string>
+    <string name="profile_bmi_info">شاخص توده بدنی محاسبه‌شده: %1$s kg/m² (صرفاً جهت اطلاع)</string>
+    <string name="profile_save">ذخیره پروفایل</string>
+    <string name="profile_edit">ویرایش پروفایل</string>
+    <string name="profile_skip">فعلاً رد شود</string>
+    <string name="profile_validation_error">لطفاً مقادیر معتبر وارد کنید (سن ۱۰ تا ۱۱۰، قد ۹۰ تا ۲۵۰ سانتی‌متر، وزن ۲۵ تا ۳۰۰ کیلوگرم).</string>
+
+    <!-- Home -->
+    <string name="home_start_workout">شروع تمرین</string>
+    <string name="home_quick_exercise">تمرین سریع</string>
+    <string name="home_build_session">ساخت جلسه تمرینی ترکیبی</string>
+    <string name="home_continue_previous">ادامه تمرین قبلی</string>
+    <string name="home_categories_title">دسته‌بندی تمرین‌ها</string>
+    <string name="home_recent_exercises">تمرین‌های اخیر</string>
+    <string name="home_last_workout">آخرین تمرین انجام‌شده</string>
+    <string name="home_weekly_summary">خلاصه هفتگی</string>
+    <string name="home_weekly_sessions">%1$d جلسه</string>
+    <string name="home_weekly_minutes">%1$d دقیقه</string>
+    <string name="home_no_workouts_yet">هنوز تمرینی ثبت نشده است. یک حرکت را برای شروع انتخاب کنید.</string>
+
+    <!-- Categories -->
+    <string name="cat_weighted">تمرین با وزنه</string>
+    <string name="cat_bodyweight">تمرین با وزن بدن</string>
+    <string name="cat_core">تمرینات عضلات مرکزی بدن</string>
+    <string name="cat_resistance_band">تمرین با کش مقاومتی</string>
+
+    <!-- Exercises -->
+    <string name="exercises_search_hint">جستجوی نام تمرین یا عضله…</string>
+    <string name="exercises_all_categories">همه</string>
+    <string name="exercise_target_muscles">عضلات هدف</string>
+    <string name="exercise_equipment">تجهیزات مورد نیاز</string>
+    <string name="exercise_instructions">آموزش گام‌به‌گام</string>
+    <string name="exercise_common_mistakes">اشتباهات رایج</string>
+    <string name="exercise_camera_guide">راهنمای قرارگیری دوربین</string>
+    <string name="exercise_tracking_capabilities">قابلیت‌های ردیابی و محدودیت‌ها</string>
+    <string name="exercise_band_setup_safety">راهنمای ایمنی و نصب کش</string>
+    <string name="exercise_band_anchor_warning">اطمینان حاصل کنید کش به یک نقطه تکیه‌گاه محکم و ثابت متصل است و پیش از شروع سلامت کش را بررسی کنید. دوربین قادر به سنجش استحکام تکیه‌گاه یا سلامت کش نیست.</string>
+    <string name="exercise_demo_placeholder_title">پیش‌نمایش آفلاین (جایگزین موقت)</string>
+    <string name="exercise_demo_placeholder_desc">فایل محلی مورد انتظار: %1$s (نمای %2$s). بدون تغییر موتور تحلیل قابل جایگزینی است.</string>
+
+    <!-- Implementation Status -->
+    <string name="status_implemented">پیاده‌سازی‌شده — نیازمند ارزیابی میدانی</string>
+    <string name="status_experimental">آزمایشی</string>
+    <string name="status_coming_soon">به‌زودی</string>
+
+    <!-- Equipment & Resistance Bands -->
+    <string name="equip_weight_mode_per_dumbbell">وزن هر دمبل</string>
+    <string name="equip_weight_mode_total">وزن کل</string>
+    <string name="equip_weight_value">وزن</string>
+    <string name="equip_sets">تعداد ست هدف</string>
+    <string name="equip_reps">تکرار هدف</string>
+    <string name="equip_hold_sec">مدت نگهداشتن (ثانیه)</string>
+    <string name="equip_rest_sec">زمان استراحت (ثانیه)</string>
+    <string name="band_type_label">نوع کش مقاومتی</string>
+    <string name="band_type_long_loop">کش حلقه‌ای بلند</string>
+    <string name="band_type_mini_loop">کش مینی لوپ</string>
+    <string name="band_type_tube">کش لوله‌ای دسته‌دار</string>
+    <string name="band_type_flat">کش تخت تمرینی</string>
+    <string name="band_brand_label">برند کش (اختیاری)</string>
+    <string name="band_mfg_label">برچسب مقاومت سازنده (اختیاری)</string>
+    <string name="band_level_label">سطح مقاومت</string>
+    <string name="band_level_extra_light">خیلی سبک</string>
+    <string name="band_level_light">سبک</string>
+    <string name="band_level_medium">متوسط</string>
+    <string name="band_level_heavy">سنگین</string>
+    <string name="band_level_extra_heavy">خیلی سنگین</string>
+    <string name="band_level_custom">سفارشی</string>
+    <string name="band_color_label">رنگ کش (توجه: رنگ‌ها استاندارد یکسانی ندارند)</string>
+    <string name="band_count_label">تعداد کش استفاده‌شده</string>
+    <string name="band_range_label">محدوده اعلام‌شده سازنده (فراداده، نه نیروی اندازه‌گیری‌شده)</string>
+    <string name="band_metadata_disclaimer">مقاومت واردشده صرفاً اطلاعات تجهیزات است. تحلیل دوربین فقط حرکت بدن را ردیابی می‌کند و کشش یا نیروی واقعی کش را نمی‌سنجد.</string>
+
+    <!-- Camera & Workout -->
+    <string name="camera_permission_title">نیاز به دسترسی دوربین</string>
+    <string name="camera_permission_rationale">مربی هوشمند تناسب اندام تصاویر را به‌صورت کاملاً محلی روی گوشی پردازش می‌کند. هیچ ویدئویی ذخیره یا به سرور ارسال نمی‌شود.</string>
+    <string name="camera_grant_permission">اعطای دسترسی دوربین</string>
+    <string name="camera_setup_title">راهنمای تنظیم دوربین</string>
+    <string name="camera_setup_distance">فاصله پیشنهادی: %1$s</string>
+    <string name="camera_setup_height">ارتفاع دوربین: %1$s</string>
+    <string name="camera_setup_landmarks">نقاط بدن لازم در کادر: %1$s</string>
+    <string name="camera_setup_instruction">بدن خود را در کادر قرار دهید و سپس دکمه شروع ردیابی را لمس کنید.</string>
+    <string name="camera_start_tracking">شروع ردیابی</string>
+    <string name="camera_switch">تغییر دوربین</string>
+    <string name="workout_pause">توقف موقت</string>
+    <string name="workout_resume">ادامه</string>
+    <string name="workout_finish">پایان تمرین</string>
+    <string name="workout_next_set">تکمیل ست</string>
+    <string name="workout_skip_rest">رد کردن استراحت</string>
+    <string name="workout_rest_remaining">استراحت: %1$d ثانیه</string>
+    <string name="workout_reps_label">تکرار</string>
+    <string name="workout_hold_label">زمان نگهداشتن</string>
+    <string name="workout_set_label">ست %1$d از %2$d</string>
+    <string name="workout_tracking_ok">ردیابی فعال است</string>
+    <string name="workout_tracking_low_conf">اطمینان پایین نقاط بدن — نور یا کادر را تنظیم کنید</string>
+    <string name="workout_tracking_lost">ردیابی قطع شد — در کادر قرار بگیرید</string>
+    <string name="workout_no_analyzer_notice">شمارش خودکار برای این حرکت هنوز فعال نیست (%1$s). می‌توانید ست‌ها و زمان را دستی ثبت کنید.</string>
+    <string name="workout_summary_title">خلاصه جلسه تمرین</string>
+    <string name="workout_save_session">ذخیره جلسه تمرین</string>
+    <string name="workout_discard">لغو</string>
+
+    <!-- Feedback Messages -->
+    <string name="fb_ready">وضعیت آماده است. حرکت را شروع کنید.</string>
+    <string name="fb_squat_descending">در حال پایین آمدن… سینه را بالا نگه دارید.</string>
+    <string name="fb_squat_good_depth">عمق اسکوات مناسب است. با کنترل بالا بیایید.</string>
+    <string name="fb_squat_shallow">تکرار ناقص — در صورت راحتی کمی پایین‌تر بروید.</string>
+    <string name="fb_curl_flexing">در حال خم کردن آرنج با کنترل.</string>
+    <string name="fb_curl_top">بالاترین نقطه حرکت. به‌آرامی پایین بیاورید.</string>
+    <string name="fb_curl_partial">تکرار ناقص — دامنه کامل خم و باز شدن آرنج را انجام دهید.</string>
+    <string name="fb_curl_elbow_drift">بازو را ثابت‌تر در کنار تنه نگه دارید.</string>
+    <string name="fb_plank_holding">در حال نگهداشتن پلانک — خط بدن را ثابت نگه دارید.</string>
+    <string name="fb_plank_hip_sag">لگن کمی پایین افتاده — با انقباض شکم شانه، لگن و مچ را هم‌راستا کنید.</string>
+    <string name="fb_plank_hip_high">لگن کمی بالا رفته — لگن را در راستای مستقیم قرار دهید.</string>
+    <string name="fb_tracking_paused">شمارش تا زمان دیده شدن واضح نقاط بدن متوقف شد.</string>
+
+    <!-- History -->
+    <string name="history_empty">هنوز هیچ جلسه تمرینی ذخیره نشده است.</string>
+    <string name="history_duration_min">%1$d دقیقه</string>
+    <string name="history_observations">مشاهدات فرم حرکت</string>
+
+    <!-- Health Connect -->
+    <string name="health_status_available">سرویس Health Connect در دسترس است</string>
+    <string name="health_status_unavailable">Health Connect نصب نیست یا پشتیبانی نمی‌شود</string>
+    <string name="health_status_update_required">به‌روزرسانی Health Connect لازم است</string>
+    <string name="health_enable_toggle">فعال‌سازی همگام‌سازی Health Connect</string>
+    <string name="health_features_title">قابلیت‌های انتخاب‌شده Health Connect</string>
+    <string name="health_features_hint">فقط مجوزهای مربوط به قابلیت‌هایی که در زیر فعال می‌کنید درخواست خواهد شد.</string>
+    <string name="health_feat_write_workouts">ثبت تمرین‌های تکمیل‌شده</string>
+    <string name="health_feat_auto_sync">همگام‌سازی خودکار پس از تمرین</string>
+    <string name="health_feat_read_workouts">خواندن جلسات تمرینی اخیر</string>
+    <string name="health_feat_read_steps">خواندن تعداد قدم‌های امروز</string>
+    <string name="health_feat_read_sleep">خواندن مدت خواب اخیر</string>
+    <string name="health_feat_read_heart_rate">خواندن ضربان قلب اخیر</string>
+    <string name="health_permissions_summary">مجوزهای صادرشده برای قابلیت‌های فعال: %1$d از %2$d</string>
+    <string name="health_select_feature_first">ابتدا حداقل یک قابلیت را در بالا فعال کنید.</string>
+    <string name="health_request_permissions">درخواست مجوزهای انتخاب‌شده</string>
+    <string name="health_sync_now">همگام‌سازی تمرین‌های تکمیل‌شده</string>
+    <string name="health_sync_result">%1$d تمرین همگام‌سازی شد.</string>
+    <string name="health_synced_count">تمرین‌های همگام‌سازی‌شده: %1$d</string>
+    <string name="health_last_sync">آخرین همگام‌سازی: %1$s</string>
+    <string name="health_never_synced">هنوز همگام‌سازی نشده</string>
+    <string name="health_heart_rate">نمونه‌های اخیر ضربان قلب</string>
+    <string name="health_sleep">مدت خواب اخیر</string>
+    <string name="health_steps">تعداد قدم‌های امروز</string>
+    <string name="health_imported_sessions">جلسات خوانده‌شده از Health Connect</string>
+    <string name="health_feature_disabled">این قابلیت غیرفعال است — برای خواندن آن را در بالا فعال کنید.</string>
+    <string name="health_no_data">داده واقعی موجود نیست یا مجوز صادر نشده است.</string>
+    <string name="health_personal_apps_note">اتصال اختیاری است. تمام قابلیت‌های تمرین و تحلیل حرکت بدون Health Connect به‌صورت کاملاً آفلاین کار می‌کنند.</string>
+
+    <!-- Settings & Privacy -->
+    <string name="settings_language">زبان برنامه</string>
+    <string name="lang_system">پیش‌فرض دستگاه</string>
+    <string name="lang_en">English</string>
+    <string name="lang_fa">فارسی</string>
+    <string name="settings_theme">حالت نمایش</string>
+    <string name="theme_system">پیش‌فرض سیستم</string>
+    <string name="theme_light">روشن</string>
+    <string name="theme_dark">تیره</string>
+    <string name="settings_camera">دوربین پیش‌فرض</string>
+    <string name="camera_front">دوربین جلو</string>
+    <string name="camera_back">دوربین پشت</string>
+    <string name="settings_voice_feedback">بازخورد صوتی (TTS آفلاین)</string>
+    <string name="settings_skeleton_overlay">نمایش اسکلت بدن روی تصویر</string>
+    <string name="settings_dev_metrics">نمایش معیارهای توسعه‌دهنده (FPS / زمان پردازش)</string>
+    <string name="settings_privacy">حریم خصوصی و پردازش محلی</string>
+    <string name="settings_delete_data">حذف تمام داده‌های محلی تمرین</string>
+    <string name="settings_delete_confirm">آیا مطمئن هستید که می‌خواهید تمام تاریخچه تمرین‌ها، ست‌ها و تنظیمات محلی را برای همیشه حذف کنید؟</string>
+    <string name="privacy_body">• فریم‌های دوربین منحصراً در حافظه موقت گوشی و با MediaPipe Pose Landmarker پردازش می‌شوند.\n• هیچ ویدئو یا تصویری ذخیره یا به اینترنت ارسال نمی‌شود.\n• تاریخچه تمرین، پروفایل و اطلاعات تجهیزات در دیتابیس محلی Room و DataStore ذخیره می‌شوند.\n• هیچ تحلیل ابری، ردیابی تبلیغاتی یا حساب کاربری اجباری وجود ندارد.\n• اتصال به Health Connect کاملاً اختیاری است.</string>
+
+    <!-- Common -->
+    <string name="common_back">بازگشت</string>
+    <string name="common_cancel">انصراف</string>
+    <string name="common_clear">پاک کردن</string>
+    <string name="common_confirm">تأیید</string>
+    <string name="common_delete">حذف</string>
+    <string name="common_download">دانلود</string>
+    <string name="common_edit">ویرایش</string>
+    <string name="common_none">هیچ‌کدام</string>
+    <string name="common_ok">تأیید</string>
+    <string name="common_resume">ادامه</string>
+    <string name="common_retry">تلاش مجدد</string>
+    <string name="common_save">ذخیره</string>
+    <string name="common_set_active">انتخاب به‌عنوان فعال</string>
+    <string name="common_wifi_only">دانلود فقط از طریق Wi-Fi</string>
+
+    <!-- Onboarding & Fitness Goals -->
+    <string name="onboarding_welcome_title">به مربی هوشمند ورزشی خوش آمدید</string>
+    <string name="onboarding_welcome_body">تکرارها، زمان نگهداشتن و فرم حرکات خود را از طریق دوربین گوشی و به‌صورت کاملاً محلی و خصوصی ردیابی کنید.</string>
+    <string name="onboarding_get_started">شروع کنید</string>
+    <string name="onboarding_capabilities_title">چهار دسته‌بندی تمرینی</string>
+    <string name="onboarding_capabilities_body">• تمرین با وزنه، تمرین با وزن بدن، تمرینات عضلات مرکزی و تمرین با کش مقاومتی.\n• شمارش زنده تکرارها و ردیابی زمان نگهداشتن با دوربین.\n• تاریخچه تمرینی محلی و مرور پیشرفت.\n• تحلیل اختیاری تمرین‌ها با هوش مصنوعی روی دستگاه یا ارائه‌دهنده دلخواه.</string>
+    <string name="onboarding_continue">ادامه</string>
+    <string name="onboarding_privacy_title">داده‌های شما نزد خودتان می‌ماند</string>
+    <string name="onboarding_privacy_body">• ردیابی حرکت به‌صورت محلی روی گوشی اجرا می‌شود.\n• ویدئوها و تصاویر دوربین هرگز آپلود نمی‌شوند.\n• سرویس‌های هوش مصنوعی خارجی کاملاً اختیاری و در ابتدا غیرفعال هستند.\n• همگام‌سازی Health Connect اختیاری و تحت کنترل شماست.</string>
+    <string name="onboarding_language_title">انتخاب زبان</string>
+    <string name="onboarding_language_subtitle">هر زمان می‌توانید زبان برنامه را بین فارسی، انگلیسی یا پیش‌فرض دستگاه در تنظیمات تغییر دهید.</string>
+    <string name="onboarding_profile_title">تکمیل پروفایل شخصی</string>
+    <string name="onboarding_profile_subtitle">مشخصات خود را وارد کنید تا تم برنامه، واحدها و اهداف تمرینی متناسب با شما تنظیم شود.</string>
+    <string name="onboarding_name_required_label">نام شما *</string>
+    <string name="onboarding_name_required">لطفاً برای ادامه نام خود را وارد کنید.</string>
+    <string name="onboarding_optional_body_metrics">مشخصات بدنی اختیاری</string>
+    <string name="profile_age_optional_label">سن (اختیاری)</string>
+    <string name="profile_height_optional_label">قد به سانتی‌متر (اختیاری)</string>
+    <string name="profile_weight_optional_label">وزن به کیلوگرم (اختیاری)</string>
+    <string name="onboarding_goal_label">هدف ورزشی</string>
+    <string name="onboarding_experience_label">سطح تجربه</string>
+    <string name="onboarding_permissions_later_note">دسترسی دوربین، Health Connect و اعلان‌ها فقط زمانی درخواست می‌شوند که خودتان تصمیم به استفاده از آن قابلیت بگیرید.</string>
+    <string name="onboarding_finish">شروع تمرین</string>
+
+    <string name="goal_general_fitness">تناسب اندام عمومی</string>
+    <string name="goal_strength">افزایش قدرت</string>
+    <string name="goal_muscle">عضله‌سازی</string>
+    <string name="goal_mobility">انعطاف‌پذیری و تحرک</string>
+    <string name="goal_core">پایداری عضلات مرکزی</string>
+    <string name="goal_weight_mgmt">مدیریت وزن</string>
+    <string name="goal_custom">هدف سفارشی</string>
+    <string name="goal_custom_hint">هدف ورزشی دلخواه خود را بنویسید</string>
+    <string name="exp_beginner">مبتدی</string>
+    <string name="exp_intermediate">متوسط</string>
+    <string name="exp_advanced">پیشرفته</string>
+
+    <!-- Home & Exercises & Workout Additions -->
+    <string name="home_category_count">%1$d حرکت</string>
+    <string name="home_ai_insight_title">آخرین تحلیل مربی هوشمند</string>
+    <string name="home_ai_insight_empty_no_workouts">اولین جلسه تمرینی خود را ثبت کنید تا تحلیل‌های مبتنی بر قوانین یا هوش مصنوعی فعال شود.</string>
+    <string name="home_ai_insight_empty_ready">تمرین‌های شما برای تحلیل محلی یا تحلیل با ارائه‌دهنده دلخواه آماده هستند.</string>
+    <string name="exercise_quick_configure">تنظیم سریع تمرین</string>
+    <string name="exercise_start_camera_workout">شروع تمرین با دوربین</string>
+    <string name="workout_save_and_analyze">ذخیره و تحلیل</string>
+
+    <!-- Settings Sections & Preferences -->
+    <string name="settings_section_a_profile">الف. پروفایل و ظاهر برنامه</string>
+    <string name="settings_section_b_workout">ب. تنظیمات تمرین</string>
+    <string name="settings_section_c_health">پ. سلامت و همگام‌سازی</string>
+    <string name="settings_section_d_ai">ت. هوش مصنوعی و تحلیل</string>
+    <string name="settings_section_e_storage">ث. دانلودها و فضای ذخیره‌سازی</string>
+    <string name="settings_section_f_privacy">ج. حریم خصوصی و داده‌ها</string>
+    <string name="settings_profile_unset_sub">نام، جنسیت، مشخصات بدنی و اهداف</string>
+    <string name="settings_open_action">باز کردن</string>
+    <string name="settings_units">واحدهای اندازه‌گیری</string>
+    <string name="units_metric">متریک (کیلوگرم / سانتی‌متر)</string>
+    <string name="units_imperial">امپریال (پوند / اینچ)</string>
+    <string name="settings_notifications_master">فعال‌سازی اعلان‌های برنامه</string>
+    <string name="settings_notif_analysis">آماده شدن تحلیل زمان‌بندی‌شده</string>
+    <string name="settings_notif_downloads">تکمیل یا خطای دانلود</string>
+    <string name="settings_notif_reminders">یادآور تمرین</string>
+    <string name="settings_health_enabled_sub">متصل — مدیریت مجوزها و همگام‌سازی Health Connect</string>
+    <string name="settings_health_disabled_sub">اتصال اختیاری در حال حاضر خاموش است</string>
+    <string name="settings_media_sub">مدیریت آموزش‌های آفلاین تمرین‌ها · حجم ذخیره‌شده: %1$s</string>
+    <string name="settings_local_ai_sub">مدل فعال: %1$s · حجم ذخیره‌شده: %2$s</string>
+    <string name="settings_external_ai_sub">پیکربندی اختیاری سرویس‌های سازگار با OpenAI یا سرور شبکه محلی</string>
+    <string name="settings_schedule_active_sub">زمان‌بندی‌شده حدود ساعت %1$s</string>
+    <string name="settings_schedule_off_sub">تحلیل خودکار تمرین‌ها غیرفعال است</string>
+    <string name="settings_insights_sub">مشاهده بینش‌های ذخیره‌شده و اجرای تحلیل دستی</string>
+    <string name="settings_storage_breakdown">تمرین‌های ذخیره‌شده: %1$d · رسانه تمرین‌ها: %2$s · مدل‌های محلی: %3$s</string>
+    <string name="settings_allow_external_ai_sharing">اجازه ارسال خلاصه تمرین به هوش مصنوعی خارجی</string>
+    <string name="settings_export_workouts">خروجی تاریخچه تمرین‌ها (JSON)</string>
+    <string name="settings_export_ready">فایل JSON خروجی تمرین‌ها آماده اشتراک‌گذاری است.</string>
+
+    <!-- Exercise Media Library -->
+    <string name="media_library_title">کتابخانه رسانه‌ای تمرین‌ها</string>
+    <string name="media_library_summary">دانلودشده: %1$d از %2$d · فضای مصرف‌شده: %3$s</string>
+    <string name="media_library_repdb_note">تصاویر برداری/WebP تمیز فقط در صورت درخواست شما دانلود می‌شوند.</string>
+    <string name="media_download_all">دانلود همه موارد موجود</string>
+    <string name="media_delete_all">حذف فایل‌های دانلودشده</string>
+    <string name="media_import_local">افزودن فایل محلی</string>
+    <string name="media_phase_start">شروع</string>
+    <string name="media_phase_peak">اوج</string>
+    <string name="media_status_available">آماده دانلود</string>
+    <string name="media_status_downloading">در حال دانلود…</string>
+    <string name="media_status_paused">متوقف‌شده</string>
+    <string name="media_status_downloaded">دانلودشده</string>
+    <string name="media_status_failed">ناموفق</string>
+    <string name="media_status_not_available">در دسترس نیست</string>
+    <string name="media_status_license_restricted">محدودیت مجوز</string>
+
+    <!-- Local LLM Model Manager -->
+    <string name="local_models_title">مدل‌های هوش مصنوعی محلی روی دستگاه</string>
+    <string name="local_models_device_resources">رم دستگاه: %1$d مگابایت · فضای آزاد: %2$s · معماری: %3$s</string>
+    <string name="local_models_runtime_note">اجرای آفلاین با Google LiteRT-LM (.litertlm). هنگام فعال بودن دوربین، اولویت با ردیابی حرکت است.</string>
+    <string name="local_models_hf_token_title">توکن Hugging Face (اختیاری)</string>
+    <string name="local_models_hf_token_hint">فقط برای دانلود مدل‌های دارای تأیید مجوز Gemma 3 پس از پذیرش قوانین در Hugging Face لازم است. به‌صورت رمزنگاری‌شده در Keystore ذخیره می‌شود.</string>
+    <string name="local_models_hf_token_saved">توکن Hugging Face به‌صورت امن در Android Keystore ذخیره شد.</string>
+    <string name="local_models_hf_token_label">توکن دسترسی Hugging Face</string>
+    <string name="local_models_low_storage_warning">هشدار: فضای ذخیره‌سازی آزاد ممکن است برای این مدل کافی نباشد.</string>
+    <string name="local_models_low_ram_warning">هشدار: رم دستگاه ممکن است کمتر از %1$d مگابایت پیشنهادی باشد.</string>
+    <string name="local_model_status_not_downloaded">دانلود نشده</string>
+    <string name="local_model_status_downloading">در حال دانلود…</string>
+    <string name="local_model_status_paused">متوقف‌شده</string>
+    <string name="local_model_status_verifying">در حال بررسی SHA-256…</string>
+    <string name="local_model_status_downloaded_untested">دانلودشده (تست‌نشده)</string>
+    <string name="local_model_status_verified">تأییدشده و آماده</string>
+    <string name="local_model_status_test_failed">تست سازگاری ناموفق</string>
+    <string name="local_model_status_failed">دانلود ناموفق</string>
+    <string name="local_model_test_btn">تست مدل</string>
+    <string name="local_model_testing">در حال تست…</string>
+    <string name="local_model_benchmark_line">آماده‌سازی: %1$dms · تأخیر پاسخ: %2$dms · حافظه: %3$d MB</string>
+    <string name="local_model_run_test_prompt">دانلود شد. در حال اجرای بنچمارک سازگاری…</string>
+
+    <!-- External AI Providers -->
+    <string name="external_ai_title">ارائه‌دهندگان هوش مصنوعی خارجی</string>
+    <string name="external_ai_security_note">پروتکل HTTPS برای آدرس‌های عمومی اجباری است. کلیدهای API در Android Keystore رمزنگاری شده و در بکاپ یا خروجی قرار نمی‌گیرند.</string>
+    <string name="external_ai_add_preset">افزودن ارائه‌دهنده از الگو</string>
+    <string name="external_ai_empty">هنوز هیچ ارائه‌دهنده خارجی تنظیم نشده است. می‌توانید یکی اضافه کنید یا از تحلیل آفلاین و مدل محلی استفاده نمایید.</string>
+    <string name="external_ai_key_status">کلید API: %1$s</string>
+    <string name="external_ai_key_stored_masked">ذخیره‌شده در Keystore (••••)</string>
+    <string name="external_ai_test_btn">تست اتصال</string>
+    <string name="external_ai_testing">در حال تست…</string>
+    <string name="external_ai_test_ok">متصل (%1$dms) — %2$s</string>
+    <string name="external_ai_test_failed">خطا در اتصال: %1$s</string>
+    <string name="external_ai_editor_title">تنظیم ارائه‌دهنده هوش مصنوعی</string>
+    <string name="external_ai_name_label">نام نمایشی</string>
+    <string name="external_ai_base_url_label">آدرس پایه (Base URL)</string>
+    <string name="external_ai_path_label">مسیر Chat Completions</string>
+    <string name="external_ai_model_label">شناسه مدل</string>
+    <string name="external_ai_apikey_label">کلید API (برای حفظ کلید فعلی خالی بگذارید)</string>
+    <string name="external_ai_timeout_label">زمان انتظار (ثانیه)</string>
+    <string name="external_ai_max_tokens_label">حداکثر توکن</string>
+    <string name="external_ai_allow_lan_http">اجازه HTTP رمزنگاری‌نشده در شبکه محلی LAN</string>
+    <string name="external_ai_enabled_toggle">فعال‌سازی این ارائه‌دهنده</string>
+    <string name="external_ai_lan_http_warn_title">هشدار HTTP بدون رمزنگاری در شبکه محلی</string>
+    <string name="external_ai_lan_http_warn_body">پروتکل HTTP ساده داده‌ها را در شبکه محلی رمزنگاری نمی‌کند. این گزینه را فقط برای سرورهای محلی مطمئن مانند Ollama یا LM Studio در شبکه خصوصی خود فعال کنید.</string>
+
+    <!-- AI Analysis & Insights -->
+    <string name="ai_coach_insights_title">تحلیل‌ها و بینش‌های مربی هوشمند</string>
+    <string name="ai_analyze_history_btn">تحلیل تمرین‌ها</string>
+    <string name="ai_analyze_this_workout">تحلیل این تمرین</string>
+    <string name="ai_open_insights">مشاهده تحلیل‌ها</string>
+    <string name="ai_range_selected_workout">تمرین انتخاب‌شده</string>
+    <string name="ai_range_last_7_days">۷ روز گذشته</string>
+    <string name="ai_provider_mode_label">روش اجرای تحلیل</string>
+    <string name="ai_mode_rule_based">مبتنی بر قوانین (آفلاین)</string>
+    <string name="ai_mode_local_llm">مدل محلی روی دستگاه</string>
+    <string name="ai_mode_external_api">سرویس هوش مصنوعی خارجی</string>
+    <string name="ai_question_label">سؤال درباره تمرین‌هایتان (اختیاری)</string>
+    <string name="ai_question_hint">مثلاً: روند عمق اسکوات من این هفته چطور بوده؟</string>
+    <string name="ai_run_analysis_btn">اجرای تحلیل</string>
+    <string name="ai_analyzing_now">در حال تحلیل تمرین‌ها…</string>
+    <string name="ai_fallback_rule_based">استفاده از تحلیل آفلاین مبتنی بر قوانین</string>
+    <string name="ai_fallback_local_llm">استفاده از مدل محلی روی دستگاه</string>
+    <string name="ai_saved_insights_header">تحلیل‌های ذخیره‌شده</string>
+    <string name="ai_saved_insights_empty">هنوز تحلیلی ذخیره نشده است. برای دریافت بازخورد ساختاریافته یک تحلیل اجرا کنید.</string>
+    <string name="ai_external_consent_title">ارسال خلاصه تمرین به سرویس خارجی؟</string>
+    <string name="ai_external_consent_body">فقط شاخص‌های خلاصه از %1$d جلسه تمرین (%2$s) به ارائه‌دهنده تنظیم‌شده ارسال می‌شود. هیچ تصویر دوربین یا کلید محرمانه‌ای ارسال نمی‌شود.</string>
+    <string name="ai_external_consent_send_once">تأیید و ارسال</string>
+
+    <!-- Scheduled Analysis & Notifications -->
+    <string name="schedule_title">تحلیل زمان‌بندی‌شده</string>
+    <string name="schedule_enable_toggle">فعال‌سازی تحلیل خودکار تمرین‌ها</string>
+    <string name="schedule_time_window_label">بازه زمانی پیشنهادی شبانه</string>
+    <string name="schedule_hour_label">ساعت (۰ تا ۲۳)</string>
+    <string name="schedule_minute_label">دقیقه (۰ تا ۵۹)</string>
+    <string name="schedule_frequency_label">تکرار</string>
+    <string name="schedule_freq_daily">روزانه</string>
+    <string name="schedule_freq_weekly">هفتگی</string>
+    <string name="schedule_scope_label">بازه تمرین‌ها</string>
+    <string name="schedule_scope_since_last">از آخرین تحلیل تاکنون</string>
+    <string name="schedule_scope_last_day">۲۴ ساعت گذشته</string>
+    <string name="schedule_scope_last_7_days">۷ روز گذشته</string>
+    <string name="schedule_charging_only">فقط هنگام شارژ گوشی</string>
+    <string name="schedule_notify_toggle">اعلان هنگام آماده شدن تحلیل</string>
+    <string name="schedule_workmanager_note">اجرا از طریق WorkManager اندروید با رعایت محدودیت‌های باتری، حافظه و شبکه انجام می‌شود.</string>
+    <string name="schedule_run_now_btn">اجرای تحلیل همین حالا</string>
+    <string name="schedule_run_queued_msg">تحلیل پس‌زمینه در صف قرار گرفت.</string>
+    <string name="schedule_status_header">وضعیت زمان‌بندی</string>
+    <string name="schedule_last_run">آخرین اجرا: %1$s (%2$d تمرین تحلیل شد)</string>
+    <string name="schedule_local_deferred_msg">اجرای زمان‌بندی‌شده مدل محلی به دلیل باتری یا حافظه پایین به تعویق افتاد.</string>
+
+    <string name="notif_channel_analysis_name">تحلیل مربی ورزشی</string>
+    <string name="notif_channel_analysis_desc">اعلان‌ها هنگام آماده شدن گزارش تحلیل تمرین.</string>
+    <string name="notif_channel_downloads_name">دانلودها</string>
+    <string name="notif_channel_downloads_desc">وضعیت دانلود رسانه تمرین‌ها و مدل‌های هوش مصنوعی محلی.</string>
+    <string name="notif_channel_reminders_name">یادآورهای تمرین</string>
+    <string name="notif_channel_reminders_desc">یادآورهای اختیاری تمرین و اهداف ورزشی.</string>
+    <string name="notif_analysis_ready_title">تحلیل تمرینی آماده است</string>
+    <string name="notif_download_complete_title">دانلود تکمیل شد</string>
+    <string name="notif_download_failed_title">دانلود ناموفق بود</string>
+
+    <!-- Personal Profile Editor & Units -->
+    <string name="profile_edit_subtitle">هر زمان می‌توانید نام، مشخصات بدنی اختیاری، هدف ورزشی و سطح تجربه خود را ویرایش کنید.</string>
+    <string name="profile_saved_success">پروفایل ذخیره شد.</string>
+    <string name="profile_gender_optional_label">جنسیت (اختیاری)</string>
+    <string name="profile_age_birth_section">سن یا سال تولد (اختیاری)</string>
+    <string name="profile_mode_age">سن</string>
+    <string name="profile_mode_birth_year">سال تولد</string>
+    <string name="profile_birth_year_optional_label">سال تولد (اختیاری)</string>
+    <string name="profile_height_imperial_label">قد (اینچ)</string>
+    <string name="profile_weight_imperial_label">وزن (پوند)</string>
+    <string name="profile_clear_optional_metrics">پاک کردن شاخص‌های بدنی اختیاری</string>
+    <string name="profile_custom_goal_error">لطفاً توضیح هدف سفارشی خود را وارد کنید.</string>
+    <string name="profile_validation_error_imperial">لطفاً مقادیر معتبر وارد کنید (سن ۱۰ تا ۱۱۰، قد ۳۵ تا ۹۹ اینچ، وزن ۵۵ تا ۶۶۰ پوند).</string>
+
+    <!-- Theme & Color Palettes -->
+    <string name="theme_screen_title">ظاهر و پالت رنگی</string>
+    <string name="theme_appearance_subtitle">جابجایی روان بین حالت سیستم، روشن و تیره.</string>
+    <string name="theme_palette_title">پالت رنگی</string>
+    <string name="theme_palette_subtitle">گزینه خودکار را برای پیشنهاد متناسب با پروفایل انتخاب کنید یا پالت دلخواه را ثابت نگه دارید.</string>
+    <string name="palette_auto">خودکار (پیشنهاد پروفایل)</string>
+    <string name="palette_auto_desc">پیشنهاد فعلی: %1$s</string>
+    <string name="palette_cobalt">آبی کوبالت ورزشی</string>
+    <string name="palette_cobalt_desc">آبی ورزشی شفاف با جزئیات فیروزه‌ای</string>
+    <string name="palette_teal">سبز آبی اقیانوسی</string>
+    <string name="palette_teal_desc">سبزآبی متمرکز با سطوح تمیز و خوانا</string>
+    <string name="palette_violet">بنفش استودیویی</string>
+    <string name="palette_violet_desc">بنفش پرانرژی با جزئیات رُز متعادل</string>
+    <string name="palette_neutral">عملکرد خنثی</string>
+    <string name="palette_neutral_desc">ترکیب متعادل طوسی و زمردی</string>
+    <string name="theme_dynamic_color_title">رنگ پویای Material You</string>
+    <string name="theme_dynamic_color_desc">استفاده از رنگ‌های تصویر زمینه در اندروید ۱۲ و بالاتر.</string>
+    <string name="theme_dynamic_color_unsupported">نیازمند اندروید ۱۲ یا بالاتر است.</string>
+
+    <!-- Daily Motivation & Home/Workout Polish -->
+    <string name="daily_quote_copy">کپی نقل‌قول</string>
+    <string name="daily_quote_share">اشتراک‌گذاری</string>
+    <string name="daily_quote_copied">کپی شد</string>
+    <string name="daily_quote_source">منبع</string>
+    <string name="daily_quote_unavailable">در حال حاضر نقل‌قول تأییدشده‌ای در دسترس نیست.</string>
+    <string name="home_last_workout_meta">%1$s · %2$d ست</string>
+    <string name="common_selected">انتخاب‌شده</string>
+    <string name="common_active_badge">فعال</string>
+    <string name="workout_add_exercise_all_categories">افزودن حرکت از ۴ دسته</string>
+    <string name="workout_move_up">انتقال به بالا</string>
+    <string name="workout_move_down">انتقال به پایین</string>
+    <string name="workout_hold_target_format">%1$s · هدف %2$d ثانیه</string>
+    <string name="workout_summary_set_header">%1$s · ست %2$d</string>
+    <string name="workout_hold_seconds_format">%1$d ثانیه</string>
+    <string name="workout_reps_count_format">%1$d تکرار</string>
+    <string name="history_reps_ratio_format">%1$d از %2$d تکرار</string>
+    <string name="history_set_line_format">• %1$s — ست %2$d: %3$s</string>
+</resources>

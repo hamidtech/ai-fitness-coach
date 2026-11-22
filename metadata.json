@@ -1,0 +1,6 @@
+{
+  "name": "AI Fitness Coach",
+  "description": "Offline-first, bilingual (English & Persian RTL) native Android fitness coach with MediaPipe Pose Landmarker, Health Connect, and gender-adaptive Material 3 themes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

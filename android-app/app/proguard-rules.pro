@@ -1,0 +1,10 @@
+-keep class com.google.mediapipe.** { *; }
+-dontwarn com.google.mediapipe.**
+-keep class com.google.ai.edge.litertlm.** { *; }
+-dontwarn com.google.ai.edge.litertlm.**
+-keep class androidx.health.connect.** { *; }
+-keep class androidx.work.** { *; }
+-keepclassmembers class com.aifitnesscoach.core.ai.** { *; }
+-keepclassmembers class com.aifitnesscoach.core.database.** { *; }
+-dontwarn okhttp3.**
+-dontwarn okio.**
