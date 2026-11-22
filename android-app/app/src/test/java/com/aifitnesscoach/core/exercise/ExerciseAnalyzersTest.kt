@@ -21,7 +21,10 @@ class ExerciseAnalyzersTest {
         val list = blankLandmarks()
         list[PoseLandmarkIndex.LEFT_SHOULDER.index] = NormalizedLandmark3D(0.5f, hipY - 0.25f)
         list[PoseLandmarkIndex.LEFT_HIP.index] = NormalizedLandmark3D(0.45f, hipY)
-        list[PoseLandmarkIndex.LEFT_KNEE.index] = NormalizedLandmark3D(0.58f, hipY + kneeYOffset)
+        // The standing pose must have an extended knee (approximately 166 degrees).
+        // Keep the bent-knee X coordinate for descending/bottom positions.
+        val kneeX = if (kneeYOffset >= 0.19f) 0.50f else 0.58f
+        list[PoseLandmarkIndex.LEFT_KNEE.index] = NormalizedLandmark3D(kneeX, hipY + kneeYOffset)
         list[PoseLandmarkIndex.LEFT_ANKLE.index] = NormalizedLandmark3D(0.5f, ankleY)
         return PoseFrame(timestampMs = timestampMs, landmarks = list)
     }
@@ -68,21 +71,24 @@ class ExerciseAnalyzersTest {
             squatFrame(850L, kneeYOffset = 0.02f, hipY = 0.78f),
             squatFrame(1050L, kneeYOffset = 0.14f, hipY = 0.62f),
             squatFrame(1250L, kneeYOffset = 0.20f, hipY = 0.50f),
-            squatFrame(1450L, kneeYOffset = 0.20f, hipY = 0.50f)
+            squatFrame(1450L, kneeYOffset = 0.20f, hipY = 0.50f),
+            squatFrame(1650L, kneeYOffset = 0.20f, hipY = 0.50f),
+            squatFrame(1850L, kneeYOffset = 0.20f, hipY = 0.50f),
+            squatFrame(2050L, kneeYOffset = 0.20f, hipY = 0.50f)
         )
         var lastResult = analyzer.processFrame(sequence.first())
         sequence.drop(1).forEach { lastResult = analyzer.processFrame(it) }
         assertEquals(1, lastResult.repCount)
 
         // Tracking loss pauses cleanly without incrementing reps
-        val lostFrame = PoseFrame(1650L, blankLandmarks(confidence = 0.1f))
+        val lostFrame = PoseFrame(2250L, blankLandmarks(confidence = 0.1f))
         val lostResult = analyzer.processFrame(lostFrame)
         assertEquals(TrackingQuality.LOW_CONFIDENCE, lostResult.trackingQuality)
         assertEquals(MovementPhase.PAUSED_TRACKING_LOST, lostResult.phase)
         assertEquals(1, lostResult.repCount)
 
         // Recovery returns to valid tracking without phantom rep increment
-        val recovered = analyzer.processFrame(squatFrame(1900L, kneeYOffset = 0.20f, hipY = 0.50f))
+        val recovered = analyzer.processFrame(squatFrame(2500L, kneeYOffset = 0.20f, hipY = 0.50f))
         assertEquals(TrackingQuality.GOOD, recovered.trackingQuality)
         assertEquals(1, recovered.repCount)
     }
@@ -97,7 +103,9 @@ class ExerciseAnalyzersTest {
             squatFrame(600L, kneeYOffset = 0.14f, hipY = 0.62f),
             squatFrame(800L, kneeYOffset = 0.20f, hipY = 0.50f),
             squatFrame(1000L, kneeYOffset = 0.20f, hipY = 0.50f),
-            squatFrame(1200L, kneeYOffset = 0.20f, hipY = 0.50f)
+            squatFrame(1200L, kneeYOffset = 0.20f, hipY = 0.50f),
+            squatFrame(1400L, kneeYOffset = 0.20f, hipY = 0.50f),
+            squatFrame(1600L, kneeYOffset = 0.20f, hipY = 0.50f)
         )
         var result = analyzer.processFrame(sequence.first())
         sequence.drop(1).forEach { result = analyzer.processFrame(it) }
