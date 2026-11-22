@@ -1,6 +1,19 @@
 package com.aifitnesscoach.feature.exercises
 
-import androidx.compose.foundation.clickable
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
+import com.aifitnesscoach.core.media.ExerciseIllustration
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,12 +42,10 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -67,6 +78,8 @@ fun ExercisesScreen(
     initialCategoryFilter: ExerciseCategory? = null,
     selectedExerciseForDetail: ExerciseDefinition? = null,
     onSelectExerciseForDetail: (ExerciseDefinition?) -> Unit,
+    onOpenMedia: (String) -> Unit,
+    onOpenCameraGuide: (String) -> Unit,
     onStartWorkoutWithItem: (PlannedWorkoutItem) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -83,6 +96,25 @@ fun ExercisesScreen(
                 ex.targetMusclesFa.any { it.lowercase().contains(q) }
             catMatch && queryMatch
         }
+    }
+
+    if (selectedExerciseForDetail != null) {
+        val exercise = selectedExerciseForDetail
+        val close = { onSelectExerciseForDetail(null) }
+        BackHandler(onBack = close)
+        ExerciseWorkoutSetup(
+            exercise = exercise,
+            downloadedAsset = downloadedAssets[exercise.id],
+            isPersian = isPersian,
+            onBack = close,
+            onOpenMedia = { onOpenMedia(exercise.id) },
+            onOpenCameraGuide = { onOpenCameraGuide(exercise.id) },
+            onStartWorkout = { configured ->
+                close()
+                onStartWorkoutWithItem(configured)
+            }
+        )
+        return
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -131,81 +163,123 @@ fun ExercisesScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(filtered, key = { it.id }) { ex ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onSelectExerciseForDetail(ex) },
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text(
-                            text = if (isPersian) ex.nameFa else ex.nameEn,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = buildString {
-                                append(categoryLabel(ex.category))
-                                append(" · ")
-                                append(statusLabel(ex.implementationStatus))
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        val muscles = if (isPersian) ex.targetMusclesFa else ex.targetMusclesEn
-                        Text(
-                            text = muscles.joinToString(", "),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+                ExerciseListItem(ex, isPersian) { onSelectExerciseForDetail(ex) }
             }
         }
     }
 
-    if (selectedExerciseForDetail != null) {
-        ModalBottomSheet(onDismissRequest = { onSelectExerciseForDetail(null) }) {
-            ExerciseDetailSheet(
-                exercise = selectedExerciseForDetail,
-                downloadedAsset = downloadedAssets[selectedExerciseForDetail.id],
-                isPersian = isPersian,
-                onStartWorkout = { configured ->
-                    onSelectExerciseForDetail(null)
-                    onStartWorkoutWithItem(configured)
-                }
-            )
+
+}
+
+@Composable
+fun ExerciseListItem(exercise: ExerciseDefinition, isPersian: Boolean, onClick: () -> Unit) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(LayoutSpacing.small),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.screen)
+        ) {
+            ExerciseIllustration(exercise.id, Modifier.size(76.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(if (isPersian) exercise.nameFa else exercise.nameEn, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "${categoryLabel(exercise.category)} · ${statusLabel(exercise.implementationStatus)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ExerciseDetailSheet(
+private fun ExerciseWorkoutSetup(
     exercise: ExerciseDefinition,
     downloadedAsset: ExerciseAssetEntity?,
     isPersian: Boolean,
+    onBack: () -> Unit,
+    onOpenMedia: () -> Unit,
+    onOpenCameraGuide: () -> Unit,
     onStartWorkout: (PlannedWorkoutItem) -> Unit
 ) {
-    var targetSets by remember(exercise.id) { mutableIntStateOf(3) }
-    var targetReps by remember(exercise.id) { mutableIntStateOf(10) }
-    var targetHoldSec by remember(exercise.id) { mutableIntStateOf(30) }
-    var weightText by remember(exercise.id) { mutableStateOf("5") }
-    var loadMode by remember(exercise.id) { mutableStateOf(WeightLoadMode.PER_DUMBBELL) }
-    var selectedBandType by remember(exercise.id) {
+    var targetSets by rememberSaveable(exercise.id) { mutableStateOf("3") }
+    var targetReps by rememberSaveable(exercise.id) { mutableStateOf("10") }
+    var targetHoldSec by rememberSaveable(exercise.id) { mutableStateOf("30") }
+    var weightText by rememberSaveable(exercise.id) { mutableStateOf("5") }
+    var loadMode by rememberSaveable(exercise.id) { mutableStateOf(WeightLoadMode.PER_DUMBBELL) }
+    var selectedBandType by rememberSaveable(exercise.id) {
         mutableStateOf(exercise.supportedBandTypes.firstOrNull() ?: ResistanceBandType.LONG_LOOP)
     }
-    var selectedBandLevel by remember(exercise.id) { mutableStateOf(ResistanceLevel.MEDIUM) }
+    var selectedBandLevel by rememberSaveable(exercise.id) { mutableStateOf(ResistanceLevel.MEDIUM) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .imePadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+    val sets = targetSets.toIntOrNull()?.takeIf { it in 1..20 }
+    val reps = targetReps.toIntOrNull()?.takeIf { it in 1..100 }
+    val hold = targetHoldSec.toIntOrNull()?.takeIf { it in 5..600 }
+    val weight = weightText.map { it.digitToIntOrNull()?.digitToChar() ?: it }.joinToString("")
+        .toFloatOrNull()?.takeIf { it.isFinite() && it >= 0f }
+    val problem = when {
+        sets == null -> R.string.setup_valid_sets
+        exercise.exerciseMode == ExerciseMode.TIMED_HOLD && hold == null -> R.string.setup_valid_hold
+        exercise.exerciseMode != ExerciseMode.TIMED_HOLD && reps == null -> R.string.setup_valid_reps
+        exercise.category == ExerciseCategory.WEIGHTED_TRAINING && weight == null -> R.string.setup_valid_weight
+        else -> null
+    }
+    var launching by remember(exercise.id) { mutableStateOf(false) }
+    var showTechnique by rememberSaveable(exercise.id) { mutableStateOf(false) }
+
+    Scaffold(
+        modifier = Modifier.imePadding(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            Surface(tonalElevation = 3.dp) {
+                Column(
+                    Modifier.fillMaxWidth().padding(LayoutSpacing.screen),
+                    verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)
+                ) {
+                    if (problem != null) Text(stringResource(problem), color = MaterialTheme.colorScheme.error)
+                    Button(
+                        enabled = problem == null && !launching,
+                        modifier = Modifier.fillMaxWidth().sizeIn(minHeight = LayoutSpacing.touchTarget),
+                        onClick = start@{
+                            if (launching || problem != null || sets == null) return@start
+                            launching = true
+                            val configured = PlannedWorkoutItem(
+                                exercise = exercise,
+                                targetSets = sets,
+                                targetReps = reps ?: 10,
+                                targetHoldSec = hold ?: 30,
+                                weightEntry = if (exercise.category == ExerciseCategory.WEIGHTED_TRAINING) {
+                                    WeightEntry(
+                                        value = requireNotNull(weight),
+                                        unit = WeightUnit.KG,
+                                        loadMode = loadMode
+                                    )
+                                } else null,
+                                bandMetadata = if (exercise.category == ExerciseCategory.RESISTANCE_BAND_TRAINING) {
+                                    ResistanceBandMetadata(
+                                        bandType = selectedBandType,
+                                        resistanceLevel = selectedBandLevel
+                                    )
+                                } else null
+                            )
+                            onStartWorkout(configured)
+                        }
+                    ) {
+                        Text(stringResource(R.string.exercise_start_camera_workout))
+                    }
+                }
+            }
+        }
+    ) { insets ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(insets).verticalScroll(rememberScrollState())
+                .padding(LayoutSpacing.screen),
+            verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.common_back))
+            }
         Text(
             text = if (isPersian) exercise.nameFa else exercise.nameEn,
             style = MaterialTheme.typography.headlineMedium
@@ -218,14 +292,13 @@ private fun ExerciseDetailSheet(
 
         ExerciseDemoMediaView(
             mediaRef = exercise.demoMedia,
+            exerciseId = exercise.id,
             isPersian = isPersian,
             downloadedAsset = downloadedAsset
         )
 
-        Text(
-            text = if (isPersian) exercise.descriptionFa else exercise.descriptionEn,
-            style = MaterialTheme.typography.bodyLarge
-        )
+        TextButton(onClick = onOpenMedia) { Text(stringResource(R.string.exercise_media_actions)) }
+        TextButton(onClick = onOpenCameraGuide) { Text(stringResource(R.string.camera_setup_title)) }
 
         // Quick Set / Rep / Equipment Setup right inside Exercise Details
         Card(
@@ -239,8 +312,8 @@ private fun ExerciseDetailSheet(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
-                        value = targetSets.toString(),
-                        onValueChange = { v -> v.toIntOrNull()?.let { targetSets = it.coerceIn(1, 20) } },
+                        value = targetSets,
+                        onValueChange = { targetSets = it.filter(Char::isDigit).take(2) },
                         label = { Text(stringResource(R.string.equip_sets)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
@@ -248,8 +321,8 @@ private fun ExerciseDetailSheet(
                     )
                     if (exercise.exerciseMode == ExerciseMode.TIMED_HOLD) {
                         OutlinedTextField(
-                            value = targetHoldSec.toString(),
-                            onValueChange = { v -> v.toIntOrNull()?.let { targetHoldSec = it.coerceIn(5, 600) } },
+                            value = targetHoldSec,
+                            onValueChange = { targetHoldSec = it.filter(Char::isDigit).take(3) },
                             label = { Text(stringResource(R.string.equip_hold_sec)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
@@ -257,8 +330,8 @@ private fun ExerciseDetailSheet(
                         )
                     } else {
                         OutlinedTextField(
-                            value = targetReps.toString(),
-                            onValueChange = { v -> v.toIntOrNull()?.let { targetReps = it.coerceIn(1, 100) } },
+                            value = targetReps,
+                            onValueChange = { targetReps = it.filter(Char::isDigit).take(3) },
                             label = { Text(stringResource(R.string.equip_reps)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
@@ -268,15 +341,16 @@ private fun ExerciseDetailSheet(
                 }
 
                 if (exercise.category == ExerciseCategory.WEIGHTED_TRAINING) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column {
                         OutlinedTextField(
                             value = weightText,
                             onValueChange = { weightText = it.filter { ch -> ch.isDigit() || ch == '.' } },
                             label = { Text(stringResource(R.string.equip_weight_value)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             singleLine = true,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.fillMaxWidth()
                         )
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
                         FilterChip(
                             selected = loadMode == WeightLoadMode.PER_DUMBBELL,
                             onClick = { loadMode = WeightLoadMode.PER_DUMBBELL },
@@ -287,11 +361,12 @@ private fun ExerciseDetailSheet(
                             onClick = { loadMode = WeightLoadMode.TOTAL_LOAD },
                             label = { Text(stringResource(R.string.equip_weight_mode_total)) }
                         )
+                        }
                     }
                 }
 
                 if (exercise.category == ExerciseCategory.RESISTANCE_BAND_TRAINING) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
                         exercise.supportedBandTypes.take(3).forEach { bt ->
                             FilterChip(
                                 selected = selectedBandType == bt,
@@ -300,7 +375,7 @@ private fun ExerciseDetailSheet(
                             )
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
                         listOf(ResistanceLevel.LIGHT, ResistanceLevel.MEDIUM, ResistanceLevel.HEAVY).forEach { lvl ->
                             FilterChip(
                                 selected = selectedBandLevel == lvl,
@@ -312,11 +387,6 @@ private fun ExerciseDetailSheet(
                 }
             }
         }
-
-        SectionBlock(
-            title = stringResource(R.string.exercise_target_muscles),
-            items = if (isPersian) exercise.targetMusclesFa else exercise.targetMusclesEn
-        )
 
         if (exercise.supportedBandTypes.isNotEmpty()) {
             SectionBlock(
@@ -350,6 +420,16 @@ private fun ExerciseDetailSheet(
             }
         }
 
+        TextButton(onClick = { showTechnique = !showTechnique }) {
+            Text(stringResource(if (showTechnique) R.string.setup_hide_technique else R.string.setup_show_technique))
+        }
+        if (showTechnique) {
+            Text(if (isPersian) exercise.descriptionFa else exercise.descriptionEn)
+        SectionBlock(
+            title = stringResource(R.string.exercise_target_muscles),
+            items = if (isPersian) exercise.targetMusclesFa else exercise.targetMusclesEn
+        )
+
         SectionBlock(
             title = stringResource(R.string.exercise_instructions),
             items = if (isPersian) exercise.instructionsFa else exercise.instructionsEn,
@@ -361,51 +441,14 @@ private fun ExerciseDetailSheet(
             items = if (isPersian) exercise.commonMistakesFa else exercise.commonMistakesEn
         )
 
-        val camView = if (isPersian) exercise.cameraGuide.recommendedView.labelFa else exercise.cameraGuide.recommendedView.labelEn
-        val camDist = if (isPersian) exercise.cameraGuide.distanceFa else exercise.cameraGuide.distanceEn
-        val camHeight = if (isPersian) exercise.cameraGuide.heightFa else exercise.cameraGuide.heightEn
-        SectionBlock(
-            title = stringResource(R.string.exercise_camera_guide),
-            items = listOf(camView, camDist, camHeight)
-        )
-
         SectionBlock(
             title = stringResource(R.string.exercise_tracking_capabilities),
             items = (if (isPersian) exercise.observableFormChecksFa else exercise.observableFormChecksEn) +
                 (if (isPersian) exercise.limitationsFa else exercise.limitationsEn)
         )
 
-        Button(
-            onClick = {
-                val configured = PlannedWorkoutItem(
-                    exercise = exercise,
-                    targetSets = targetSets,
-                    targetReps = targetReps,
-                    targetHoldSec = targetHoldSec,
-                    weightEntry = if (exercise.category == ExerciseCategory.WEIGHTED_TRAINING) {
-                        WeightEntry(
-                            value = weightText.toFloatOrNull() ?: 5f,
-                            unit = WeightUnit.KG,
-                            loadMode = loadMode
-                        )
-                    } else null,
-                    bandMetadata = if (exercise.category == ExerciseCategory.RESISTANCE_BAND_TRAINING) {
-                        ResistanceBandMetadata(
-                            bandType = selectedBandType,
-                            resistanceLevel = selectedBandLevel
-                        )
-                    } else null
-                )
-                onStartWorkout(configured)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(14.dp)
-        ) {
-            Text(stringResource(R.string.exercise_start_camera_workout), style = MaterialTheme.typography.titleMedium)
         }
-        Spacer(Modifier.height(24.dp))
+        }
     }
 }
 

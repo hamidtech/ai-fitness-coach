@@ -12,12 +12,12 @@ import java.io.File
  */
 object ExerciseAssetCatalog {
 
-    const val REPDB_BASE_URL = "https://raw.githubusercontent.com/RepDB/exercise-dataset/main/images/flat"
+    const val REPDB_BASE_URL = "https://raw.githubusercontent.com/RepDB/exercise-dataset/f12da458a90f353a86c953f204304d5a8bd98275/images/flat"
     const val REPDB_ATTRIBUTION = "Exercise data by RepDB (https://repdb.co)"
     const val REPDB_LICENSE = "RepDB Free Tier License v1.0 (free with attribution)"
     const val EXERCISEDB_ATTRIBUTION = "ExerciseDB OSS API (AscendAPI) — Non-commercial attribution required"
 
-    private fun repDbPair(exerciseId: String, slug: String) = ExerciseMediaManifestEntry(
+    private fun repDbPair(exerciseId: String, slug: String, bytes: Long) = ExerciseMediaManifestEntry(
         exerciseId = exerciseId,
         sourceType = AssetSourceType.REPDB_FREE_TIER,
         sourceSlug = slug,
@@ -26,10 +26,13 @@ object ExerciseAssetCatalog {
         secondaryUrl = "$REPDB_BASE_URL/$slug-peak.webp",
         licenseName = REPDB_LICENSE,
         attribution = REPDB_ATTRIBUTION,
+        expectedBytes = bytes,
+        resolution = "512 × 512",
+        licenseUrl = "https://github.com/RepDB/exercise-dataset/blob/f12da458a90f353a86c953f204304d5a8bd98275/LICENSE-DATA.md",
         defaultStatus = AssetDownloadStatus.AVAILABLE
     )
 
-    private fun repDbSingle(exerciseId: String, slug: String) = ExerciseMediaManifestEntry(
+    private fun repDbSingle(exerciseId: String, slug: String, bytes: Long) = ExerciseMediaManifestEntry(
         exerciseId = exerciseId,
         sourceType = AssetSourceType.REPDB_FREE_TIER,
         sourceSlug = slug,
@@ -38,6 +41,9 @@ object ExerciseAssetCatalog {
         secondaryUrl = null,
         licenseName = REPDB_LICENSE,
         attribution = REPDB_ATTRIBUTION,
+        expectedBytes = bytes,
+        resolution = "512 × 512",
+        licenseUrl = "https://github.com/RepDB/exercise-dataset/blob/f12da458a90f353a86c953f204304d5a8bd98275/LICENSE-DATA.md",
         defaultStatus = AssetDownloadStatus.AVAILABLE
     )
 
@@ -57,46 +63,46 @@ object ExerciseAssetCatalog {
 
     val entriesByExerciseId: Map<String, ExerciseMediaManifestEntry> = listOf(
         // Category A — Weighted Training (8/8 matched in RepDB)
-        repDbPair("dumbbell_biceps_curl", "bicep-curl"),
-        repDbPair("dumbbell_shoulder_press", "dumbbell-shoulder-press"),
-        repDbPair("dumbbell_lateral_raise", "lateral-raise"),
-        repDbPair("dumbbell_bent_over_row", "bent-over-db-row"),
-        repDbPair("goblet_squat", "db-goblet-squat"),
-        repDbPair("dumbbell_triceps_extension", "dumbbell-tricep-extension"),
-        repDbPair("dumbbell_romanian_deadlift", "dumbbell-romanian-deadlift"),
-        repDbPair("dumbbell_chest_press", "db-bench-press"),
+        repDbPair("dumbbell_biceps_curl", "bicep-curl", 27804L),
+        repDbPair("dumbbell_shoulder_press", "dumbbell-shoulder-press", 24932L),
+        repDbPair("dumbbell_lateral_raise", "lateral-raise", 27592L),
+        repDbPair("dumbbell_bent_over_row", "bent-over-db-row", 32774L),
+        repDbPair("goblet_squat", "db-goblet-squat", 24116L),
+        repDbPair("dumbbell_triceps_extension", "dumbbell-tricep-extension", 18382L),
+        repDbPair("dumbbell_romanian_deadlift", "dumbbell-romanian-deadlift", 24078L),
+        repDbPair("dumbbell_chest_press", "db-bench-press", 27742L),
 
         // Category B — Bodyweight Training (8/8 matched in RepDB)
-        repDbPair("bodyweight_squat", "bodyweight-squat"),
-        repDbPair("push_up", "push-up"),
-        repDbPair("forward_lunge", "lunge"),
-        repDbPair("reverse_lunge", "reverse-lunge"),
-        repDbPair("glute_bridge", "glute-bridge"),
-        repDbPair("standing_calf_raise", "standing-calf-raise"),
-        repDbSingle("wall_sit", "wall-sit"),
-        repDbPair("superman", "superman"),
+        repDbPair("bodyweight_squat", "bodyweight-squat", 27050L),
+        repDbPair("push_up", "push-up", 29834L),
+        repDbPair("forward_lunge", "lunge", 24248L),
+        repDbPair("reverse_lunge", "reverse-lunge", 29616L),
+        repDbPair("glute_bridge", "glute-bridge", 24136L),
+        repDbPair("standing_calf_raise", "standing-calf-raise", 47034L),
+        repDbSingle("wall_sit", "wall-sit", 13132L),
+        repDbPair("superman", "superman", 20716L),
 
         // Category C — Core Training (8/8 matched in RepDB)
-        repDbSingle("forearm_plank", "plank"),
-        repDbSingle("side_plank", "side-plank"),
-        repDbPair("dead_bug", "dead-bug"),
-        repDbPair("bird_dog", "bird-dog"),
-        repDbPair("abdominal_crunch", "crunches"),
-        repDbPair("reverse_crunch", "reverse-crunches"),
-        repDbPair("mountain_climber", "mountain-climbers"),
-        repDbSingle("hollow_body_hold", "hollow-body-hold"),
+        repDbSingle("forearm_plank", "plank", 15364L),
+        repDbSingle("side_plank", "side-plank", 14396L),
+        repDbPair("dead_bug", "dead-bug", 28284L),
+        repDbPair("bird_dog", "bird-dog", 20782L),
+        repDbPair("abdominal_crunch", "crunches", 24602L),
+        repDbPair("reverse_crunch", "reverse-crunches", 29566L),
+        repDbPair("mountain_climber", "mountain-climbers", 28520L),
+        repDbSingle("hollow_body_hold", "hollow-body-hold", 15534L),
 
-        // Category D — Resistance Band Training (8/15 exact matches in RepDB; 7 honest NOT_AVAILABLE)
-        repDbPair("band_row", "banded-standing-row"),
-        repDbPair("band_squat", "banded-squat"),
-        repDbPair("band_good_morning", "banded-good-morning"),
-        repDbPair("band_pull_apart", "band-pull-apart"),
-        repDbPair("mini_band_lateral_walk", "banded-lateral-walk"),
-        repDbPair("mini_band_clamshell", "banded-clamshell"),
-        repDbPair("band_pallof_press", "banded-pallof-press"),
-        repDbPair("band_shoulder_press", "banded-overhead-press"),
+        // Category D — Resistance Band Training (9/15 exact matches in RepDB)
+        repDbPair("band_row", "banded-standing-row", 27264L),
+        repDbPair("band_squat", "banded-squat", 34746L),
+        repDbPair("band_good_morning", "banded-good-morning", 35230L),
+        repDbPair("band_pull_apart", "band-pull-apart", 24974L),
+        repDbPair("mini_band_lateral_walk", "banded-lateral-walk", 29070L),
+        repDbPair("mini_band_clamshell", "banded-clamshell", 27844L),
+        repDbPair("band_pallof_press", "banded-pallof-press", 25512L),
+        repDbPair("band_shoulder_press", "banded-overhead-press", 25512L),
 
-        notAvailableBand("band_biceps_curl"),
+        repDbPair("band_biceps_curl", "banded-standing-curl", 22346L),
         notAvailableBand("band_lateral_raise"),
         notAvailableBand("band_chest_press"),
         notAvailableBand("band_triceps_extension"),

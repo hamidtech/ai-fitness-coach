@@ -104,6 +104,7 @@ fun WorkoutScreen(
     coachExplanationProvider: CoachExplanationProvider,
     viewModel: WorkoutViewModel,
     onCameraGuideAcknowledged: () -> Unit = {},
+    onOpenCameraGuide: (String) -> Unit = {},
     onPoseTrackingActiveChanged: (Boolean) -> Unit = {},
     onSaveAndAnalyze: () -> Unit = {},
     onExitWorkout: () -> Unit
@@ -171,6 +172,7 @@ fun WorkoutScreen(
                 hasCameraPermission = hasCameraPermission,
                 onRequestPermission = requestPermission,
                 permissionBlocked = permissionBlocked,
+                onOpenGuide = { uiState.currentItem?.exercise?.id?.let(onOpenCameraGuide) },
                 onStartTracking = {
                     onCameraGuideAcknowledged()
                     viewModel.startLiveTracking()
@@ -184,6 +186,7 @@ fun WorkoutScreen(
                 CameraPermissionRationaleView(
                     onRequestPermission = requestPermission,
                     permissionBlocked = permissionBlocked,
+                    onOpenGuide = { uiState.currentItem?.exercise?.id?.let(onOpenCameraGuide) },
                     onBack = onExitWorkout
                 )
             } else {
@@ -193,6 +196,7 @@ fun WorkoutScreen(
                     isPersian = isPersian,
                     useFrontCamera = useFrontCamera,
                     onToggleCamera = { useFrontCamera = !useFrontCamera },
+                    onOpenGuide = { uiState.currentItem?.exercise?.id?.let(onOpenCameraGuide) },
                     coachExplanationProvider = coachExplanationProvider,
                     viewModel = viewModel
                 )
@@ -492,6 +496,7 @@ private fun CameraSetupGuideView(
     hasCameraPermission: Boolean,
     onRequestPermission: () -> Unit,
     permissionBlocked: Boolean,
+    onOpenGuide: () -> Unit,
     onStartTracking: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -512,23 +517,9 @@ private fun CameraSetupGuideView(
             color = MaterialTheme.colorScheme.primary
         )
 
-        Card(shape = RoundedCornerShape(16.dp)) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                val viewText = if (isPersian) ex.cameraGuide.recommendedView.labelFa else ex.cameraGuide.recommendedView.labelEn
-                val distText = if (isPersian) ex.cameraGuide.distanceFa else ex.cameraGuide.distanceEn
-                val heightText = if (isPersian) ex.cameraGuide.heightFa else ex.cameraGuide.heightEn
-                Text(viewText, style = MaterialTheme.typography.titleMedium)
-                Text(stringResource(R.string.camera_setup_distance, distText))
-                Text(stringResource(R.string.camera_setup_height, heightText))
-                Text(
-                    stringResource(
-                        R.string.camera_setup_landmarks,
-                        ex.requiredLandmarks.joinToString(", ") { it.name.lowercase().replace('_', ' ') }
-                    )
-                )
-                Text(stringResource(R.string.camera_setup_instruction), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
+        CameraFramingExample(ex.id)
+        CameraPositionInstructions(ex, isPersian)
+        TextButton(onClick = onOpenGuide) { Text(stringResource(R.string.guide_full)) }
 
         if (ex.analyzerId == null) {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
@@ -559,10 +550,11 @@ private fun CameraSetupGuideView(
 private fun CameraPermissionRationaleView(
     onRequestPermission: () -> Unit,
     permissionBlocked: Boolean,
+    onOpenGuide: () -> Unit,
     onBack: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -573,6 +565,7 @@ private fun CameraPermissionRationaleView(
         Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth().height(52.dp)) {
             Text(stringResource(if (permissionBlocked) R.string.camera_open_settings else R.string.camera_grant_permission))
         }
+        TextButton(onClick = onOpenGuide) { Text(stringResource(R.string.camera_setup_title)) }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.workout_discard))
@@ -587,6 +580,7 @@ private fun LiveTrackingWorkoutView(
     isPersian: Boolean,
     useFrontCamera: Boolean,
     onToggleCamera: () -> Unit,
+    onOpenGuide: () -> Unit,
     coachExplanationProvider: CoachExplanationProvider,
     viewModel: WorkoutViewModel
 ) {
@@ -603,8 +597,6 @@ private fun LiveTrackingWorkoutView(
         WorkoutCameraState.CAMERA_UNAVAILABLE, WorkoutCameraState.PREVIEW_ERROR, WorkoutCameraState.POSE_ERROR
     )
     val canCompleteSet = item.exercise.analyzerId == null || cameraState == WorkoutCameraState.WORKOUT_READY
-
-    var showCameraHelpDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         androidx.compose.runtime.key(cameraAttempt) {
@@ -651,7 +643,7 @@ private fun LiveTrackingWorkoutView(
                 }
                 Row {
                     IconButton(
-                        onClick = { showCameraHelpDialog = true },
+                        onClick = onOpenGuide,
                         modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                     ) {
                         Icon(
@@ -828,28 +820,7 @@ private fun LiveTrackingWorkoutView(
             }
         }
 
-        if (showCameraHelpDialog) {
-            val viewText = if (isPersian) item.exercise.cameraGuide.recommendedView.labelFa else item.exercise.cameraGuide.recommendedView.labelEn
-            val distText = if (isPersian) item.exercise.cameraGuide.distanceFa else item.exercise.cameraGuide.distanceEn
-            val heightText = if (isPersian) item.exercise.cameraGuide.heightFa else item.exercise.cameraGuide.heightEn
-            AlertDialog(
-                onDismissRequest = { showCameraHelpDialog = false },
-                title = { Text(stringResource(R.string.camera_setup_title)) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(viewText, fontWeight = FontWeight.SemiBold)
-                        Text(stringResource(R.string.camera_setup_distance, distText))
-                        Text(stringResource(R.string.camera_setup_height, heightText))
-                        Text(stringResource(R.string.camera_setup_instruction))
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showCameraHelpDialog = false }) {
-                        Text(stringResource(R.string.common_ok))
-                    }
-                }
-            )
-        }
+
     }
 }
 
@@ -861,7 +832,7 @@ private fun RestTimerView(
     onFinishEarly: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

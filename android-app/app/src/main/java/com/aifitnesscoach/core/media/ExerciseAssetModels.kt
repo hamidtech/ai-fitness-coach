@@ -40,7 +40,10 @@ data class ExerciseMediaManifestEntry(
     val attribution: String = "",
     val defaultStatus: AssetDownloadStatus,
     val unavailableReasonEn: String? = null,
-    val unavailableReasonFa: String? = null
+    val unavailableReasonFa: String? = null,
+    val expectedBytes: Long? = null,
+    val resolution: String? = null,
+    val licenseUrl: String? = null
 )
 
 data class ExerciseAssetUiItem(

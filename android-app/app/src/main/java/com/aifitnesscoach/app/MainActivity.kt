@@ -34,6 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -60,7 +62,12 @@ import com.aifitnesscoach.feature.media.ExerciseMediaLibraryScreen
 import com.aifitnesscoach.feature.onboarding.OnboardingScreen
 import com.aifitnesscoach.feature.profile.ProfileScreen
 import com.aifitnesscoach.feature.settings.SettingsScreen
+import com.aifitnesscoach.feature.settings.SettingsHome
+import com.aifitnesscoach.feature.settings.SettingsPage
+import com.aifitnesscoach.core.ui.CenteredContent
+import androidx.compose.foundation.layout.consumeWindowInsets
 import com.aifitnesscoach.feature.settings.ThemePreferencesScreen
+import com.aifitnesscoach.feature.workout.CameraPositionGuide
 import com.aifitnesscoach.feature.workout.WorkoutScreen
 import com.aifitnesscoach.feature.workout.WorkoutViewModel
 import kotlinx.coroutines.flow.map
@@ -74,10 +81,13 @@ sealed class MainDestination(val route: String) {
     data object History : MainDestination("history")
     data object Health : MainDestination("health")
     data object Settings : MainDestination("settings")
+    data object SettingsDetail : MainDestination("settings/{section}")
     data object PersonalProfile : MainDestination("personal_profile")
     data object ThemePreferences : MainDestination("theme_preferences")
     data object Workout : MainDestination("workout")
+    data object CameraGuide : MainDestination("camera_guide/{exercise}")
     data object MediaLibrary : MainDestination("media_library")
+    data object MediaLibraryExercise : MainDestination("media_library?exercise={exercise}")
     data object LocalModels : MainDestination("local_models")
     data object AiProviders : MainDestination("ai_providers")
     data object AiInsights : MainDestination("ai_insights")
@@ -275,7 +285,8 @@ private fun AIFitnessCoachAppRoot(
 
     Scaffold(
         bottomBar = {
-            if (currentRoute in topLevelRoutes) {
+            if (currentRoute in topLevelRoutes &&
+                (currentRoute != MainDestination.Exercises.route || selectedExerciseDetail == null)) {
                 NavigationBar {
                     bottomItems.forEach { (route, labelRes, icon) ->
                         NavigationBarItem(
@@ -299,235 +310,266 @@ private fun AIFitnessCoachAppRoot(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
         ) {
-            NavHost(
-                navController = navController,
-                startDestination = startDestination
-            ) {
-                composable(MainDestination.Onboarding.route) {
-                    OnboardingScreen(
-                        initialProfile = preferences.profile,
-                        initialLanguage = preferences.language,
-                        onLanguageSelected = { lang ->
-                            scope.launch { container.preferencesRepository.setLanguage(lang) }
-                        },
-                        onCompleteOnboarding = { profile ->
-                            scope.launch {
-                                container.preferencesRepository.saveProfile(
-                                    profile.copy(hasCompletedOnboarding = true)
-                                )
-                                navController.navigate(MainDestination.Home.route) {
-                                    popUpTo(MainDestination.Onboarding.route) { inclusive = true }
+            CenteredContent {
+                NavHost(
+                    navController = navController,
+                    startDestination = startDestination
+                ) {
+                    composable(MainDestination.Onboarding.route) {
+                        OnboardingScreen(
+                            initialProfile = preferences.profile,
+                            initialLanguage = preferences.language,
+                            onLanguageSelected = { lang ->
+                                scope.launch { container.preferencesRepository.setLanguage(lang) }
+                            },
+                            onCompleteOnboarding = { profile ->
+                                scope.launch {
+                                    container.preferencesRepository.saveProfile(
+                                        profile.copy(hasCompletedOnboarding = true)
+                                    )
+                                    navController.navigate(MainDestination.Home.route) {
+                                        popUpTo(MainDestination.Onboarding.route) { inclusive = true }
+                                    }
                                 }
                             }
-                        }
-                    )
-                }
+                        )
+                    }
 
-                composable(MainDestination.Home.route) {
-                    HomeScreen(
-                        profile = preferences.profile,
-                        isPersian = isPersian,
-                        recentExerciseIds = recentExerciseIds,
-                        allSessions = sessions,
-                        latestInsight = latestInsight,
-                        dailyQuote = quoteSelection.quote,
-                        onOpenProfileSetup = { navController.navigate(MainDestination.PersonalProfile.route) },
-                        onStartQuickWorkout = {
-                            val defaultEx = ExerciseCatalog.findById("bodyweight_squat")
-                                ?: ExerciseCatalog.allExercises.first()
-                            workoutViewModel.startQuickExercise(
-                                exercise = defaultEx,
-                                skipCameraGuide = preferences.cameraGuideAcknowledged
-                            )
-                            navController.navigate(MainDestination.Workout.route)
-                        },
-                        onBuildMultiWorkout = {
-                            workoutViewModel.openSessionBuilder()
-                            navController.navigate(MainDestination.Workout.route)
-                        },
-                        onContinueLastWorkout = { last ->
-                            val exercises = last.sets
-                                .mapNotNull { ExerciseCatalog.findById(it.exerciseId) }
-                                .distinctBy { it.id }
-                            workoutViewModel.openSessionBuilder(exercises)
-                            navController.navigate(MainDestination.Workout.route)
-                        },
-                        onSelectCategory = { cat ->
-                            selectedCategoryFilter = cat
-                            navController.navigate(MainDestination.Exercises.route)
-                        },
-                        onSelectExercise = { ex ->
-                            selectedExerciseDetail = ex
-                            navController.navigate(MainDestination.Exercises.route)
-                        },
-                        onOpenInsights = {
-                            selectedAnalysisSessionId = null
-                            navController.navigate(MainDestination.AiInsights.route)
-                        }
-                    )
-                }
-
-                composable(MainDestination.Exercises.route) {
-                    ExercisesScreen(
-                        isPersian = isPersian,
-                        downloadedAssets = downloadedAssetsMap,
-                        initialCategoryFilter = selectedCategoryFilter,
-                        selectedExerciseForDetail = selectedExerciseDetail,
-                        onSelectExerciseForDetail = { selectedExerciseDetail = it },
-                        onStartWorkoutWithItem = { plannedItem ->
-                            workoutViewModel.startQuickExercise(
-                                exercise = plannedItem.exercise,
-                                customItem = plannedItem,
-                                skipCameraGuide = preferences.cameraGuideAcknowledged
-                            )
-                            navController.navigate(MainDestination.Workout.route)
-                        }
-                    )
-                }
-
-                composable(MainDestination.History.route) {
-                    HistoryScreen(
-                        isPersian = isPersian,
-                        sessions = sessions,
-                        onAnalyzeWorkouts = { sessionId ->
-                            selectedAnalysisSessionId = sessionId
-                            navController.navigate(MainDestination.AiInsights.route)
-                        }
-                    )
-                }
-
-                composable(MainDestination.Health.route) {
-                    HealthScreen(
-                        preferences = preferences,
-                        preferencesRepository = container.preferencesRepository,
-                        workoutDao = container.workoutDao,
-                        healthConnectManager = container.healthConnectManager,
-                        syncedWorkoutCount = syncedCount,
-                        onOpenInsights = {
-                            selectedAnalysisSessionId = null
-                            navController.navigate(MainDestination.AiInsights.route)
-                        }
-                    )
-                }
-
-                composable(MainDestination.Settings.route) {
-                    SettingsScreen(
-                        preferences = preferences,
-                        preferencesRepository = container.preferencesRepository,
-                        workoutDao = container.workoutDao,
-                        sessions = sessions,
-                        exerciseAssetRepository = container.exerciseAssetRepository,
-                        localModelRepository = container.localModelRepository,
-                        savedInsightRepository = container.savedInsightRepository,
-                        secretStore = container.secretStore,
-                        onOpenPersonalProfile = { navController.navigate(MainDestination.PersonalProfile.route) },
-                        onOpenThemePreferences = { navController.navigate(MainDestination.ThemePreferences.route) },
-                        onOpenHealthConnect = { navController.navigate(MainDestination.Health.route) },
-                        onOpenMediaLibrary = { navController.navigate(MainDestination.MediaLibrary.route) },
-                        onOpenLocalModels = { navController.navigate(MainDestination.LocalModels.route) },
-                        onOpenExternalProviders = { navController.navigate(MainDestination.AiProviders.route) },
-                        onOpenScheduledAnalysis = { navController.navigate(MainDestination.ScheduledAnalysis.route) },
-                        onOpenInsights = {
-                            selectedAnalysisSessionId = null
-                            navController.navigate(MainDestination.AiInsights.route)
-                        }
-                    )
-                }
-
-                composable(MainDestination.PersonalProfile.route) {
-                    ProfileScreen(
-                        preferences = preferences,
-                        preferencesRepository = container.preferencesRepository,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                composable(MainDestination.ThemePreferences.route) {
-                    ThemePreferencesScreen(
-                        preferences = preferences,
-                        preferencesRepository = container.preferencesRepository,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                composable(MainDestination.Workout.route) {
-                    WorkoutScreen(
-                        uiState = workoutUiState,
-                        preferences = preferences,
-                        isPersian = isPersian,
-                        coachExplanationProvider = container.coachExplanationProvider,
-                        viewModel = workoutViewModel,
-                        onCameraGuideAcknowledged = {
-                            scope.launch {
-                                container.preferencesRepository.setCameraGuideAcknowledged(true)
+                    composable(MainDestination.Home.route) {
+                        HomeScreen(
+                            profile = preferences.profile,
+                            isPersian = isPersian,
+                            recentExerciseIds = recentExerciseIds,
+                            allSessions = sessions,
+                            latestInsight = latestInsight,
+                            dailyQuote = quoteSelection.quote,
+                            onOpenProfileSetup = { navController.navigate(MainDestination.PersonalProfile.route) },
+                            onStartQuickWorkout = {
+                                val defaultEx = ExerciseCatalog.findById("bodyweight_squat")
+                                    ?: ExerciseCatalog.allExercises.first()
+                                workoutViewModel.startQuickExercise(
+                                    exercise = defaultEx,
+                                    skipCameraGuide = preferences.cameraGuideAcknowledged
+                                )
+                                navController.navigate(MainDestination.Workout.route) { launchSingleTop = true }
+                            },
+                            onBuildMultiWorkout = {
+                                workoutViewModel.openSessionBuilder()
+                                navController.navigate(MainDestination.Workout.route) { launchSingleTop = true }
+                            },
+                            onContinueLastWorkout = { last ->
+                                val exercises = last.sets
+                                    .mapNotNull { ExerciseCatalog.findById(it.exerciseId) }
+                                    .distinctBy { it.id }
+                                workoutViewModel.openSessionBuilder(exercises)
+                                navController.navigate(MainDestination.Workout.route) { launchSingleTop = true }
+                            },
+                            onSelectCategory = { cat ->
+                                selectedCategoryFilter = cat
+                                navController.navigate(MainDestination.Exercises.route)
+                            },
+                            onSelectExercise = { ex ->
+                                selectedExerciseDetail = ex
+                                navController.navigate(MainDestination.Exercises.route)
+                            },
+                            onOpenInsights = {
+                                selectedAnalysisSessionId = null
+                                navController.navigate(MainDestination.AiInsights.route)
                             }
-                        },
-                        onPoseTrackingActiveChanged = { active ->
-                            container.localInferenceEngine.setPoseTrackingActive(active)
-                        },
-                        onSaveAndAnalyze = {
-                            selectedAnalysisSessionId = null
-                            navController.navigate(MainDestination.AiInsights.route) {
-                                popUpTo(MainDestination.Home.route) { inclusive = false }
+                        )
+                    }
+
+                    composable(MainDestination.Exercises.route) {
+                        ExercisesScreen(
+                            isPersian = isPersian,
+                            downloadedAssets = downloadedAssetsMap,
+                            initialCategoryFilter = selectedCategoryFilter,
+                            selectedExerciseForDetail = selectedExerciseDetail,
+                            onSelectExerciseForDetail = { selectedExerciseDetail = it },
+                            onOpenMedia = { id -> navController.navigate("media_library?exercise=$id") },
+                            onOpenCameraGuide = { id -> navController.navigate("camera_guide/$id") },
+                            onStartWorkoutWithItem = { plannedItem ->
+                                workoutViewModel.startQuickExercise(
+                                    exercise = plannedItem.exercise,
+                                    customItem = plannedItem,
+                                    skipCameraGuide = preferences.cameraGuideAcknowledged
+                                )
+                                navController.navigate(MainDestination.Workout.route) { launchSingleTop = true }
                             }
-                        },
-                        onExitWorkout = {
-                            navController.popBackStack(MainDestination.Home.route, inclusive = false)
+                        )
+                    }
+
+                    composable(MainDestination.History.route) {
+                        HistoryScreen(
+                            isPersian = isPersian,
+                            sessions = sessions,
+                            onAnalyzeWorkouts = { sessionId ->
+                                selectedAnalysisSessionId = sessionId
+                                navController.navigate(MainDestination.AiInsights.route)
+                            }
+                        )
+                    }
+
+                    composable(MainDestination.Health.route) {
+                        HealthScreen(
+                            preferences = preferences,
+                            preferencesRepository = container.preferencesRepository,
+                            workoutDao = container.workoutDao,
+                            healthConnectManager = container.healthConnectManager,
+                            syncedWorkoutCount = syncedCount,
+                            onOpenInsights = {
+                                selectedAnalysisSessionId = null
+                                navController.navigate(MainDestination.AiInsights.route)
+                            }
+                        )
+                    }
+
+                    composable(MainDestination.Settings.route) {
+                        SettingsHome { page ->
+                            navController.navigate("settings/${page.name}") { launchSingleTop = true }
                         }
-                    )
-                }
+                    }
 
-                composable(MainDestination.MediaLibrary.route) {
-                    ExerciseMediaLibraryScreen(
-                        isPersian = isPersian,
-                        assetRepository = container.exerciseAssetRepository,
-                        downloadManager = container.exerciseAssetDownloadManager,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
+                    composable(MainDestination.SettingsDetail.route) { entry ->
+                        val page = SettingsPage.entries.firstOrNull { it.name == entry.arguments?.getString("section") }
+                            ?: return@composable
+                        SettingsScreen(
+                            page = page,
+                            onBack = { navController.popBackStack() },
+                            preferences = preferences,
+                            preferencesRepository = container.preferencesRepository,
+                            workoutDao = container.workoutDao,
+                            sessions = sessions,
+                            exerciseAssetRepository = container.exerciseAssetRepository,
+                            localModelRepository = container.localModelRepository,
+                            savedInsightRepository = container.savedInsightRepository,
+                            secretStore = container.secretStore,
+                            onOpenPersonalProfile = { navController.navigate(MainDestination.PersonalProfile.route) },
+                            onOpenThemePreferences = { navController.navigate(MainDestination.ThemePreferences.route) },
+                            onOpenHealthConnect = { navController.navigate(MainDestination.Health.route) },
+                            onOpenMediaLibrary = { navController.navigate(MainDestination.MediaLibrary.route) },
+                            onOpenLocalModels = { navController.navigate(MainDestination.LocalModels.route) },
+                            onOpenExternalProviders = { navController.navigate(MainDestination.AiProviders.route) },
+                            onOpenScheduledAnalysis = { navController.navigate(MainDestination.ScheduledAnalysis.route) },
+                            onOpenInsights = {
+                                selectedAnalysisSessionId = null
+                                navController.navigate(MainDestination.AiInsights.route)
+                            }
+                        )
+                    }
 
-                composable(MainDestination.LocalModels.route) {
-                    LocalModelManagerScreen(
-                        isPersian = isPersian,
-                        repository = container.localModelRepository,
-                        downloadManager = container.localModelDownloadManager,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
+                    composable(MainDestination.PersonalProfile.route) {
+                        ProfileScreen(
+                            preferences = preferences,
+                            preferencesRepository = container.preferencesRepository,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
 
-                composable(MainDestination.AiProviders.route) {
-                    AIProviderSettingsScreen(
-                        isPersian = isPersian,
-                        preferences = preferences,
-                        repository = container.aiProviderRepository,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
+                    composable(MainDestination.ThemePreferences.route) {
+                        ThemePreferencesScreen(
+                            preferences = preferences,
+                            preferencesRepository = container.preferencesRepository,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
 
-                composable(MainDestination.AiInsights.route) {
-                    AIAnalysisScreen(
-                        isPersian = isPersian,
-                        preferences = preferences,
-                        preferencesRepository = container.preferencesRepository,
-                        sessions = sessions,
-                        focusSessionId = selectedAnalysisSessionId,
-                        coordinator = container.aiAnalysisCoordinator,
-                        insightRepository = container.savedInsightRepository,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
+                    composable(MainDestination.CameraGuide.route) { entry ->
+                        val exercise = entry.arguments?.getString("exercise")?.let(ExerciseCatalog::findById)
+                            ?: return@composable
+                        CameraPositionGuide(exercise, isPersian) { navController.popBackStack() }
+                    }
 
-                composable(MainDestination.ScheduledAnalysis.route) {
-                    ScheduledAnalysisScreen(
-                        preferences = preferences,
-                        preferencesRepository = container.preferencesRepository,
-                        scheduler = container.analysisScheduler,
-                        onBack = { navController.popBackStack() }
-                    )
+                    composable(MainDestination.Workout.route) {
+                        WorkoutScreen(
+                            uiState = workoutUiState,
+                            preferences = preferences,
+                            isPersian = isPersian,
+                            coachExplanationProvider = container.coachExplanationProvider,
+                            viewModel = workoutViewModel,
+                            onCameraGuideAcknowledged = {
+                                scope.launch {
+                                    container.preferencesRepository.setCameraGuideAcknowledged(true)
+                                }
+                            },
+                            onOpenCameraGuide = { id ->
+                                navController.navigate("camera_guide/$id") { launchSingleTop = true }
+                            },
+                            onPoseTrackingActiveChanged = { active ->
+                                container.localInferenceEngine.setPoseTrackingActive(active)
+                            },
+                            onSaveAndAnalyze = {
+                                selectedAnalysisSessionId = null
+                                navController.navigate(MainDestination.AiInsights.route) {
+                                    popUpTo(MainDestination.Home.route) { inclusive = false }
+                                }
+                            },
+                            onExitWorkout = { navController.popBackStack() }
+                        )
+                    }
+
+                    composable(
+                        MainDestination.MediaLibraryExercise.route,
+                        arguments = listOf(navArgument("exercise") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        })
+                    ) { entry ->
+                        ExerciseMediaLibraryScreen(
+                            isPersian = isPersian,
+                            assetRepository = container.exerciseAssetRepository,
+                            downloadManager = container.exerciseAssetDownloadManager,
+                            preferencesRepository = container.preferencesRepository,
+                            wifiOnly = preferences.mediaWifiOnly,
+                            exerciseId = entry.arguments?.getString("exercise"),
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    composable(MainDestination.LocalModels.route) {
+                        LocalModelManagerScreen(
+                            isPersian = isPersian,
+                            repository = container.localModelRepository,
+                            downloadManager = container.localModelDownloadManager,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    composable(MainDestination.AiProviders.route) {
+                        AIProviderSettingsScreen(
+                            isPersian = isPersian,
+                            preferences = preferences,
+                            repository = container.aiProviderRepository,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    composable(MainDestination.AiInsights.route) {
+                        AIAnalysisScreen(
+                            isPersian = isPersian,
+                            preferences = preferences,
+                            preferencesRepository = container.preferencesRepository,
+                            sessions = sessions,
+                            focusSessionId = selectedAnalysisSessionId,
+                            coordinator = container.aiAnalysisCoordinator,
+                            insightRepository = container.savedInsightRepository,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    composable(MainDestination.ScheduledAnalysis.route) {
+                        ScheduledAnalysisScreen(
+                            preferences = preferences,
+                            preferencesRepository = container.preferencesRepository,
+                            scheduler = container.analysisScheduler,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
                 }
             }
         }
     }
 }
-

@@ -3,6 +3,16 @@ package com.aifitnesscoach.feature.media
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalUriHandler
+import android.text.format.Formatter
+import com.aifitnesscoach.core.media.ExerciseIllustration
+import com.aifitnesscoach.core.database.UserPreferencesRepository
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -50,11 +60,15 @@ import com.aifitnesscoach.feature.exercises.categoryLabel
 import kotlinx.coroutines.launch
 import java.util.Locale
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ExerciseMediaLibraryScreen(
     isPersian: Boolean,
     assetRepository: ExerciseAssetRepository,
     downloadManager: ExerciseAssetDownloadManager,
+    preferencesRepository: UserPreferencesRepository,
+    wifiOnly: Boolean,
+    exerciseId: String? = null,
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -62,9 +76,10 @@ fun ExerciseMediaLibraryScreen(
         .collectAsStateWithLifecycle(initialValue = emptyList())
 
     var statusFilter by remember { mutableStateOf<AssetDownloadStatus?>(null) }
-    var wifiOnly by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val uriHandler = LocalUriHandler.current
     var storageBytes by remember { mutableLongStateOf(0L) }
-    var pendingImportExerciseId by remember { mutableStateOf<String?>(null) }
+    var pendingImportExerciseId by rememberSaveable { mutableStateOf<String?>(null) }
     var importFeedback by remember { mutableStateOf<String?>(null) }
 
     val importLauncher = rememberLauncherForActivityResult(
@@ -97,9 +112,9 @@ fun ExerciseMediaLibraryScreen(
     }
     val downloadedCount = items.count { it.effectiveStatus == AssetDownloadStatus.DOWNLOADED }
 
-    val filtered = remember(items, statusFilter) {
-        if (statusFilter == null) items else items.filter { it.effectiveStatus == statusFilter }
-    }
+    var showAll by rememberSaveable(exerciseId) { mutableStateOf(exerciseId == null) }
+    val filtered = items.filter { (showAll || it.exercise.id == exerciseId) &&
+        (statusFilter == null || it.effectiveStatus == statusFilter) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -119,7 +134,7 @@ fun ExerciseMediaLibraryScreen(
         }
 
         LazyColumn(
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(LayoutSpacing.screen),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
@@ -147,9 +162,16 @@ fun ExerciseMediaLibraryScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(stringResource(R.string.common_wifi_only), style = MaterialTheme.typography.bodyMedium)
-                            Switch(checked = wifiOnly, onCheckedChange = { wifiOnly = it })
+                            Switch(checked = wifiOnly, onCheckedChange = { value ->
+                                scope.launch { preferencesRepository.setMediaWifiOnly(value) }
+                            })
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (!showAll) {
+                            TextButton(onClick = { showAll = true }) {
+                                Text(stringResource(R.string.media_show_library))
+                            }
+                        }
+                        if (showAll) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
                                 onClick = { downloadManager.enqueueBatchDownload(downloadableIds, wifiOnly = wifiOnly) },
                                 enabled = downloadableIds.isNotEmpty(),
@@ -178,7 +200,7 @@ fun ExerciseMediaLibraryScreen(
                 }
             }
 
-            item {
+            if (showAll) item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     item {
                         FilterChip(
@@ -207,6 +229,7 @@ fun ExerciseMediaLibraryScreen(
             items(filtered, key = { it.exercise.id }) { item ->
                 Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        ExerciseIllustration(item.exercise.id, Modifier.size(72.dp))
                         Text(
                             text = if (isPersian) item.exercise.nameFa else item.exercise.nameEn,
                             style = MaterialTheme.typography.titleMedium,
@@ -225,11 +248,38 @@ fun ExerciseMediaLibraryScreen(
                             }
                         }
 
+                        if (item.effectiveStatus == AssetDownloadStatus.DOWNLOADED) {
+                            Text(stringResource(R.string.media_on_device, Formatter.formatShortFileSize(context, item.totalBytes)))
+                            item.entity?.licenseName?.takeIf { it.isNotBlank() }?.let { Text(it) }
+                        }
+                        if (item.manifest.primaryUrl != null) {
+                            Text(stringResource(
+                                R.string.media_webp_source,
+                                item.manifest.resolution.orEmpty(),
+                                Formatter.formatShortFileSize(context, item.manifest.expectedBytes ?: 0)
+                            ))
+                            item.manifest.licenseUrl?.let { url ->
+                                TextButton(onClick = { uriHandler.openUri(url) }) {
+                                    Text(item.manifest.licenseName)
+                                }
+                            }
+                        }
+                        if (item.effectiveStatus == AssetDownloadStatus.DOWNLOADING) {
+                            if (item.totalBytes > 0) {
+                                LinearProgressIndicator(
+                                    progress = { (item.bytesDownloaded.toFloat() / item.totalBytes).coerceIn(0f, 1f) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            } else {
+                                LinearProgressIndicator(Modifier.fillMaxWidth())
+                            }
+                        }
+
                         item.errorMessage?.let { err ->
                             Text(err, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         }
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
                             when (item.effectiveStatus) {
                                 AssetDownloadStatus.AVAILABLE,
                                 AssetDownloadStatus.PAUSED,
@@ -263,8 +313,7 @@ fun ExerciseMediaLibraryScreen(
                                 AssetDownloadStatus.LICENSE_RESTRICTED -> Unit
                             }
 
-                            Spacer(Modifier.weight(1f))
-                            TextButton(onClick = {
+                            TextButton(enabled = item.effectiveStatus != AssetDownloadStatus.DOWNLOADING, onClick = {
                                 pendingImportExerciseId = item.exercise.id
                                 importLauncher.launch(arrayOf("video/mp4", "image/*"))
                             }) {

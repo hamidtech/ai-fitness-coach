@@ -67,6 +67,7 @@ private fun assetExists(context: Context, assetPath: String): Boolean {
 @Composable
 fun ExerciseDemoMediaView(
     mediaRef: MediaAssetRef,
+    exerciseId: String? = null,
     isPersian: Boolean,
     downloadedAsset: ExerciseAssetEntity? = null,
     modifier: Modifier = Modifier
@@ -93,10 +94,6 @@ fun ExerciseDemoMediaView(
             }
             .build()
     }
-
-    val viewLabel = mediaRef.availableViews.firstOrNull()?.let {
-        if (isPersian) it.labelFa else it.labelEn
-    } ?: ""
 
     var showPeakPhase by remember(primaryFile?.absolutePath, secondaryFile?.absolutePath) {
         mutableStateOf(false)
@@ -226,34 +223,7 @@ fun ExerciseDemoMediaView(
                 }
 
                 else -> {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.OndemandVideo,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(40.dp)
-                        )
-                        Text(
-                            text = stringResource(R.string.exercise_demo_placeholder_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.exercise_demo_placeholder_desc,
-                                mediaRef.demoVideoAsset,
-                                viewLabel
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                    if (exerciseId != null) ExerciseIllustration(exerciseId, Modifier.fillMaxSize())
                 }
             }
         }

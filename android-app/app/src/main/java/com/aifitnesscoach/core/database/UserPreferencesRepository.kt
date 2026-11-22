@@ -124,6 +124,7 @@ data class UserPreferences(
     val voiceFeedbackEnabled: Boolean = true,
     val skeletonOverlayEnabled: Boolean = true,
     val developerMetricsEnabled: Boolean = false,
+    val mediaWifiOnly: Boolean = false,
     // Daily English Motivational Quote Persistence
     val dailyQuoteDateIso: String? = null,
     val dailyQuoteId: String? = null,
@@ -187,6 +188,7 @@ class UserPreferencesRepository(private val context: Context) {
         val CAMERA_GUIDE_ACK = booleanPreferencesKey("camera_guide_acknowledged")
         val VOICE_FEEDBACK = booleanPreferencesKey("voice_feedback")
         val SKELETON_OVERLAY = booleanPreferencesKey("skeleton_overlay")
+        val MEDIA_WIFI_ONLY = booleanPreferencesKey("media_wifi_only")
         val DEV_METRICS = booleanPreferencesKey("dev_metrics")
 
         val DAILY_QUOTE_DATE = stringPreferencesKey("daily_quote_date")
@@ -251,6 +253,7 @@ class UserPreferencesRepository(private val context: Context) {
             cameraGuideAcknowledged = prefs[Keys.CAMERA_GUIDE_ACK] ?: false,
             voiceFeedbackEnabled = prefs[Keys.VOICE_FEEDBACK] ?: true,
             skeletonOverlayEnabled = prefs[Keys.SKELETON_OVERLAY] ?: true,
+            mediaWifiOnly = prefs[Keys.MEDIA_WIFI_ONLY] ?: false,
             developerMetricsEnabled = prefs[Keys.DEV_METRICS] ?: false,
             dailyQuoteDateIso = prefs[Keys.DAILY_QUOTE_DATE]?.takeIf { it.isNotBlank() },
             dailyQuoteId = prefs[Keys.DAILY_QUOTE_ID]?.takeIf { it.isNotBlank() },
@@ -361,6 +364,10 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun setSkeletonOverlay(enabled: Boolean) {
         context.dataStore.edit { it[Keys.SKELETON_OVERLAY] = enabled }
+    }
+
+    suspend fun setMediaWifiOnly(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.MEDIA_WIFI_ONLY] = enabled }
     }
 
     suspend fun setDeveloperMetrics(enabled: Boolean) {
