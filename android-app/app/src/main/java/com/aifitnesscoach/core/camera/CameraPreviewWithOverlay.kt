@@ -67,7 +67,7 @@ fun CameraPreviewWithOverlay(
             val preview = Preview.Builder()
                 .setTargetRotation(displayRotation)
                 .build().also {
-                    it.surfaceProvider = previewView.surfaceProvider
+                    it.setSurfaceProvider(previewView.surfaceProvider)
                 }
 
             val imageAnalysis = ImageAnalysis.Builder()
