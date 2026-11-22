@@ -76,6 +76,8 @@ import kotlinx.coroutines.launch
 import java.time.ZonedDateTime
 import java.time.Duration
 import kotlinx.coroutines.delay
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -110,7 +112,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        appContainer = AppContainer(applicationContext)
+        appContainer = ViewModelProvider(this)[AppContainerViewModel::class.java].container
         pendingDeepLinkRoute = extractDeepLinkRoute(intent)
 
         setContent {
@@ -163,13 +165,6 @@ class MainActivity : AppCompatActivity() {
         pendingDeepLinkRoute = extractDeepLinkRoute(intent)
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        if (::appContainer.isInitialized) {
-            appContainer.ttsCoachManager.shutdown()
-        }
-    }
-
     private fun extractDeepLinkRoute(intent: Intent?): String? {
         return routeForLaunchExtra(intent?.getStringExtra(AppNotificationManager.EXTRA_OPEN_ROUTE))
     }
@@ -219,7 +214,7 @@ private fun AIFitnessCoachAppRoot(
     val latestInsight by container.savedInsightRepository.observeLatestInsight()
         .collectAsStateWithLifecycle(initialValue = null)
 
-    val workoutViewModel = remember {
+    val workoutViewModel = viewModel {
         WorkoutViewModel(
             workoutDao = container.workoutDao,
             coachExplanationProvider = container.coachExplanationProvider,

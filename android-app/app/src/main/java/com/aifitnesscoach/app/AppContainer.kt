@@ -1,6 +1,8 @@
 package com.aifitnesscoach.app
 
 import android.content.Context
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import com.aifitnesscoach.core.ai.analysis.AIAnalysisCoordinator
 import com.aifitnesscoach.core.ai.analysis.SavedInsightRepository
 import com.aifitnesscoach.core.ai.external.AIProviderRepository
@@ -66,4 +68,12 @@ class AppContainer(context: Context) {
     )
 
     val analysisScheduler = AnalysisScheduler(appContext)
+}
+
+class AppContainerViewModel(application: Application) : AndroidViewModel(application) {
+    val container = AppContainer(application)
+
+    override fun onCleared() {
+        container.ttsCoachManager.shutdown()
+    }
 }

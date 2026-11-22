@@ -170,7 +170,10 @@ data class UserPreferences(
     val lastAnalyzedWatermarkMs: Long? = null
 )
 
-class UserPreferencesRepository(private val context: Context) {
+class UserPreferencesRepository(
+    context: Context,
+    private val store: DataStore<Preferences> = context.dataStore
+) {
 
     private object Keys {
         val PERSON_NAME = stringPreferencesKey("person_name")
@@ -236,7 +239,7 @@ class UserPreferencesRepository(private val context: Context) {
         val SCHED_WATERMARK_MS = longPreferencesKey("sched_watermark_ms")
     }
 
-    val preferencesFlow: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
+    val preferencesFlow: Flow<UserPreferences> = store.data.map { prefs ->
         UserPreferences(
             profile = UserProfile(
                 name = prefs[Keys.PERSON_NAME] ?: "",
@@ -303,13 +306,13 @@ class UserPreferencesRepository(private val context: Context) {
     }
 
     suspend fun saveOnboardingDraft(encoded: String) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             if (prefs[Keys.PROFILE_COMPLETED] != true) prefs[Keys.ONBOARDING_DRAFT] = encoded
         }
     }
 
     suspend fun saveProfile(profile: UserProfile) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[Keys.PERSON_NAME] = profile.name.trim()
             prefs[Keys.GENDER] = profile.gender.name
             if (profile.age != null) prefs[Keys.AGE] = profile.age else prefs.remove(Keys.AGE)
@@ -325,37 +328,37 @@ class UserPreferencesRepository(private val context: Context) {
     }
 
     suspend fun markOnboardingSkipped() {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[Keys.PROFILE_COMPLETED] = true
             prefs.remove(Keys.ONBOARDING_DRAFT)
         }
     }
 
     suspend fun setOnboardingCompleted(completed: Boolean) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[Keys.PROFILE_COMPLETED] = completed
         }
     }
 
     suspend fun setLanguage(language: AppLanguage) {
-        context.dataStore.edit { it[Keys.LANGUAGE] = language.name }
+        store.edit { it[Keys.LANGUAGE] = language.name }
     }
 
     suspend fun setThemeMode(mode: AppThemeMode) {
-        context.dataStore.edit { it[Keys.THEME_MODE] = mode.name }
+        store.edit { it[Keys.THEME_MODE] = mode.name }
     }
 
     suspend fun setColorPalette(palette: AppColorPalette) {
-        context.dataStore.edit { it[Keys.COLOR_PALETTE] = palette.name }
+        store.edit { it[Keys.COLOR_PALETTE] = palette.name }
     }
 
     suspend fun setUseDynamicColor(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.USE_DYNAMIC_COLOR] = enabled }
+        store.edit { it[Keys.USE_DYNAMIC_COLOR] = enabled }
     }
 
     suspend fun dailyQuote(today: LocalDate, repository: VerifiedQuoteRepository): MotivationalQuote? {
         var quote: MotivationalQuote? = null
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             val selection = DailyQuoteSelector.selectForDate(
                 repository = repository,
                 today = today,
@@ -375,63 +378,63 @@ class UserPreferencesRepository(private val context: Context) {
     }
 
     suspend fun setMeasurementUnit(unit: MeasurementUnit) {
-        context.dataStore.edit { it[Keys.MEASUREMENT_UNIT] = unit.name }
+        store.edit { it[Keys.MEASUREMENT_UNIT] = unit.name }
     }
 
     suspend fun setCameraLens(lens: CameraLensPreference) {
-        context.dataStore.edit { it[Keys.CAMERA_LENS] = lens.name }
+        store.edit { it[Keys.CAMERA_LENS] = lens.name }
     }
 
     suspend fun setCameraGuideAcknowledged(acknowledged: Boolean) {
-        context.dataStore.edit { it[Keys.CAMERA_GUIDE_ACK] = acknowledged }
+        store.edit { it[Keys.CAMERA_GUIDE_ACK] = acknowledged }
     }
 
     suspend fun setVoiceFeedback(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.VOICE_FEEDBACK] = enabled }
+        store.edit { it[Keys.VOICE_FEEDBACK] = enabled }
     }
 
     suspend fun setSkeletonOverlay(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.SKELETON_OVERLAY] = enabled }
+        store.edit { it[Keys.SKELETON_OVERLAY] = enabled }
     }
 
     suspend fun setMediaWifiOnly(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.MEDIA_WIFI_ONLY] = enabled }
+        store.edit { it[Keys.MEDIA_WIFI_ONLY] = enabled }
     }
 
     suspend fun setDeveloperMetrics(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.DEV_METRICS] = enabled }
+        store.edit { it[Keys.DEV_METRICS] = enabled }
     }
 
     suspend fun setHealthConnectEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.HC_ENABLED] = enabled }
+        store.edit { it[Keys.HC_ENABLED] = enabled }
     }
 
     suspend fun setHealthAutoSync(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.HC_AUTO_SYNC] = enabled }
+        store.edit { it[Keys.HC_AUTO_SYNC] = enabled }
     }
 
     suspend fun setHcWriteWorkouts(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.HC_WRITE_WORKOUTS] = enabled }
+        store.edit { it[Keys.HC_WRITE_WORKOUTS] = enabled }
     }
 
     suspend fun setHcReadWorkouts(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.HC_READ_WORKOUTS] = enabled }
+        store.edit { it[Keys.HC_READ_WORKOUTS] = enabled }
     }
 
     suspend fun setHcReadSteps(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.HC_READ_STEPS] = enabled }
+        store.edit { it[Keys.HC_READ_STEPS] = enabled }
     }
 
     suspend fun setHcReadSleep(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.HC_READ_SLEEP] = enabled }
+        store.edit { it[Keys.HC_READ_SLEEP] = enabled }
     }
 
     suspend fun setHcReadHeartRate(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.HC_READ_HEART_RATE] = enabled }
+        store.edit { it[Keys.HC_READ_HEART_RATE] = enabled }
     }
 
     suspend fun setLastHealthSync(epochMs: Long) {
-        context.dataStore.edit { it[Keys.HC_LAST_SYNC] = epochMs.toString() }
+        store.edit { it[Keys.HC_LAST_SYNC] = epochMs.toString() }
     }
 
     suspend fun setNotificationPreferences(
@@ -440,7 +443,7 @@ class UserPreferencesRepository(private val context: Context) {
         downloads: Boolean? = null,
         workoutReminder: Boolean? = null
     ) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             enabled?.let { prefs[Keys.NOTIF_ENABLED] = it }
             analysisComplete?.let { prefs[Keys.NOTIF_ANALYSIS] = it }
             downloads?.let { prefs[Keys.NOTIF_DOWNLOADS] = it }
@@ -456,7 +459,7 @@ class UserPreferencesRepository(private val context: Context) {
         clearExternalProviderId: Boolean = false,
         allowExternalSharing: Boolean? = null
     ) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             mode?.let { prefs[Keys.AI_EXEC_MODE] = it.name }
             if (clearLocalModelId) {
                 prefs.remove(Keys.ACTIVE_LOCAL_MODEL_ID)
@@ -483,7 +486,7 @@ class UserPreferencesRepository(private val context: Context) {
         scope: AnalysisRangeScope? = null,
         notifyOnComplete: Boolean? = null
     ) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             enabled?.let { prefs[Keys.SCHED_ENABLED] = it }
             hour?.let { prefs[Keys.SCHED_HOUR] = it.coerceIn(0, 23) }
             minute?.let { prefs[Keys.SCHED_MINUTE] = it.coerceIn(0, 59) }
@@ -503,7 +506,7 @@ class UserPreferencesRepository(private val context: Context) {
         newWatermarkMs: Long?,
         error: String?
     ) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[Keys.SCHED_LAST_RUN_MS] = runAtMs
             prefs[Keys.SCHED_LAST_COUNT] = analyzedCount
             if (success) {
@@ -517,7 +520,7 @@ class UserPreferencesRepository(private val context: Context) {
     }
 
     suspend fun clearAll() {
-        context.dataStore.edit { it.clear() }
+        store.edit { it.clear() }
     }
 
     private inline fun <reified T : Enum<T>> enumOrDefault(raw: String?, fallback: T): T {

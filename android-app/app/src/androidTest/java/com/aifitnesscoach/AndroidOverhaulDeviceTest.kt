@@ -6,6 +6,13 @@ import android.content.pm.PackageManager
 import android.widget.FrameLayout
 import android.widget.RemoteViews
 import androidx.room.Room
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import java.io.File
+import java.util.UUID
 import androidx.test.platform.app.InstrumentationRegistry
 import com.aifitnesscoach.core.database.AppDatabase
 import com.aifitnesscoach.core.database.AppLanguage
@@ -32,16 +39,11 @@ class AndroidOverhaulDeviceTest {
 
     @Test
     fun profileAndSettingsPersistAndCompletionClearsDraft() = runBlocking {
-        // Use the test APK's files directory, separate from the athlete's app data.
-        val context = instrumentation.context
-        val repository = UserPreferencesRepository(context)
-        repository.clearAll()
-        try {
+        withIsolatedPreferences { repository, reopened ->
             repository.saveOnboardingDraft(OnboardingDraft(name = "حمید", stepIndex = 2).encode())
             repository.setLanguage(AppLanguage.FA)
             repository.setThemeMode(AppThemeMode.DARK)
             repository.setMediaWifiOnly(true)
-            val reopened = UserPreferencesRepository(context)
             assertEquals("حمید", OnboardingDraft.restore(reopened.preferencesFlow.first().onboardingDraft, UserProfile()).name)
             reopened.saveProfile(UserProfile(name = "حمید", heightCm = 179f))
             reopened.saveOnboardingDraft("late draft")
@@ -53,8 +55,6 @@ class AndroidOverhaulDeviceTest {
             assertEquals(AppLanguage.FA, saved.language)
             assertEquals(AppThemeMode.DARK, saved.themeMode)
             assertTrue(saved.mediaWifiOnly)
-        } finally {
-            repository.clearAll()
         }
     }
 
@@ -106,18 +106,28 @@ class AndroidOverhaulDeviceTest {
 
     @Test
     fun dailyQuoteIsPersistedAndSharedBySeparateRepositoryCallers() = runBlocking {
-        val context = instrumentation.context
-        val appRepository = UserPreferencesRepository(context)
-        appRepository.clearAll()
-        try {
+        withIsolatedPreferences { appRepository, widgetRepository ->
             val today = LocalDate.of(2026, 11, 22)
             val appQuote = appRepository.dailyQuote(today, VerifiedQuoteRepository())
-            val widgetQuote = UserPreferencesRepository(context).dailyQuote(today, VerifiedQuoteRepository())
+            val widgetQuote = widgetRepository.dailyQuote(today, VerifiedQuoteRepository())
             assertNotNull(appQuote)
             assertEquals(appQuote, widgetQuote)
             assertEquals(appQuote?.id, appRepository.preferencesFlow.first().dailyQuoteId)
+        }
+    }
+
+    private suspend fun withIsolatedPreferences(
+        block: suspend (UserPreferencesRepository, UserPreferencesRepository) -> Unit
+    ) {
+        val context = instrumentation.targetContext
+        val file = File(context.cacheDir, "${UUID.randomUUID()}.preferences_pb")
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        try {
+            val store = PreferenceDataStoreFactory.create(scope = scope) { file }
+            block(UserPreferencesRepository(context, store), UserPreferencesRepository(context, store))
         } finally {
-            appRepository.clearAll()
+            scope.cancel()
+            file.delete()
         }
     }
 }
