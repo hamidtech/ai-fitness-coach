@@ -2,8 +2,6 @@ package com.aifitnesscoach.feature.ai
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,6 +42,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.ControlFlow
 import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.ai.external.AIProviderClient
 import com.aifitnesscoach.core.ai.external.AIProviderRepository
@@ -53,7 +52,6 @@ import com.aifitnesscoach.core.database.AIProviderConfigEntity
 import com.aifitnesscoach.core.database.UserPreferences
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AIProviderSettingsScreen(
     isPersian: Boolean,
@@ -155,7 +153,7 @@ fun AIProviderSettingsScreen(
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(stringResource(R.string.external_ai_security_note), style = MaterialTheme.typography.bodyMedium)
                         Text(stringResource(R.string.external_ai_add_preset), style = MaterialTheme.typography.labelLarge)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ControlFlow {
                             ProviderPresetType.entries.forEach { p ->
                                 OutlinedButton(onClick = { openEditorForNew(p) }) {
                                     Text(if (isPersian) p.displayNameFa else p.displayNameEn)

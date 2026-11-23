@@ -1,7 +1,5 @@
 package com.aifitnesscoach.feature.exercises
 
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Alignment
@@ -55,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.ControlFlow
 import com.aifitnesscoach.core.database.ExerciseAssetEntity
 import com.aifitnesscoach.core.equipment.ResistanceBandMetadata
 import com.aifitnesscoach.core.equipment.ResistanceBandType
@@ -212,7 +211,6 @@ fun ExerciseListItem(exercise: ExerciseDefinition, isPersian: Boolean, onClick: 
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ExerciseWorkoutSetup(
     exercise: ExerciseDefinition,
@@ -381,7 +379,7 @@ internal fun ExerciseWorkoutSetup(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                            ControlFlow {
                             FilterChip(
                                 selected = loadMode == WeightLoadMode.PER_DUMBBELL,
                                 onClick = { loadMode = WeightLoadMode.PER_DUMBBELL },
@@ -397,7 +395,7 @@ internal fun ExerciseWorkoutSetup(
                     }
 
                     if (exercise.category == ExerciseCategory.RESISTANCE_BAND_TRAINING) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                        ControlFlow {
                             exercise.supportedBandTypes.take(3).forEach { bt ->
                                 FilterChip(
                                     selected = selectedBandType == bt,
@@ -406,7 +404,7 @@ internal fun ExerciseWorkoutSetup(
                                 )
                             }
                         }
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                        ControlFlow {
                             listOf(ResistanceLevel.LIGHT, ResistanceLevel.MEDIUM, ResistanceLevel.HEAVY).forEach { lvl ->
                                 FilterChip(
                                     selected = selectedBandLevel == lvl,

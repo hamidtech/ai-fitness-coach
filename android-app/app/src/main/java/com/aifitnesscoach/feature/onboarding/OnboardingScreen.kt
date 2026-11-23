@@ -5,10 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -51,6 +50,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.ControlFlow
 import com.aifitnesscoach.core.ui.TrainingPhotography
 import com.aifitnesscoach.core.database.AppLanguage
 import com.aifitnesscoach.core.database.ExperienceLevel
@@ -108,11 +108,21 @@ fun OnboardingScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             Surface(tonalElevation = 3.dp) {
-                Column(Modifier.fillMaxWidth().padding(LayoutSpacing.screen)) {
+                Column(
+                    Modifier.fillMaxWidth().padding(LayoutSpacing.pagePadding),
+                    verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)
+                ) {
                     error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
-                    Row(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.screen),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         if (step != OnboardingStep.WELCOME) {
                             TextButton(
+                                modifier = Modifier.sizeIn(
+                                    minWidth = LayoutSpacing.touchTarget,
+                                    minHeight = LayoutSpacing.touchTarget
+                                ),
                                 enabled = completed == null,
                                 onClick = { goTo(step.previous()) }
                             ) { Text(stringResource(R.string.common_back)) }
@@ -141,8 +151,8 @@ fun OnboardingScreen(
     ) { insets ->
         key(step) {
             Column(
-                Modifier.fillMaxSize().padding(insets).verticalScroll(rememberScrollState())
-                    .padding(LayoutSpacing.screen),
+                Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)
+                    .verticalScroll(rememberScrollState()).padding(LayoutSpacing.pagePadding),
                 verticalArrangement = Arrangement.spacedBy(LayoutSpacing.screen)
             ) {
                 Text(stringResource(R.string.wizard_progress, step.ordinal + 1, OnboardingStep.entries.size))
@@ -204,13 +214,29 @@ fun OnboardingScreen(
                         }) { Text(stringResource(R.string.profile_skip)) }
                     }
                     OnboardingStep.GOALS -> {
-                        Text(stringResource(R.string.onboarding_goal_label))
-                        WizardChoices(draft.goal, goalLabels) { update(draft.copy(goal = it)) }
-                        if (draft.goal == FitnessGoal.CUSTOM.name) {
-                            WizardField(R.string.goal_custom_hint, draft.custom) { update(draft.copy(custom = it.take(80))) }
+                        Column(verticalArrangement = Arrangement.spacedBy(LayoutSpacing.sectionGap)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                                Text(
+                                    stringResource(R.string.onboarding_goal_label),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                WizardChoices(draft.goal, goalLabels) { update(draft.copy(goal = it)) }
+                                if (draft.goal == FitnessGoal.CUSTOM.name) {
+                                    WizardField(R.string.goal_custom_hint, draft.custom) {
+                                        update(draft.copy(custom = it.take(80)))
+                                    }
+                                }
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                                Text(
+                                    stringResource(R.string.onboarding_experience_label),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                WizardChoices(draft.experience, experienceLabels) {
+                                    update(draft.copy(experience = it))
+                                }
+                            }
                         }
-                        Text(stringResource(R.string.onboarding_experience_label))
-                        WizardChoices(draft.experience, experienceLabels) { update(draft.copy(experience = it)) }
                     }
                     OnboardingStep.REVIEW -> {
                         if (draft.name.isNotBlank()) Text(draft.name, style = MaterialTheme.typography.titleLarge)
@@ -254,10 +280,9 @@ private val experienceLabels = listOf(
     ExperienceLevel.ADVANCED.name to R.string.exp_advanced
 )
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun <T> WizardChoices(selected: T, choices: List<Pair<T, Int>>, onSelect: (T) -> Unit) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+    ControlFlow {
         choices.forEach { (value, label) ->
             FilterChip(
                 selected = value == selected,

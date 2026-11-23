@@ -3,8 +3,6 @@ package com.aifitnesscoach.feature.media
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -52,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.ControlFlow
 import com.aifitnesscoach.core.media.AssetDownloadStatus
 import com.aifitnesscoach.core.media.ExerciseAssetCatalog
 import com.aifitnesscoach.core.media.ExerciseAssetDownloadManager
@@ -60,7 +59,6 @@ import com.aifitnesscoach.feature.exercises.categoryLabel
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ExerciseMediaLibraryScreen(
     isPersian: Boolean,
@@ -286,7 +284,7 @@ fun ExerciseMediaLibraryScreen(
                             Text(err, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         }
 
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                        ControlFlow {
                             when (status) {
                                 AssetDownloadStatus.AVAILABLE,
                                 AssetDownloadStatus.PAUSED,

@@ -1,11 +1,9 @@
 package com.aifitnesscoach.feature.settings
 
 import android.Manifest
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material3.Surface
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PersonOutline
@@ -63,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.ControlFlow
 import com.aifitnesscoach.core.ai.analysis.SavedInsightRepository
 import com.aifitnesscoach.core.ai.local.LocalModelRepository
 import com.aifitnesscoach.core.database.AppColorPalette
@@ -130,7 +129,6 @@ private fun SettingsGroup(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     page: SettingsPage,
@@ -228,7 +226,7 @@ fun SettingsScreen(
                 Card(shape = RoundedCornerShape(16.dp)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(stringResource(R.string.settings_language), style = MaterialTheme.typography.titleMedium)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                        ControlFlow {
                             listOf(
                                 AppLanguage.SYSTEM to stringResource(R.string.lang_system),
                                 AppLanguage.EN to stringResource(R.string.lang_en),
@@ -249,7 +247,7 @@ fun SettingsScreen(
 
                         HorizontalDivider()
                         Text(stringResource(R.string.settings_units), style = MaterialTheme.typography.titleMedium)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                        ControlFlow {
                             FilterChip(
                                 selected = preferences.measurementUnit == MeasurementUnit.METRIC,
                                 onClick = { scope.launch { preferencesRepository.setMeasurementUnit(MeasurementUnit.METRIC) } },
@@ -269,7 +267,7 @@ fun SettingsScreen(
                 Card(shape = RoundedCornerShape(16.dp)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(stringResource(R.string.settings_camera), style = MaterialTheme.typography.titleMedium)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                        ControlFlow {
                             FilterChip(
                                 selected = preferences.cameraLens == CameraLensPreference.FRONT,
                                 onClick = { scope.launch { preferencesRepository.setCameraLens(CameraLensPreference.FRONT) } },
