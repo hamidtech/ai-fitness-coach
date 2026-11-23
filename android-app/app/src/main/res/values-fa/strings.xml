@@ -287,7 +287,7 @@
     <string name="media_library_title">کتابخانه رسانه‌ای تمرین‌ها</string>
     <string name="media_library_summary">دانلودشده: %1$d از %2$d · فضای مصرف‌شده: %3$s</string>
     <string name="media_library_repdb_note">تصاویر برداری/WebP تمیز فقط در صورت درخواست شما دانلود می‌شوند.</string>
-    <string name="media_download_all">دانلود همه موارد موجود</string>
+    <string name="media_download_all">دانلود بستهٔ RepDB</string>
     <string name="media_delete_all">حذف فایل‌های دانلودشده</string>
     <string name="media_import_local">افزودن فایل محلی</string>
     <string name="media_phase_start">شروع</string>

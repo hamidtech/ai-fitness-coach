@@ -287,7 +287,7 @@
     <string name="media_library_title">Exercise Media Library</string>
     <string name="media_library_summary">Downloaded: %1$d / %2$d · Storage used: %3$s</string>
     <string name="media_library_repdb_note">Clean vector/WebP frames downloaded only on demand.</string>
-    <string name="media_download_all">Download All Available</string>
+    <string name="media_download_all">Download RepDB pack</string>
     <string name="media_delete_all">Delete Downloaded</string>
     <string name="media_import_local">Import Local Media</string>
     <string name="media_phase_start">Start</string>

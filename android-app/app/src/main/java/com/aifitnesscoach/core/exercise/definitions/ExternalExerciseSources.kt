@@ -62,7 +62,7 @@ object ExternalExerciseSources {
     fun load(context: Context) {
         if (snapshot != null) return
         try {
-            val catalog = JSONObject(context.assets.open("exercise_sources/catalog.json.gz").use { file ->
+            val catalog = JSONObject(context.assets.open("exercise_sources/catalog.bin").use { file ->
                 GZIPInputStream(file).bufferedReader().use { it.readText() }
             })
             check(catalog.getString("openRevision") == OPEN_REVISION)

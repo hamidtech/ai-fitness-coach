@@ -64,7 +64,8 @@ def main():
         {"hasanRevision": HASAN_REV, "openRevision": OPEN_REV, "exercises": rows},
         ensure_ascii=False, separators=(",", ":")
     ).encode("utf-8")
-    (output / "catalog.json.gz").write_bytes(gzip.compress(catalog, mtime=0))
+    # Android asset merging unwraps files with a .gz suffix.
+    (output / "catalog.bin").write_bytes(gzip.compress(catalog, mtime=0))
     atlas = Image.new("RGB", (COLUMNS * EDGE, (len(images) + COLUMNS - 1) // COLUMNS * EDGE), "white")
     for i, tile in enumerate(images):
         atlas.paste(tile, (i % COLUMNS * EDGE, i // COLUMNS * EDGE))
