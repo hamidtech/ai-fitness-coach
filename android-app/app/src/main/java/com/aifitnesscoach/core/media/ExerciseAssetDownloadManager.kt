@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import com.aifitnesscoach.core.exercise.definitions.ExternalExerciseSources
 import java.io.File
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
@@ -96,6 +97,7 @@ class ExerciseAssetDownloadWorker(
         val exerciseId = inputData.getString(ExerciseAssetDownloadManager.KEY_EXERCISE_ID)
             ?: return@withContext Result.failure()
 
+        ExternalExerciseSources.load(applicationContext)
         val manifest = ExerciseAssetCatalog.entryFor(exerciseId)
         val primaryUrl = manifest.primaryUrl
         if (manifest.defaultStatus != AssetDownloadStatus.AVAILABLE || primaryUrl == null) {
@@ -138,12 +140,15 @@ class ExerciseAssetDownloadWorker(
             .build()
         var saved = false
         try {
+            val isPng = manifest.mediaType == AssetMediaType.PNG_SINGLE
+            val extension = if (isPng) "png" else "webp"
+            val mimeType = "image/$extension"
             suspend fun receive(url: String, role: String): Pair<File, String> {
                 val file = ExerciseAssetCatalog.resolveConfinedMediaFile(
-                    mediaDir, "${exerciseId}_${attempt}_$role.webp"
+                    mediaDir, "${exerciseId}_${attempt}_$role.$extension"
                 )
                 staged.add(file)
-                val hash = downloadFile(client, url, file) { bytes ->
+                val hash = downloadFile(client, url, file, mimeType) { bytes ->
                     received += bytes
                     assetDao.upsert(working.copy(bytesDownloaded = received))
                 }
@@ -207,6 +212,7 @@ class ExerciseAssetDownloadWorker(
         client: OkHttpClient,
         url: String,
         destFile: File,
+        mimeType: String,
         onBytes: suspend (Int) -> Unit
     ): String {
         val digest = MessageDigest.getInstance("SHA-256")
@@ -236,8 +242,8 @@ class ExerciseAssetDownloadWorker(
         }
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(destFile.absolutePath, options)
-        require(options.outMimeType == "image/webp" && options.outWidth > 0 && options.outHeight > 0) {
-            "Invalid WebP file"
+        require(options.outMimeType == mimeType && options.outWidth > 0 && options.outHeight > 0) {
+            "Invalid image file"
         }
         return digest.digest().joinToString("") { "%02x".format(it) }
     }

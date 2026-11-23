@@ -78,5 +78,30 @@ def main():
     capture("06-camera-guide.png", label("camera_setup_title"))
 
 
+    # Return to the top-level tabs after entering the Quick Start deep link from Settings.
+    for _ in range(4):
+        adb("shell", "input", "keyevent", "KEYCODE_BACK")
+    tap(label("nav_plan"))
+    capture("07-weekly-plan.png", label("plan_rest_day"))
+    tap(label("nav_progress"))
+    capture("08-progress-empty.png", label("history_empty"))
+    tap(label("nav_exercises"))
+    tap(label("discovery_equipment"))
+    capture("09-equipment-filter.png", label("discovery_all_equipment"))
+    adb("shell", "input", "keyevent", "KEYCODE_BACK")
+
+    # Break UI with a practical narrow-display and large-type configuration.
+    initial_font = adb("shell", "settings", "get", "system", "font_scale").decode().strip()
+    try:
+        adb("shell", "settings", "put", "system", "font_scale", "1.65")
+        tap(label("discovery_muscles"))
+        capture("10-muscle-filter-large-type.png", label("discovery_all_muscles"))
+    finally:
+        if initial_font in {"", "null"}:
+            adb("shell", "settings", "delete", "system", "font_scale")
+        else:
+            adb("shell", "settings", "put", "system", "font_scale", initial_font)
+
+
 if __name__ == "__main__":
     main()

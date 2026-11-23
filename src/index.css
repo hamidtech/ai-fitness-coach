@@ -70,3 +70,31 @@ code, pre, .font-mono {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .workspace-control {
+    transition: transform 120ms ease-out;
+  }
+
+  .workspace-control:active {
+    transform: scale(0.98);
+    transition-duration: 60ms;
+  }
+
+  .workspace-panel {
+    animation: workspace-enter 150ms ease-out both;
+  }
+
+  @keyframes workspace-enter {
+    from { opacity: 0.68; }
+    to { opacity: 1; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-control,
+  .workspace-panel {
+    animation: none;
+    transition: none;
+  }
+}

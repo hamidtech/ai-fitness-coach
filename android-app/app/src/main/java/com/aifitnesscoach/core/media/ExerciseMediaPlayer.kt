@@ -44,10 +44,12 @@ import coil.decode.ImageDecoderDecoder
 import com.aifitnesscoach.R
 import com.aifitnesscoach.core.database.ExerciseAssetEntity
 import com.aifitnesscoach.core.exercise.MediaAssetRef
+import com.aifitnesscoach.core.exercise.definitions.ExternalExerciseSources
 import kotlinx.coroutines.delay
 import java.io.File
 
 private fun assetExists(context: Context, assetPath: String): Boolean {
+    if (assetPath.isBlank()) return false
     return runCatching {
         context.assets.open(assetPath).use { true }
     }.getOrDefault(false)
@@ -117,7 +119,7 @@ fun ExerciseDemoMediaView(
             contentAlignment = Alignment.Center
         ) {
             when {
-                mediaFailed -> ExerciseIllustration(exerciseId, Modifier.fillMaxSize())
+                mediaFailed -> ExerciseArtwork(exerciseId, Modifier.fillMaxSize())
                 isDownloaded && downloadedAsset?.mediaType == AssetMediaType.MP4.name && primaryFile != null -> {
                     val exoPlayer = remember(primaryFile.absolutePath) {
                         ExoPlayer.Builder(context).build().apply {
@@ -240,19 +242,21 @@ fun ExerciseDemoMediaView(
                 }
 
                 else -> {
-                    ExerciseIllustration(exerciseId, Modifier.fillMaxSize())
+                    ExerciseArtwork(exerciseId, Modifier.fillMaxSize())
                 }
             }
         }
 
         if (mediaFailed) {
             Text(stringResource(R.string.exercise_media_unreadable), style = MaterialTheme.typography.labelMedium)
-        } else if (isDownloaded && !downloadedAsset?.attribution.isNullOrBlank()) {
-            Text(
-                text = downloadedAsset!!.attribution,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        }
+        val attribution = when {
+            !mediaFailed && isDownloaded -> downloadedAsset?.attribution
+            ExternalExerciseSources.photo(exerciseId) != null -> ExternalExerciseSources.OPEN_ATTRIBUTION
+            else -> null
+        }
+        attribution?.takeIf(String::isNotBlank)?.let {
+            Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

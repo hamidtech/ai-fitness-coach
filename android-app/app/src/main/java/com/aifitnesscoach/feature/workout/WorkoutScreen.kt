@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.heightIn
 import com.aifitnesscoach.core.ui.LayoutSpacing
-import com.aifitnesscoach.core.media.ExerciseIllustration
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,14 +54,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -101,11 +97,15 @@ import com.aifitnesscoach.core.equipment.WeightLoadMode
 import com.aifitnesscoach.core.exercise.CoachExplanationProvider
 import com.aifitnesscoach.core.exercise.ExerciseCategory
 import com.aifitnesscoach.core.exercise.ExerciseMode
-import com.aifitnesscoach.core.exercise.definitions.ExerciseCatalog
 import com.aifitnesscoach.core.localization.LocaleManager
 import com.aifitnesscoach.core.personalization.PersonalizedGreeting
 import com.aifitnesscoach.core.pose.TrackingQuality
 import com.aifitnesscoach.feature.exercises.statusLabel
+import com.aifitnesscoach.feature.exercises.ExercisesScreen
+import com.aifitnesscoach.core.exercise.EquipmentCategoryType
+import com.aifitnesscoach.core.ui.ControlFlow
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
@@ -121,10 +121,18 @@ fun WorkoutScreen(
     onOpenCameraGuide: (String) -> Unit = {},
     onPoseTrackingActiveChanged: (Boolean) -> Unit = {},
     onSaveAndAnalyze: () -> Unit = {},
+    onSavePlan: ((List<PlannedWorkoutItem>) -> Unit)? = null,
     onExitWorkout: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val view = LocalView.current
+    val keepAwake = uiState.stage == WorkoutStage.LIVE_TRACKING || uiState.stage == WorkoutStage.REST_TIMER
+    DisposableEffect(view, keepAwake) {
+        val previous = view.keepScreenOn
+        if (keepAwake) view.keepScreenOn = true
+        onDispose { view.keepScreenOn = previous }
+    }
     fun hasPermission() = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
         PackageManager.PERMISSION_GRANTED
     var hasCameraPermission by remember { mutableStateOf(hasPermission()) }
@@ -180,6 +188,7 @@ fun WorkoutScreen(
                 isPersian = isPersian,
                 viewModel = viewModel,
                 skipCameraGuide = preferences.cameraGuideAcknowledged,
+                onSavePlan = onSavePlan,
                 onCancel = onExitWorkout
             )
         }
@@ -269,9 +278,23 @@ private fun SessionBuilderView(
     isPersian: Boolean,
     viewModel: WorkoutViewModel,
     skipCameraGuide: Boolean,
+    onSavePlan: ((List<PlannedWorkoutItem>) -> Unit)?,
     onCancel: () -> Unit
 ) {
-    var pickerExpanded by remember { mutableStateOf(false) }
+    var pickerExpanded by rememberSaveable { mutableStateOf(false) }
+    BackHandler(pickerExpanded) { pickerExpanded = false }
+    if (pickerExpanded) {
+        ExercisesScreen(
+            isPersian = isPersian,
+            onCloseQuickPicker = { pickerExpanded = false },
+            pickerTitle = R.string.workout_add_exercise,
+            onSelectExerciseForDetail = {
+                viewModel.addExerciseToPlan(it)
+                pickerExpanded = false
+            }
+        )
+        return
+    }
 
     Column(modifier = Modifier.fillMaxSize().imePadding().padding(16.dp)) {
         Text(
@@ -280,35 +303,12 @@ private fun SessionBuilderView(
         )
         Spacer(Modifier.height(10.dp))
 
-        ExposedDropdownMenuBox(
-            expanded = pickerExpanded,
-            onExpandedChange = { pickerExpanded = it }
+        OutlinedButton(
+            onClick = { pickerExpanded = true },
+            modifier = Modifier.fillMaxWidth().sizeIn(minHeight = LayoutSpacing.touchTarget)
         ) {
-            OutlinedButton(
-                onClick = { pickerExpanded = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .sizeIn(minHeight = 48.dp)
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
-            ) {
-                Icon(Icons.Outlined.Add, contentDescription = null)
-                Text(stringResource(R.string.workout_add_exercise_all_categories))
-            }
-            ExposedDropdownMenu(
-                expanded = pickerExpanded,
-                onDismissRequest = { pickerExpanded = false }
-            ) {
-                ExerciseCatalog.allExercises.forEach { ex ->
-                    DropdownMenuItem(
-                        text = { Text(if (isPersian) ex.nameFa else ex.nameEn) },
-                        leadingIcon = { ExerciseIllustration(ex.id, Modifier.size(44.dp)) },
-                        onClick = {
-                            viewModel.addExerciseToPlan(ex)
-                            pickerExpanded = false
-                        }
-                    )
-                }
-            }
+            Icon(Icons.Outlined.Add, contentDescription = null)
+            Text(stringResource(R.string.workout_add_exercise))
         }
 
         Spacer(Modifier.height(12.dp))
@@ -331,16 +331,19 @@ private fun SessionBuilderView(
         }
 
         Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
+        ControlFlow {
+            OutlinedButton(onClick = onCancel) {
                 Text(stringResource(R.string.workout_discard))
             }
             Button(
-                onClick = { viewModel.beginSessionFromPlan(skipCameraGuide = skipCameraGuide) },
-                enabled = uiState.plannedItems.isNotEmpty(),
-                modifier = Modifier.weight(2f)
+                onClick = {
+                    if (onSavePlan != null) onSavePlan(uiState.plannedItems)
+                    else viewModel.beginSessionFromPlan(skipCameraGuide = skipCameraGuide)
+                },
+                enabled = onSavePlan != null || uiState.plannedItems.isNotEmpty(),
+                modifier = Modifier.sizeIn(minHeight = LayoutSpacing.touchTarget)
             ) {
-                Text(stringResource(R.string.home_start_workout))
+                Text(stringResource(if (onSavePlan == null) R.string.home_start_workout else R.string.plan_save))
             }
         }
     }
@@ -438,16 +441,19 @@ private fun PlannedItemCard(
             // Weighted Training Manual Entry (Per Dumbbell vs Total Load)
             if (item.exercise.category == ExerciseCategory.WEIGHTED_TRAINING) {
                 val w = item.weightEntry ?: WeightEntry(5f)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
                     OutlinedTextField(
                         value = w.value.toString(),
                         onValueChange = { v ->
-                            v.toFloatOrNull()?.let { onUpdate(item.copy(weightEntry = w.copy(value = it))) }
+                            v.toFloatOrNull()?.takeIf { it.isFinite() && it >= 0f }?.let {
+                                onUpdate(item.copy(weightEntry = w.copy(value = it)))
+                            }
                         },
                         label = { Text(stringResource(R.string.equip_weight_value)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
+                    if (item.exercise.equipmentType == EquipmentCategoryType.DUMBBELL) ControlFlow {
                     FilterChip(
                         selected = w.loadMode == WeightLoadMode.PER_DUMBBELL,
                         onClick = { onUpdate(item.copy(weightEntry = w.copy(loadMode = WeightLoadMode.PER_DUMBBELL))) },
@@ -458,6 +464,7 @@ private fun PlannedItemCard(
                         onClick = { onUpdate(item.copy(weightEntry = w.copy(loadMode = WeightLoadMode.TOTAL_LOAD))) },
                         label = { Text(stringResource(R.string.equip_weight_mode_total)) }
                     )
+                    }
                 }
             }
 
@@ -465,7 +472,7 @@ private fun PlannedItemCard(
             if (item.exercise.category == ExerciseCategory.RESISTANCE_BAND_TRAINING) {
                 val band = item.bandMetadata ?: ResistanceBandMetadata()
                 Text(stringResource(R.string.band_type_label), style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ControlFlow {
                     item.exercise.supportedBandTypes.forEach { bt ->
                         FilterChip(
                             selected = band.bandType == bt,
@@ -474,7 +481,7 @@ private fun PlannedItemCard(
                         )
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ControlFlow {
                     listOf(
                         ResistanceLevel.LIGHT,
                         ResistanceLevel.MEDIUM,

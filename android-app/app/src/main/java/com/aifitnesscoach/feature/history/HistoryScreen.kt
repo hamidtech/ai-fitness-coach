@@ -18,6 +18,8 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material.icons.outlined.History
@@ -54,6 +56,7 @@ fun HistoryScreen(
     sessions: List<WorkoutSessionWithDetails>,
     onAnalyzeWorkouts: (Long?) -> Unit
 ) {
+    var showProgress by rememberSaveable { mutableStateOf(true) }
     var categoryFilter by rememberSaveable { mutableStateOf<ExerciseCategory?>(null) }
 
     val filtered = remember(sessions, categoryFilter) {
@@ -68,13 +71,25 @@ fun HistoryScreen(
             Modifier.fillMaxWidth().padding(LayoutSpacing.pagePadding),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(stringResource(R.string.nav_history), style = MaterialTheme.typography.headlineMedium)
-            if (sessions.isNotEmpty()) {
+            Text(stringResource(R.string.nav_progress), style = MaterialTheme.typography.headlineMedium)
+            if (!showProgress && sessions.isNotEmpty()) {
                 TextButton(onClick = { onAnalyzeWorkouts(null) }) {
                     Icon(Icons.Outlined.AutoAwesome, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
                     Text(stringResource(R.string.ai_analyze_history_btn))
                 }
             }
+        }
+
+        TabRow(selectedTabIndex = if (showProgress) 0 else 1) {
+            Tab(selected = showProgress, onClick = { showProgress = true },
+                text = { Text(stringResource(R.string.progress_overview)) })
+            Tab(selected = !showProgress, onClick = { showProgress = false },
+                text = { Text(stringResource(R.string.nav_history)) })
+        }
+
+        if (showProgress) {
+            TrainingProgressView(sessions, isPersian)
+            return
         }
 
         LazyRow(

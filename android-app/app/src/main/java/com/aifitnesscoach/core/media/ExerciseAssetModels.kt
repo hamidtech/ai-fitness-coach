@@ -16,6 +16,7 @@ enum class AssetDownloadStatus {
 
 enum class AssetSourceType {
     REPDB_FREE_TIER,
+    OPEN_EXERCISE_BASE,
     EXERCISE_DB_RESTRICTED,
     USER_IMPORTED,
     NONE
@@ -25,6 +26,7 @@ enum class AssetMediaType {
     NONE,
     WEBP_IMAGE_PAIR,
     WEBP_SINGLE,
+    PNG_SINGLE,
     GIF,
     MP4
 }

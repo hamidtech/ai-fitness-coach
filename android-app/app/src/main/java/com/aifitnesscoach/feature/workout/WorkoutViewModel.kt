@@ -15,6 +15,7 @@ import com.aifitnesscoach.core.exercise.AnalysisResult
 import com.aifitnesscoach.core.exercise.AnalyzerRegistry
 import com.aifitnesscoach.core.exercise.CoachExplanationProvider
 import com.aifitnesscoach.core.exercise.ExerciseAnalyzer
+import com.aifitnesscoach.core.exercise.EquipmentCategoryType
 import com.aifitnesscoach.core.exercise.ExerciseCategory
 import com.aifitnesscoach.core.exercise.ExerciseDefinition
 import com.aifitnesscoach.core.exercise.ExerciseMode
@@ -42,7 +43,13 @@ data class PlannedWorkoutItem(
     val targetHoldSec: Int = 30,
     val restDurationSec: Int = 60,
     val weightEntry: WeightEntry? = if (exercise.category == ExerciseCategory.WEIGHTED_TRAINING) {
-        WeightEntry(value = 5f, unit = WeightUnit.KG, loadMode = WeightLoadMode.PER_DUMBBELL)
+        WeightEntry(
+            value = 5f,
+            unit = WeightUnit.KG,
+            loadMode = if (exercise.equipmentType == EquipmentCategoryType.DUMBBELL) {
+                WeightLoadMode.PER_DUMBBELL
+            } else WeightLoadMode.TOTAL_LOAD
+        )
     } else null,
     val bandMetadata: ResistanceBandMetadata? = if (exercise.category == ExerciseCategory.RESISTANCE_BAND_TRAINING) {
         ResistanceBandMetadata(bandType = exercise.supportedBandTypes.firstOrNull() ?: com.aifitnesscoach.core.equipment.ResistanceBandType.LONG_LOOP)
@@ -129,10 +136,14 @@ class WorkoutViewModel(
     }
 
     fun openSessionBuilder(initialExercises: List<ExerciseDefinition> = emptyList()) {
+        openConfiguredPlan(initialExercises.map { PlannedWorkoutItem(exercise = it) })
+    }
+
+    fun openConfiguredPlan(items: List<PlannedWorkoutItem>) {
         restTimerJob?.cancel()
         _uiState.value = WorkoutUiState(
             stage = WorkoutStage.PLANNING,
-            plannedItems = initialExercises.map { PlannedWorkoutItem(exercise = it) }
+            plannedItems = items
         )
     }
 

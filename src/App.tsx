@@ -130,11 +130,11 @@ export default function App() {
           </a>
           <div className="flex shrink-0 items-center gap-1 md:order-3">
             <button type="button" aria-pressed={darkMode} onClick={() => setDarkMode((value) => !value)}
-              className="min-h-12 rounded-lg px-3 text-sm font-medium hover:bg-slate-100 focus-visible:ring-2 dark:hover:bg-slate-800">
+              className="min-h-12 workspace-control rounded-lg px-3 text-sm font-medium hover:bg-slate-100 focus-visible:ring-2 dark:hover:bg-slate-800">
               {darkMode ? (isFa ? 'روشن' : 'Light') : (isFa ? 'تیره' : 'Dark')}
             </button>
             <button type="button" onClick={() => setIsFa((value) => !value)}
-              className="min-h-12 rounded-lg px-3 text-sm font-semibold hover:bg-slate-100 focus-visible:ring-2 dark:hover:bg-slate-800">
+              className="min-h-12 workspace-control rounded-lg px-3 text-sm font-semibold hover:bg-slate-100 focus-visible:ring-2 dark:hover:bg-slate-800">
               {isFa ? 'English' : 'فارسی'}
             </button>
           </div>
@@ -143,7 +143,7 @@ export default function App() {
             {workspaceSections.map((item) => (
               <a key={item.id} href={`#${item.id}`}
                 aria-current={section === item.id ? 'page' : undefined}
-                className={`inline-flex min-h-12 items-center rounded-lg px-3 font-medium focus-visible:ring-2 ${section === item.id
+                className={`workspace-control inline-flex min-h-12 items-center rounded-lg px-3 font-medium focus-visible:ring-2 ${section === item.id
                   ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
                   : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
                 {isFa ? item.fa : item.en}
@@ -198,7 +198,7 @@ export default function App() {
       </div>
 
       {/* Main Content */}
-      <main>
+      <main key={section} className="workspace-panel">
         {section === 'preview' && (
           <PhonePreview
             isFa={isFa}

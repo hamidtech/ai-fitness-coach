@@ -3,7 +3,21 @@ package com.aifitnesscoach.feature.exercises
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Alignment
-import com.aifitnesscoach.core.media.ExerciseIllustration
+import com.aifitnesscoach.core.media.ExerciseArtwork
+import com.aifitnesscoach.core.exercise.definitions.DiscoverableExercise
+import com.aifitnesscoach.core.exercise.definitions.ExerciseSource
+import androidx.compose.ui.draw.clip
+import com.aifitnesscoach.core.exercise.definitions.MuscleRegion
+import com.aifitnesscoach.core.exercise.definitions.discoveryEntry
+import com.aifitnesscoach.core.exercise.definitions.equipmentLabel
+import com.aifitnesscoach.core.exercise.definitions.searchKey
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
@@ -23,7 +37,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -75,23 +88,92 @@ fun ExercisesScreen(
     isPersian: Boolean,
     initialCategoryFilter: ExerciseCategory? = null,
     onCloseQuickPicker: (() -> Unit)? = null,
+    pickerTitle: Int = R.string.widget_start,
     onSelectExerciseForDetail: (ExerciseDefinition) -> Unit
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedCategory by rememberSaveable(initialCategoryFilter) { mutableStateOf(initialCategoryFilter) }
 
     val quickPicker = onCloseQuickPicker != null
-    val filtered = remember(searchQuery, selectedCategory, quickPicker) {
-        ExerciseCatalog.allExercises.filter { ex ->
-            val catMatch = selectedCategory == null || ex.category == selectedCategory
-            val q = searchQuery.trim().lowercase()
-            val queryMatch = q.isEmpty() ||
-                ex.nameEn.lowercase().contains(q) ||
-                ex.nameFa.lowercase().contains(q) ||
-                ex.targetMusclesEn.any { it.lowercase().contains(q) } ||
-                ex.targetMusclesFa.any { it.lowercase().contains(q) }
-            catMatch && queryMatch
-        }.let { list -> if (quickPicker) list.sortedByDescending { it.analyzerId != null } else list }
+    var source by rememberSaveable(quickPicker, initialCategoryFilter) {
+        mutableStateOf(
+            when {
+                initialCategoryFilter != null -> null
+                quickPicker && pickerTitle == R.string.widget_start -> ExerciseSource.BUILT_IN
+                else -> ExerciseSource.HASAN
+            }
+        )
+    }
+    var equipment by rememberSaveable { mutableStateOf<String?>(null) }
+    var region by rememberSaveable { mutableStateOf<MuscleRegion?>(null) }
+    var openFilter by rememberSaveable { mutableStateOf<DiscoveryFilter?>(null) }
+    val catalog = remember { ExerciseCatalog.allExercises.map(::discoveryEntry) }
+    val catalogBySource = remember(catalog, source, selectedCategory) {
+        catalog.filter {
+            (source == null || it.source == source || it.source == ExerciseSource.BUILT_IN) &&
+                (selectedCategory == null || it.exercise.category == selectedCategory)
+        }
+    }
+    val equipmentOptions = remember(catalogBySource) {
+        catalogBySource.flatMap { it.equipment }.distinct().sorted()
+    }
+    val filtered = remember(catalogBySource, searchQuery, equipment, region, quickPicker) {
+        val query = searchKey(searchQuery)
+        val matches = catalogBySource.filter { it.matches(query, equipment, region) }
+        if (quickPicker) matches.sortedByDescending { it.exercise.analyzerId != null } else matches
+    }
+
+    val filter = openFilter
+    if (filter != null) {
+        val options = when (filter) {
+            DiscoveryFilter.SOURCE -> listOf(null to sourceLabel(null)) +
+                ExerciseSource.entries.map { it.name to sourceLabel(it) }
+            DiscoveryFilter.EQUIPMENT -> listOf(null to stringResource(R.string.discovery_all_equipment)) +
+                equipmentOptions.map { it to equipmentLabel(it, isPersian) }
+            DiscoveryFilter.MUSCLE -> listOf(null to stringResource(R.string.discovery_all_muscles)) +
+                MuscleRegion.entries.map { it.name to it.label(isPersian) }
+        }
+        val current = when (filter) {
+            DiscoveryFilter.SOURCE -> source?.name
+            DiscoveryFilter.EQUIPMENT -> equipment
+            DiscoveryFilter.MUSCLE -> region?.name
+        }
+        AlertDialog(
+            onDismissRequest = { openFilter = null },
+            title = { Text(stringResource(filter.title)) },
+            text = {
+                LazyColumn(
+                    Modifier.heightIn(max = 320.dp).selectableGroup(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(options, key = { it.first ?: "all" }, contentType = { "filter_option" }) { (value, label) ->
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .sizeIn(minHeight = LayoutSpacing.touchTarget)
+                                .selectable(selected = current == value, role = Role.RadioButton, onClick = {
+                                    when (filter) {
+                                        DiscoveryFilter.SOURCE -> {
+                                            source = value?.let(ExerciseSource::valueOf)
+                                            equipment = null
+                                        }
+                                        DiscoveryFilter.EQUIPMENT -> equipment = value
+                                        DiscoveryFilter.MUSCLE -> region = value?.let(MuscleRegion::valueOf)
+                                    }
+                                    openFilter = null
+                                }),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small)
+                        ) {
+                            RadioButton(selected = current == value, onClick = null)
+                            Text(label, Modifier.weight(1f))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { openFilter = null }) { Text(stringResource(R.string.common_back)) }
+            }
+        )
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -100,7 +182,7 @@ fun ExercisesScreen(
                 IconButton(onClick = onCloseQuickPicker) {
                     Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.common_back))
                 }
-                Text(stringResource(R.string.widget_start), style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(pickerTitle), style = MaterialTheme.typography.headlineSmall)
             }
         }
         if (!quickPicker) {
@@ -129,56 +211,79 @@ fun ExercisesScreen(
             shape = RoundedCornerShape(14.dp)
         )
 
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            item {
-                FilterChip(
-                    selected = selectedCategory == null,
-                    onClick = { selectedCategory = null },
-                    label = { Text(stringResource(R.string.exercises_all_categories)) }
-                )
-            }
-            items(ExerciseCategory.entries) { cat ->
-                FilterChip(
-                    selected = selectedCategory == cat,
-                    onClick = { selectedCategory = if (selectedCategory == cat) null else cat },
-                    label = { Text(categoryLabel(cat)) }
-                )
-            }
-        }
-
-        if (filtered.isEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(LayoutSpacing.pagePadding),
-                verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)
-            ) {
-                Icon(Icons.Outlined.Search, contentDescription = null)
-                Text(stringResource(R.string.exercise_search_empty), style = MaterialTheme.typography.titleMedium)
-                TextButton(onClick = {
-                    searchQuery = ""
-                    selectedCategory = null
-                }) { Text(stringResource(R.string.common_clear)) }
-            }
-        }
-
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(LayoutSpacing.pagePadding),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)
         ) {
-            items(filtered, key = { it.id }) { ex ->
-                ExerciseListItem(ex, isPersian) { onSelectExerciseForDetail(ex) }
+            item(key = "filters", contentType = "filters") {
+                Column(verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                    OutlinedButton(
+                        onClick = { openFilter = DiscoveryFilter.SOURCE },
+                        modifier = Modifier.fillMaxWidth().sizeIn(minHeight = LayoutSpacing.touchTarget)
+                    ) {
+                        Text(stringResource(R.string.discovery_source_value, sourceLabel(source)))
+                    }
+                    ControlFlow {
+                        FilterChip(
+                            selected = equipment != null,
+                            onClick = { openFilter = DiscoveryFilter.EQUIPMENT },
+                            label = { Text(equipment?.let { equipmentLabel(it, isPersian) }
+                                ?: stringResource(R.string.discovery_equipment)) }
+                        )
+                        FilterChip(
+                            selected = region != null,
+                            onClick = { openFilter = DiscoveryFilter.MUSCLE },
+                            label = { Text(region?.label(isPersian) ?: stringResource(R.string.discovery_muscles)) }
+                        )
+                        selectedCategory?.let { category ->
+                            FilterChip(
+                                selected = true,
+                                onClick = { selectedCategory = null },
+                                label = { Text(categoryLabel(category)) },
+                                trailingIcon = { Icon(Icons.Outlined.Close, contentDescription = null) }
+                            )
+                        }
+                    }
+                    Text(stringResource(R.string.discovery_results, filtered.size),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (source != ExerciseSource.BUILT_IN) {
+                        Text(stringResource(R.string.discovery_open_credit), style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            if (filtered.isEmpty()) {
+                item(key = "empty", contentType = "empty") {
+                    Column(verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                        Text(stringResource(R.string.exercise_search_empty), style = MaterialTheme.typography.titleMedium)
+                        TextButton(onClick = {
+                            searchQuery = ""
+                            selectedCategory = null
+                            equipment = null
+                            region = null
+                        }) { Text(stringResource(R.string.common_clear)) }
+                    }
+                }
+            }
+            items(filtered, key = { it.exercise.id }, contentType = { "exercise" }) { entry ->
+                ExerciseListItem(entry.exercise, isPersian, entry) { onSelectExerciseForDetail(entry.exercise) }
             }
         }
+
     }
 
 
 }
 
 @Composable
-fun ExerciseListItem(exercise: ExerciseDefinition, isPersian: Boolean, onClick: () -> Unit) {
+fun ExerciseListItem(
+    exercise: ExerciseDefinition,
+    isPersian: Boolean,
+    entry: DiscoverableExercise = remember(exercise) { discoveryEntry(exercise) },
+    onClick: () -> Unit
+) {
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -190,14 +295,20 @@ fun ExerciseListItem(exercise: ExerciseDefinition, isPersian: Boolean, onClick: 
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.screen)
         ) {
-            ExerciseIllustration(exercise.id, Modifier.size(76.dp))
+            ExerciseArtwork(exercise.id, Modifier.size(68.dp).clip(RoundedCornerShape(12.dp)))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(if (isPersian) exercise.nameFa else exercise.nameEn, style = MaterialTheme.typography.titleMedium)
+                val metadata = (entry.muscleRegions.take(1).map { it.label(isPersian) } +
+                    entry.equipment.map { equipmentLabel(it, isPersian) }).joinToString(" · ")
                 Text(
-                    categoryLabel(exercise.category),
+                    metadata,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (entry.source != ExerciseSource.BUILT_IN) {
+                    Text(sourceLabel(entry.source), style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 if (exercise.analyzerId != null) {
                     Text(
                         stringResource(R.string.exercise_camera_badge),
@@ -219,13 +330,20 @@ internal fun ExerciseWorkoutSetup(
     onBack: () -> Unit,
     onOpenMedia: () -> Unit,
     onOpenCameraGuide: () -> Unit,
+    recentLoad: WeightEntry? = null,
     onStartWorkout: (PlannedWorkoutItem) -> Unit
 ) {
     var targetSets by rememberSaveable(exercise.id) { mutableStateOf("3") }
     var targetReps by rememberSaveable(exercise.id) { mutableStateOf("10") }
     var targetHoldSec by rememberSaveable(exercise.id) { mutableStateOf("30") }
-    var weightText by rememberSaveable(exercise.id) { mutableStateOf("5") }
-    var loadMode by rememberSaveable(exercise.id) { mutableStateOf(WeightLoadMode.PER_DUMBBELL) }
+    var weightText by rememberSaveable(exercise.id) {
+        mutableStateOf(restoredLoadKg(recentLoad)?.toString() ?: "5")
+    }
+    val entry = remember(exercise) { discoveryEntry(exercise) }
+    val hasDumbbells = "dumbbell" in entry.equipment
+    var loadMode by rememberSaveable(exercise.id) {
+        mutableStateOf(if (hasDumbbells) recentLoad?.loadMode ?: WeightLoadMode.PER_DUMBBELL else WeightLoadMode.TOTAL_LOAD)
+    }
     var selectedBandType by rememberSaveable(exercise.id) {
         mutableStateOf(exercise.supportedBandTypes.firstOrNull() ?: ResistanceBandType.LONG_LOOP)
     }
@@ -311,11 +429,14 @@ internal fun ExerciseWorkoutSetup(
                 style = MaterialTheme.typography.headlineMedium
             )
             Text(
-                text = "${categoryLabel(exercise.category)} · ${statusLabel(exercise.implementationStatus)}",
+                text = entry.equipment.joinToString(" · ") { equipmentLabel(it, isPersian) },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary
             )
 
+            if (entry.source != ExerciseSource.BUILT_IN) {
+                Text(sourceLabel(entry.source), style = MaterialTheme.typography.labelLarge)
+            }
             ExerciseDemoMediaView(
                 mediaRef = exercise.demoMedia,
                 exerciseId = exercise.id,
@@ -327,7 +448,9 @@ internal fun ExerciseWorkoutSetup(
                 stringResource(if (exercise.analyzerId != null) R.string.setup_camera_analysis else R.string.setup_manual_mode),
                 style = MaterialTheme.typography.bodyMedium
             )
-            TextButton(onClick = onOpenCameraGuide) { Text(stringResource(R.string.camera_setup_title)) }
+            if (entry.source == ExerciseSource.BUILT_IN) {
+                TextButton(onClick = onOpenCameraGuide) { Text(stringResource(R.string.camera_setup_title)) }
+            }
 
             // Quick Set / Rep / Equipment Setup right inside Exercise Details
             Card(
@@ -379,7 +502,7 @@ internal fun ExerciseWorkoutSetup(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            ControlFlow {
+                            if (hasDumbbells) ControlFlow {
                             FilterChip(
                                 selected = loadMode == WeightLoadMode.PER_DUMBBELL,
                                 onClick = { loadMode = WeightLoadMode.PER_DUMBBELL },
@@ -453,7 +576,12 @@ internal fun ExerciseWorkoutSetup(
                 Text(stringResource(if (showTechnique) R.string.setup_hide_technique else R.string.setup_show_technique))
             }
             if (showTechnique) {
-                Text(if (isPersian) exercise.descriptionFa else exercise.descriptionEn)
+                val description = if (isPersian) exercise.descriptionFa else exercise.descriptionEn
+                if (description.isNotBlank()) Text(description)
+                if (isPersian && entry.source != ExerciseSource.BUILT_IN) {
+                    Text(stringResource(R.string.discovery_upstream_english),
+                        style = MaterialTheme.typography.labelLarge)
+                }
                 SectionBlock(
                     title = stringResource(R.string.exercise_target_muscles),
                     items = if (isPersian) exercise.targetMusclesFa else exercise.targetMusclesEn
@@ -487,6 +615,7 @@ private fun SectionBlock(
     items: List<String>,
     numbered: Boolean = false
 ) {
+    if (items.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = title,
@@ -516,4 +645,24 @@ fun statusLabel(status: ImplementationStatus): String = when (status) {
     ImplementationStatus.IMPLEMENTED_NEEDS_VALIDATION -> stringResource(R.string.status_implemented)
     ImplementationStatus.EXPERIMENTAL -> stringResource(R.string.status_experimental)
     ImplementationStatus.COMING_SOON -> stringResource(R.string.status_coming_soon)
+    ImplementationStatus.MANUAL_ONLY -> stringResource(R.string.setup_manual_mode)
+}
+
+private enum class DiscoveryFilter(val title: Int) {
+    SOURCE(R.string.discovery_source),
+    EQUIPMENT(R.string.discovery_equipment),
+    MUSCLE(R.string.discovery_muscles)
+}
+
+@Composable
+private fun sourceLabel(source: ExerciseSource?): String = when (source) {
+    ExerciseSource.BUILT_IN -> stringResource(R.string.discovery_builtin)
+    ExerciseSource.HASAN -> stringResource(R.string.discovery_hasan)
+    ExerciseSource.OPEN_EXERCISE_BASE -> "OpenExerciseBase"
+    null -> stringResource(R.string.discovery_all_sources)
+}
+
+private fun restoredLoadKg(load: WeightEntry?): Float? {
+    if (load == null || !load.value.isFinite() || load.value < 0f) return null
+    return if (load.unit == WeightUnit.KG) load.value else (load.value * 0.45359237f)
 }

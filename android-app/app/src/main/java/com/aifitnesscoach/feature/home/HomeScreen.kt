@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.aifitnesscoach.R
 import com.aifitnesscoach.core.ui.TrainingPhotography
 import com.aifitnesscoach.core.media.ExerciseIllustration
+import com.aifitnesscoach.core.media.ExerciseArtwork
 import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.database.SavedInsightEntity
 import com.aifitnesscoach.core.database.UserProfile
@@ -63,6 +65,7 @@ fun HomeScreen(
     latestInsight: SavedInsightEntity?,
     dailyQuote: MotivationalQuote?,
     onOpenProfileSetup: () -> Unit,
+    onOpenSettings: () -> Unit,
     onStartQuickWorkout: () -> Unit,
     onBuildMultiWorkout: () -> Unit,
     onContinueLastWorkout: (WorkoutSessionWithDetails) -> Unit,
@@ -92,6 +95,9 @@ fun HomeScreen(
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.weight(1f)
                 )
+                FilledTonalIconButton(onClick = onOpenSettings) {
+                    Icon(Icons.Outlined.Settings, stringResource(R.string.nav_settings))
+                }
                 FilledTonalIconButton(onClick = onOpenProfileSetup) {
                     Icon(Icons.Outlined.Person, stringResource(R.string.profile_edit))
                 }
@@ -214,7 +220,7 @@ fun HomeScreen(
                             shape = RoundedCornerShape(14.dp)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                ExerciseIllustration(ex.id, Modifier.fillMaxWidth().height(88.dp))
+                                ExerciseArtwork(ex.id, Modifier.fillMaxWidth().height(88.dp))
                                 Spacer(Modifier.height(LayoutSpacing.small))
                                 Text(
                                     text = if (isPersian) ex.nameFa else ex.nameEn,

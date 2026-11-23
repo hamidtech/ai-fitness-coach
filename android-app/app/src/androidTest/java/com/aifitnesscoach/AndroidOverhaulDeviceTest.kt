@@ -3,6 +3,12 @@ package com.aifitnesscoach
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
+import com.aifitnesscoach.core.exercise.definitions.ExerciseCatalog
+import com.aifitnesscoach.core.exercise.definitions.ExerciseSource
+import com.aifitnesscoach.core.exercise.definitions.ExternalExerciseSources
+import com.aifitnesscoach.core.media.AssetMediaType
+import com.aifitnesscoach.core.media.ExerciseAssetCatalog
 import android.widget.FrameLayout
 import android.widget.RemoteViews
 import androidx.room.Room
@@ -113,6 +119,43 @@ class AndroidOverhaulDeviceTest {
             assertNotNull(appQuote)
             assertEquals(appQuote, widgetQuote)
             assertEquals(appQuote?.id, appRepository.preferencesFlow.first().dailyQuoteId)
+        }
+    }
+
+    @Test
+    fun bothCatalogsAndThumbnailsWorkFromPackagedOfflineAssets() {
+        val context = instrumentation.targetContext
+        ExternalExerciseSources.load(context)
+        val external = ExternalExerciseSources.exercises
+        val hasan = external.filter { ExternalExerciseSources.entry(it.id)?.source == ExerciseSource.HASAN }
+        val validated = external.filter { ExternalExerciseSources.entry(it.id)?.source == ExerciseSource.OPEN_EXERCISE_BASE }
+        assertEquals(1_324, hasan.size)
+        assertEquals(191, validated.size)
+        assertEquals(1_554, ExerciseCatalog.allExercises.size)
+        assertTrue(external.none { it.analyzerId != null })
+        val openImage = ExerciseAssetCatalog.entryFor(validated.first().id)
+        assertEquals(AssetMediaType.PNG_SINGLE, openImage.mediaType)
+        assertTrue(requireNotNull(openImage.primaryUrl).contains(ExternalExerciseSources.OPEN_REVISION))
+        assertTrue(hasan.none { ExerciseAssetCatalog.entryFor(it.id).primaryUrl.orEmpty().contains("gymvisual") })
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.assets.open(ExternalExerciseSources.ATLAS_PATH).use {
+            BitmapFactory.decodeStream(it, null, options)
+        }
+        assertEquals(1_536, options.outWidth)
+        validated.forEach {
+            val photo = requireNotNull(ExternalExerciseSources.photo(it.id))
+            assertTrue((photo.tile / 16 + 1) * 96 <= options.outHeight)
+        }
+    }
+
+    @Test
+    fun planDaysPersistIndependentlyAndCanBeCleared() = runBlocking {
+        withIsolatedPreferences { write, read ->
+            write.savePlanDay(1, "first")
+            write.savePlanDay(7, "last")
+            assertEquals(mapOf(1 to "first", 7 to "last"), read.preferencesFlow.first().weeklyPlan)
+            write.savePlanDay(1, null)
+            assertEquals(mapOf(7 to "last"), read.preferencesFlow.first().weeklyPlan)
         }
     }
 

@@ -57,3 +57,33 @@ The AndroidX Test runner 1.6.2 is pinned for instrumentation only. It supports t
 5. Test a cold start with the camera occupied by another app or disabled by Android's camera privacy switch. Check the message, retry and exit. Verify in logcat that a closed session has no subsequent bind or inference callbacks.
 6. In airplane mode, browse all thumbnails and saved demonstrations. With network enabled, test a queued unmetered-only download, cancellation, retry, a blocked download, and valid/invalid personal imports.
 7. Pin both widgets on a phone launcher. Check empty states, all tap destinations, a saved workout, latest quote equality with Home, light/dark themes, Persian layout, resizing, and an overnight or post-reboot update. Launchers and power management can affect widget dimensions and refresh timing.
+
+## Expanded offline exercise library
+
+Exercises defaults to the MIT-licensed [Exercises Dataset](https://github.com/hasaneyldrm/exercises-dataset) exercise records. The built-in library remains visible with either external source and can be selected on its own. Choose OpenExerciseBase to see the validated snapshot of its main branch. Search accepts both scripts for built-in names and filters, and tolerates a one-character typo in an exercise name. Equipment and muscle group filters intersect. The workout builder uses the same search and filters.
+
+The combined view contains 39 built-in records, 1,324 Exercises Dataset records, and 191 professionally reviewed OpenExerciseBase records. IDs are namespaced by provider and preserved in the log. Some movements occur in more than one source. The native camera analyzers remain limited to the supported built-in exercises. Imported rows have manual logging and English source names/instructions, with a Persian UI and localized filter labels.
+
+OpenExerciseBase images use [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) and are credited to the Ludwig Boltzmann Institute for Digital Health and Prevention. The app bundles a downscaled thumbnail atlas and offers pinned original PNG downloads through the same WorkManager pipeline as RepDB. Exact, unique normalized name-and-equipment matches can also use these images. Other external records display a muscle-group diagram and support the existing file picker to add a personal image, GIF or MP4. Gym visual photos and GIFs referenced by Exercises Dataset carry separate terms and are excluded. See Settings → Licenses and credits for notices, revisions, original sources, and modification disclosures.
+
+To regenerate the dataset, install Pillow in the development environment and run:
+
+```bash
+python tools/import_exercise_sources.py /path/to/exercises-dataset/data/exercises.json \
+    /path/to/OpenExerciseBase-Database app/src/main/assets/exercise_sources
+```
+
+Use the two revisions pinned in the script. The tool removes restricted media fields, selects reviewed OpenExerciseBase records, and packages the normalized data and thumbnail atlas. It adds no APK dependency and requires no API key.
+
+## Plan and progress
+
+Home, Plan, Start, Progress, and Exercises are the primary destinations. Open Settings from Home and Health Connect from Settings. Set up an editable routine for any weekday in Plan. Start launches today's saved routine or opens the quick picker when the day is unscheduled. The workout builder preserves set, rep, duration, rest and equipment values in the saved routine. Single-exercise setup can prefill the last logged weight. The screen stays awake while a set or rest timer is active.
+
+Progress opens with the daily training heatmap, consecutive-day streaks, seven days of completed sets by muscle group, and best estimated one-rep maxima from sets of 1–12 reps. Estimated maxima separate total and per-dumbbell loads. The log and its AI analysis remain under Progress → History. These changes use existing Room records and add DataStore keys only. See [the OpenGym feature audit](../docs/opengym-feature-audit.md) for the detailed comparison.
+
+### Verification on a device
+
+1. Open Exercises in English and Persian, then try dumbbell + shoulders, an impossible combination, and a misspelling. Tap the longest returned item and check wrapping at 165% font scale.
+2. Open an OpenExerciseBase result offline. Confirm the thumbnail is present, then reconnect to download the original; try retry and cancel. Open a dataset entry without a verified image and import your own JPG or MP4.
+3. Use a starter routine, save one weekday, restart, and edit the saved sets. Start on the configured day and save a session. Verify its history, heatmap, muscle totals, and both widgets.
+4. Open Settings → Licenses and credits. Check that the source and license are available and the bundled license text opens offline.

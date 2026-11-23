@@ -1,6 +1,7 @@
 package com.aifitnesscoach.core.media
 
 import com.aifitnesscoach.core.exercise.definitions.ExerciseCatalog
+import com.aifitnesscoach.core.exercise.definitions.ExternalExerciseSources
 import java.io.File
 
 /**
@@ -112,13 +113,33 @@ object ExerciseAssetCatalog {
     ).associateBy { it.exerciseId }
 
     fun entryFor(exerciseId: String): ExerciseMediaManifestEntry {
-        return entriesByExerciseId[exerciseId] ?: ExerciseMediaManifestEntry(
+        entriesByExerciseId[exerciseId]?.let { return it }
+        val upstream = ExternalExerciseSources.entry(exerciseId)
+        val photo = ExternalExerciseSources.photo(exerciseId)
+        if (photo != null) return ExerciseMediaManifestEntry(
+            exerciseId = exerciseId,
+            sourceType = AssetSourceType.OPEN_EXERCISE_BASE,
+            sourceSlug = photo.path,
+            mediaType = AssetMediaType.PNG_SINGLE,
+            primaryUrl = "https://raw.githubusercontent.com/OpenExerciseBase/OpenExerciseBase-Database/" +
+                "${ExternalExerciseSources.OPEN_REVISION}/${photo.path}",
+            version = ExternalExerciseSources.OPEN_REVISION,
+            licenseName = ExternalExerciseSources.OPEN_LICENSE,
+            attribution = ExternalExerciseSources.OPEN_ATTRIBUTION,
+            licenseUrl = ExternalExerciseSources.OPEN_LICENSE_URL,
+            resolution = photo.resolution,
+            expectedBytes = photo.bytes,
+            defaultStatus = AssetDownloadStatus.AVAILABLE
+        )
+        return ExerciseMediaManifestEntry(
             exerciseId = exerciseId,
             sourceType = AssetSourceType.NONE,
             sourceSlug = null,
             mediaType = AssetMediaType.NONE,
             primaryUrl = null,
-            defaultStatus = AssetDownloadStatus.NOT_AVAILABLE
+            defaultStatus = AssetDownloadStatus.NOT_AVAILABLE,
+            unavailableReasonEn = upstream?.let { "Licensed online media is unavailable. You can import a personal photo, GIF or MP4." },
+            unavailableReasonFa = upstream?.let { "رسانهٔ دارای مجوز در دسترس نیست. می‌توانید عکس، گیف یا ویدیوی شخصی وارد کنید." }
         )
     }
 

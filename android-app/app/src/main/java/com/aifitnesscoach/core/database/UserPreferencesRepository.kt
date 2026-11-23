@@ -125,6 +125,7 @@ data class UserPreferences(
     val measurementUnit: MeasurementUnit = MeasurementUnit.METRIC,
     val cameraLens: CameraLensPreference = CameraLensPreference.FRONT,
     val onboardingDraft: String? = null,
+    val weeklyPlan: Map<Int, String> = emptyMap(),
     val cameraGuideAcknowledged: Boolean = false,
     val voiceFeedbackEnabled: Boolean = true,
     val skeletonOverlayEnabled: Boolean = true,
@@ -186,6 +187,7 @@ class UserPreferencesRepository(
         val CUSTOM_GOAL_LABEL = stringPreferencesKey("person_custom_goal_label")
         val EXPERIENCE_LEVEL = stringPreferencesKey("person_experience_level")
         val ONBOARDING_DRAFT = stringPreferencesKey("onboarding_draft")
+        val PLAN_DAYS = (1..7).associateWith { stringPreferencesKey("weekly_plan_day_$it") }
         val PROFILE_COMPLETED = booleanPreferencesKey("profile_completed")
 
         val LANGUAGE = stringPreferencesKey("app_language")
@@ -254,6 +256,7 @@ class UserPreferencesRepository(
                 hasCompletedOnboarding = prefs[Keys.PROFILE_COMPLETED] ?: false
             ),
             onboardingDraft = prefs[Keys.ONBOARDING_DRAFT],
+            weeklyPlan = Keys.PLAN_DAYS.mapNotNull { (day, key) -> prefs[key]?.let { day to it } }.toMap(),
             language = enumOrDefault(prefs[Keys.LANGUAGE], AppLanguage.SYSTEM),
             themeMode = enumOrDefault(prefs[Keys.THEME_MODE], AppThemeMode.SYSTEM),
             colorPalette = enumOrDefault(prefs[Keys.COLOR_PALETTE], AppColorPalette.AUTO),
@@ -516,6 +519,13 @@ class UserPreferencesRepository(
             } else if (!error.isNullOrBlank()) {
                 prefs[Keys.SCHED_LAST_ERROR] = error.take(400)
             }
+        }
+    }
+
+    suspend fun savePlanDay(day: Int, encoded: String?) {
+        val key = Keys.PLAN_DAYS.getValue(day)
+        store.edit { prefs ->
+            if (encoded == null) prefs.remove(key) else prefs[key] = encoded
         }
     }
 

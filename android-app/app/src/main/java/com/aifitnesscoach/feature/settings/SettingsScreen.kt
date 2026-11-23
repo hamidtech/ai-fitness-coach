@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
@@ -88,19 +89,25 @@ enum class SettingsPage(@StringRes val title: Int, @StringRes val description: I
     HEALTH(R.string.nav_health, R.string.settings_health_disabled_sub, Icons.Outlined.FavoriteBorder),
     AI(R.string.settings_section_d_ai, R.string.settings_insights_sub, Icons.Outlined.AutoAwesome),
     STORAGE(R.string.settings_section_e_storage, R.string.settings_storage_description, Icons.Outlined.FolderOpen),
-    PRIVACY(R.string.settings_section_f_privacy, R.string.settings_privacy_description, Icons.Outlined.Lock)
+    PRIVACY(R.string.settings_section_f_privacy, R.string.settings_privacy_description, Icons.Outlined.Lock),
+    LICENSES(R.string.settings_licenses, R.string.settings_licenses_description, Icons.Outlined.Info)
 }
 
 @Composable
-fun SettingsHome(preferences: UserPreferences, onOpenPage: (SettingsPage) -> Unit) {
+fun SettingsHome(preferences: UserPreferences, onBack: () -> Unit, onOpenPage: (SettingsPage) -> Unit) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(LayoutSpacing.pagePadding),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Text(stringResource(R.string.nav_settings), style = MaterialTheme.typography.headlineMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.common_back))
+            }
+            Text(stringResource(R.string.nav_settings), style = MaterialTheme.typography.headlineMedium)
+        }
         SettingsGroup(R.string.settings_group_account, listOf(SettingsPage.PROFILE, SettingsPage.APPEARANCE), preferences, onOpenPage)
         SettingsGroup(R.string.settings_group_training, listOf(SettingsPage.WORKOUT, SettingsPage.HEALTH, SettingsPage.AI), preferences, onOpenPage)
-        SettingsGroup(R.string.settings_group_device, listOf(SettingsPage.NOTIFICATIONS, SettingsPage.STORAGE, SettingsPage.PRIVACY), preferences, onOpenPage)
+        SettingsGroup(R.string.settings_group_device, listOf(SettingsPage.NOTIFICATIONS, SettingsPage.STORAGE, SettingsPage.PRIVACY, SettingsPage.LICENSES), preferences, onOpenPage)
     }
 }
 
@@ -190,6 +197,7 @@ fun SettingsScreen(
         }
 
         when (page) {
+            SettingsPage.LICENSES -> LicensesContent()
             SettingsPage.PROFILE -> {
                 val profileSummary = preferences.profile.name.takeIf { it.isNotBlank() }
                     ?: stringResource(R.string.settings_profile_unset_sub)

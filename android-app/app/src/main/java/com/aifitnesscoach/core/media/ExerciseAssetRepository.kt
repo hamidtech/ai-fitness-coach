@@ -17,6 +17,7 @@ import com.aifitnesscoach.core.exercise.definitions.ExerciseCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.security.MessageDigest
@@ -44,7 +45,7 @@ class ExerciseAssetRepository(
                     errorMessage = entity?.errorMessage
                 )
             }
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
     fun observeAssetByExerciseId(exerciseId: String): Flow<ExerciseAssetEntity?> =
@@ -80,7 +81,7 @@ class ExerciseAssetRepository(
         exerciseId: String,
         sourceUri: Uri
     ): Result<ExerciseAssetEntity> = withContext(Dispatchers.IO) {
-        if (ExerciseAssetCatalog.entriesByExerciseId[exerciseId] == null) {
+        if (ExerciseCatalog.findById(exerciseId) == null) {
             return@withContext Result.failure(IllegalArgumentException("Unknown exercise"))
         }
         var staging: File? = null

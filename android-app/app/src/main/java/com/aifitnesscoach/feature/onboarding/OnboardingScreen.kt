@@ -1,6 +1,9 @@
 package com.aifitnesscoach.feature.onboarding
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -149,6 +152,11 @@ fun OnboardingScreen(
             }
         }
     ) { insets ->
+        val progress = animateFloatAsState(
+            targetValue = (step.ordinal + 1).toFloat() / OnboardingStep.entries.size,
+            animationSpec = tween(durationMillis = 170, easing = LinearOutSlowInEasing),
+            label = "onboarding progress"
+        )
         key(step) {
             Column(
                 Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets)
@@ -157,7 +165,7 @@ fun OnboardingScreen(
             ) {
                 Text(stringResource(R.string.wizard_progress, step.ordinal + 1, OnboardingStep.entries.size))
                 LinearProgressIndicator(
-                    progress = { (step.ordinal + 1).toFloat() / OnboardingStep.entries.size },
+                    progress = { progress.value },
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (step == OnboardingStep.WELCOME) {

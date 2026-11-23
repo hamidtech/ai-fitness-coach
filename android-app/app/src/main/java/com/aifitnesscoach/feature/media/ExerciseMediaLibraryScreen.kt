@@ -8,7 +8,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalUriHandler
 import android.text.format.Formatter
-import com.aifitnesscoach.core.media.ExerciseIllustration
+import com.aifitnesscoach.core.media.ExerciseArtwork
+import com.aifitnesscoach.core.media.AssetMediaType
 import com.aifitnesscoach.core.database.UserPreferencesRepository
 import com.aifitnesscoach.core.ui.LayoutSpacing
 import androidx.compose.foundation.layout.Column
@@ -104,15 +105,19 @@ fun ExerciseMediaLibraryScreen(
 
     val downloadableIds = remember(items, pending) {
         items.filter {
-            it.exercise.id !in pending && it.manifest.primaryUrl != null &&
+            (exerciseId == null || it.exercise.id == exerciseId) &&
+                it.manifest.mediaType != AssetMediaType.PNG_SINGLE &&
+                it.exercise.id !in pending && it.manifest.primaryUrl != null &&
                 it.effectiveStatus in setOf(AssetDownloadStatus.AVAILABLE, AssetDownloadStatus.FAILED, AssetDownloadStatus.PAUSED)
         }.map { it.exercise.id }
     }
     val downloadedCount = items.count { it.effectiveStatus == AssetDownloadStatus.DOWNLOADED }
 
     var showAll by rememberSaveable(exerciseId) { mutableStateOf(exerciseId == null) }
-    val filtered = items.filter { (showAll || it.exercise.id == exerciseId) &&
-        (statusFilter == null || it.effectiveStatus == statusFilter) }
+    val filtered = remember(items, showAll, exerciseId, statusFilter) {
+        items.filter { (showAll || it.exercise.id == exerciseId) &&
+            (statusFilter == null || it.effectiveStatus == statusFilter) }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -224,7 +229,7 @@ fun ExerciseMediaLibraryScreen(
                 }
             }
 
-            items(filtered, key = { it.exercise.id }) { item ->
+            items(filtered, key = { it.exercise.id }, contentType = { "exercise_media" }) { item ->
                 val workPending = item.exercise.id in pending
                 val status = if (workPending) AssetDownloadStatus.DOWNLOADING else item.effectiveStatus
                 val statusText = if (workPending && item.effectiveStatus != AssetDownloadStatus.DOWNLOADING) {
@@ -234,7 +239,7 @@ fun ExerciseMediaLibraryScreen(
                 }
                 Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        ExerciseIllustration(item.exercise.id, Modifier.size(72.dp))
+                        ExerciseArtwork(item.exercise.id, Modifier.size(72.dp))
                         Text(
                             text = if (isPersian) item.exercise.nameFa else item.exercise.nameEn,
                             style = MaterialTheme.typography.titleMedium,
@@ -259,7 +264,7 @@ fun ExerciseMediaLibraryScreen(
                         }
                         if (item.manifest.primaryUrl != null) {
                             Text(stringResource(
-                                R.string.media_webp_source,
+                                if (item.manifest.mediaType == AssetMediaType.PNG_SINGLE) R.string.media_png_source else R.string.media_webp_source,
                                 item.manifest.resolution.orEmpty(),
                                 Formatter.formatShortFileSize(context, item.manifest.expectedBytes ?: 0)
                             ))

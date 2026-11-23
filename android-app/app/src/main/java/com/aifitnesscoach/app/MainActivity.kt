@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +48,12 @@ import com.aifitnesscoach.R
 import com.aifitnesscoach.core.database.UserPreferences
 import com.aifitnesscoach.core.exercise.ExerciseCategory
 import com.aifitnesscoach.core.exercise.definitions.ExerciseCatalog
+import com.aifitnesscoach.core.equipment.WeightEntry
+import com.aifitnesscoach.core.equipment.WeightUnit
+import com.aifitnesscoach.core.equipment.WeightLoadMode
+import com.aifitnesscoach.core.exercise.definitions.ExternalExerciseSources
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.aifitnesscoach.core.localization.LocaleManager
 import com.aifitnesscoach.core.motivation.MotivationalQuote
 import com.aifitnesscoach.core.motivation.VerifiedQuoteRepository
@@ -61,6 +67,9 @@ import com.aifitnesscoach.feature.exercises.ExercisesScreen
 import com.aifitnesscoach.feature.exercises.ExerciseWorkoutSetup
 import com.aifitnesscoach.feature.health.HealthScreen
 import com.aifitnesscoach.feature.history.HistoryScreen
+import com.aifitnesscoach.feature.plan.WeeklyPlan
+import com.aifitnesscoach.feature.plan.WeeklyPlanScreen
+import androidx.compose.material.icons.outlined.DateRange
 import com.aifitnesscoach.feature.home.HomeScreen
 import com.aifitnesscoach.feature.media.ExerciseMediaLibraryScreen
 import com.aifitnesscoach.feature.onboarding.OnboardingScreen
@@ -77,6 +86,7 @@ import com.aifitnesscoach.feature.workout.WorkoutViewModel
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.ZonedDateTime
+import java.time.LocalDate
 import java.time.Duration
 import kotlinx.coroutines.delay
 import androidx.lifecycle.ViewModelProvider
@@ -93,6 +103,8 @@ sealed class MainDestination(val route: String) {
     data object Exercises : MainDestination("exercises")
     data object ExerciseSetup : MainDestination("exercise_setup/{exercise}")
     data object QuickWorkout : MainDestination("quick_workout")
+    data object Plan : MainDestination("plan")
+    data object PlanEdit : MainDestination("plan_edit/{day}")
     data object History : MainDestination("history")
     data object Health : MainDestination("health")
     data object HealthSettings : MainDestination("health_connect_settings")
@@ -122,6 +134,11 @@ class MainActivity : AppCompatActivity() {
         pendingDeepLinkRoute = extractDeepLinkRoute(intent)
 
         setContent {
+            var catalogReady by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                withContext(Dispatchers.IO) { ExternalExerciseSources.load(applicationContext) }
+                catalogReady = true
+            }
             val nullablePrefs by appContainer.preferencesRepository.preferencesFlow
                 .collectAsStateWithLifecycle(initialValue = null)
 
@@ -142,7 +159,7 @@ class MainActivity : AppCompatActivity() {
                     useDynamicColor = activePrefs.useDynamicColor
                 ) {
                     val loadedPrefs = nullablePrefs
-                    if (loadedPrefs == null) {
+                    if (loadedPrefs == null || !catalogReady) {
                         Surface(modifier = Modifier.fillMaxSize()) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
@@ -276,17 +293,29 @@ private fun AIFitnessCoachAppRoot(
             MainDestination.Home.route,
             MainDestination.Exercises.route,
             MainDestination.History.route,
-            MainDestination.Health.route,
-            MainDestination.Settings.route
+            MainDestination.Plan.route
         )
+    }
+
+    fun startToday() {
+        if (navController.currentDestination?.route !in topLevelRoutes) return
+        val today = LocalDate.now().dayOfWeek.value
+        val planned = WeeklyPlan.decode(preferences.weeklyPlan[today])
+        if (planned.isNotEmpty()) {
+            workoutViewModel.openConfiguredPlan(planned)
+            workoutViewModel.beginSessionFromPlan(preferences.cameraGuideAcknowledged)
+            navController.navigate(MainDestination.Workout.route) { launchSingleTop = true }
+        } else {
+            navController.navigate(MainDestination.QuickWorkout.route) { launchSingleTop = true }
+        }
     }
 
     val bottomItems = listOf(
         Triple(MainDestination.Home.route, R.string.nav_home, Icons.Outlined.Home),
-        Triple(MainDestination.Exercises.route, R.string.nav_exercises, Icons.Outlined.FitnessCenter),
-        Triple(MainDestination.History.route, R.string.nav_history, Icons.Outlined.History),
-        Triple(MainDestination.Health.route, R.string.nav_health, Icons.Outlined.FavoriteBorder),
-        Triple(MainDestination.Settings.route, R.string.nav_settings, Icons.Outlined.Settings)
+        Triple(MainDestination.Plan.route, R.string.nav_plan, Icons.Outlined.DateRange),
+        Triple(MainDestination.QuickWorkout.route, R.string.nav_start, Icons.Outlined.PlayArrow),
+        Triple(MainDestination.History.route, R.string.nav_progress, Icons.Outlined.History),
+        Triple(MainDestination.Exercises.route, R.string.nav_exercises, Icons.Outlined.FitnessCenter)
     )
 
     Scaffold(
@@ -297,16 +326,24 @@ private fun AIFitnessCoachAppRoot(
                     tonalElevation = 0.dp
                 ) {
                     bottomItems.forEach { (route, labelRes, icon) ->
+                        val isStart = route == MainDestination.QuickWorkout.route
                         NavigationBarItem(
                             selected = currentRoute == route,
                             onClick = {
-                                navController.navigate(route) {
+                                if (isStart) startToday()
+                                else navController.navigate(route) {
                                     popUpTo(MainDestination.Home.route) { saveState = true }
                                     launchSingleTop = true
                                     restoreState = true
                                 }
                             },
-                            icon = { Icon(icon, contentDescription = null) },
+                            icon = {
+                                if (isStart) {
+                                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
+                                        Icon(icon, contentDescription = null, modifier = Modifier.padding(6.dp))
+                                    }
+                                } else Icon(icon, contentDescription = null)
+                            },
                             label = { Text(stringResource(labelRes)) }
                         )
                     }
@@ -353,9 +390,8 @@ private fun AIFitnessCoachAppRoot(
                             latestInsight = latestInsight,
                             dailyQuote = dailyQuote,
                             onOpenProfileSetup = { navController.navigate(MainDestination.PersonalProfile.route) },
-                            onStartQuickWorkout = {
-                                navController.navigate(MainDestination.QuickWorkout.route) { launchSingleTop = true }
-                            },
+                            onStartQuickWorkout = ::startToday,
+                            onOpenSettings = { navController.navigate(MainDestination.Settings.route) { launchSingleTop = true } },
                             onBuildMultiWorkout = {
                                 workoutViewModel.openSessionBuilder()
                                 navController.navigate(MainDestination.Workout.route) { launchSingleTop = true }
@@ -398,8 +434,21 @@ private fun AIFitnessCoachAppRoot(
                     composable(MainDestination.ExerciseSetup.route) { entry ->
                         val exercise = entry.arguments?.getString("exercise")?.let(ExerciseCatalog::findById)
                             ?: return@composable
+                        val recentLoad = remember(sessions, exercise.id) {
+                            sessions.asSequence()
+                                .flatMap { session -> session.sets.asSequence().sortedByDescending { it.setNumber } }
+                                .filter { it.exerciseId == exercise.id }
+                                .mapNotNull { set ->
+                                    val weight = set.weightValue?.takeIf { it.isFinite() && it >= 0f }
+                                    val unit = WeightUnit.entries.firstOrNull { it.name == set.weightUnit }
+                                    val mode = WeightLoadMode.entries.firstOrNull { it.name == set.weightLoadMode }
+                                    if (weight == null || unit == null || mode == null) null
+                                    else WeightEntry(weight, unit, mode)
+                                }.firstOrNull()
+                        }
                         ExerciseWorkoutSetup(
                             exercise = exercise,
+                            recentLoad = recentLoad,
                             downloadedAsset = downloadedAssetsMap[exercise.id],
                             isPersian = isPersian,
                             onBack = { navController.popBackStack() },
@@ -411,6 +460,22 @@ private fun AIFitnessCoachAppRoot(
                                     customItem = item,
                                     skipCameraGuide = preferences.cameraGuideAcknowledged
                                 )
+                                navController.navigate(MainDestination.Workout.route) { launchSingleTop = true }
+                            }
+                        )
+                    }
+
+                    composable(MainDestination.Plan.route) {
+                        WeeklyPlanScreen(
+                            savedDays = preferences.weeklyPlan,
+                            isPersian = isPersian,
+                            onEdit = { day, items ->
+                                workoutViewModel.openConfiguredPlan(items)
+                                navController.navigate("plan_edit/$day") { launchSingleTop = true }
+                            },
+                            onStart = { items ->
+                                workoutViewModel.openConfiguredPlan(items)
+                                workoutViewModel.beginSessionFromPlan(preferences.cameraGuideAcknowledged)
                                 navController.navigate(MainDestination.Workout.route) { launchSingleTop = true }
                             }
                         )
@@ -445,7 +510,7 @@ private fun AIFitnessCoachAppRoot(
                     }
 
                     composable(MainDestination.Settings.route) {
-                        SettingsHome(preferences) { page ->
+                        SettingsHome(preferences, onBack = { navController.popBackStack() }) { page ->
                             val route = when (page) {
                                 SettingsPage.PROFILE -> MainDestination.PersonalProfile.route
                                 SettingsPage.STORAGE -> MainDestination.MediaLibrary.route
@@ -506,8 +571,10 @@ private fun AIFitnessCoachAppRoot(
                         CameraPositionGuide(exercise, isPersian) { navController.popBackStack() }
                     }
 
-                    composable(MainDestination.Workout.route) {
-                        WorkoutScreen(
+                    listOf(MainDestination.Workout.route, MainDestination.PlanEdit.route).forEach { route ->
+                        composable(route) { entry ->
+                            val day = entry.arguments?.getString("day")?.toIntOrNull()?.takeIf { it in 1..7 }
+                            WorkoutScreen(
                             uiState = workoutUiState,
                             preferences = preferences,
                             isPersian = isPersian,
@@ -530,8 +597,18 @@ private fun AIFitnessCoachAppRoot(
                                     popUpTo(MainDestination.Home.route) { inclusive = false }
                                 }
                             },
-                            onExitWorkout = { navController.popBackStack() }
-                        )
+                                onSavePlan = day?.let { weekday ->
+                                    { items ->
+                                        scope.launch {
+                                            container.preferencesRepository.savePlanDay(weekday,
+                                                if (items.isEmpty()) null else WeeklyPlan.encode(items))
+                                            if (navController.currentBackStackEntry == entry) navController.popBackStack()
+                                        }
+                                    }
+                                },
+                                onExitWorkout = { navController.popBackStack() }
+                            )
+                        }
                     }
 
                     composable(
