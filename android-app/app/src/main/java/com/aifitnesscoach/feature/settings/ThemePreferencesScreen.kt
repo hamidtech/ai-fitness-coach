@@ -45,7 +45,6 @@ import com.aifitnesscoach.core.database.AppThemeMode
 import com.aifitnesscoach.core.database.UserPreferences
 import com.aifitnesscoach.core.database.UserPreferencesRepository
 import com.aifitnesscoach.core.ui.theme.palettePreviewPrimaryColor
-import com.aifitnesscoach.core.ui.theme.resolveEffectivePalette
 import kotlinx.coroutines.launch
 
 @Composable
@@ -61,7 +60,6 @@ fun ThemePreferencesScreen(
         AppThemeMode.DARK -> true
     }
     val supportsDynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    val resolvedAutoPalette = resolveEffectivePalette(AppColorPalette.AUTO, preferences.profile.gender)
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -138,7 +136,7 @@ fun ThemePreferencesScreen(
                         Triple(
                             AppColorPalette.AUTO,
                             stringResource(R.string.palette_auto),
-                            stringResource(R.string.palette_auto_desc, paletteNameFor(resolvedAutoPalette))
+                            stringResource(R.string.palette_auto_desc)
                         ),
                         Triple(
                             AppColorPalette.ATHLETIC_COBALT,
@@ -268,13 +266,4 @@ fun ThemePreferencesScreen(
             Spacer(Modifier.height(16.dp))
         }
     }
-}
-
-@Composable
-private fun paletteNameFor(palette: AppColorPalette): String = when (palette) {
-    AppColorPalette.AUTO -> stringResource(R.string.palette_auto)
-    AppColorPalette.ATHLETIC_COBALT -> stringResource(R.string.palette_cobalt)
-    AppColorPalette.TEAL -> stringResource(R.string.palette_teal)
-    AppColorPalette.VIOLET -> stringResource(R.string.palette_violet)
-    AppColorPalette.NEUTRAL -> stringResource(R.string.palette_neutral)
 }

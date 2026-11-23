@@ -139,12 +139,10 @@ class WorkoutWidgetWorker(context: Context, params: WorkerParameters) : Coroutin
             if (fixedTheme) {
                 val isDark = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
                 setInt(R.id.widget_root, "setBackgroundResource", if (isDark) R.drawable.widget_background_dark else R.drawable.widget_background_light)
-                val ink = if (isDark) 0xFFEAF2FF.toInt() else 0xFF142743.toInt()
-                val accent = if (isDark) 0xFFADC6FF.toInt() else 0xFF254A92.toInt()
+                val ink = if (isDark) 0xFFF0F4EB.toInt() else 0xFF182119.toInt()
                 setTextColor(R.id.widget_heading, ink)
                 setTextColor(R.id.widget_activity, ink)
                 setTextColor(R.id.widget_quote, ink)
-                setTextColor(R.id.widget_quick_start, accent)
             }
             setTextViewText(R.id.widget_heading, context.getString(R.string.widget_today))
             setTextViewText(R.id.widget_quick_start, context.getString(R.string.widget_start))

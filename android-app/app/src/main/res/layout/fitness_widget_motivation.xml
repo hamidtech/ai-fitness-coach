@@ -8,14 +8,27 @@
     android:orientation="vertical"
     android:padding="12dp">
 
-    <TextView
-        android:id="@+id/widget_heading"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="sans-serif-medium"
-        android:text="@string/widget_today"
-        android:textColor="@color/widget_ink"
-        android:textSize="16sp" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        <ImageView
+            android:layout_width="23dp"
+            android:layout_height="23dp"
+            android:layout_marginEnd="8dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_fitness_coach" />
+        <TextView
+            android:id="@+id/widget_heading"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/widget_today"
+            android:textColor="@color/widget_ink"
+            android:textSize="15sp" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/widget_activity"
@@ -31,8 +44,12 @@
         android:id="@+id/widget_quick_start"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical|start"
+        android:gravity="center"
+        android:layout_marginTop="3dp"
+        android:layout_marginBottom="4dp"
         android:minHeight="48dp"
+        android:paddingHorizontal="6dp"
+        android:background="@drawable/widget_start_background"
         android:fontFamily="sans-serif-medium"
         android:text="@string/widget_start"
         android:textColor="@color/widget_action_ink"

@@ -51,6 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.TrainingPhotography
 import com.aifitnesscoach.core.database.AppLanguage
 import com.aifitnesscoach.core.database.ExperienceLevel
 import com.aifitnesscoach.core.database.FitnessGoal
@@ -149,14 +150,18 @@ fun OnboardingScreen(
                     progress = { (step.ordinal + 1).toFloat() / OnboardingStep.entries.size },
                     modifier = Modifier.fillMaxWidth()
                 )
-                Box(
-                    Modifier.fillMaxWidth().sizeIn(minHeight = 114.dp)
+                if (step == OnboardingStep.WELCOME) {
+                    TrainingPhotography(226.dp, art = R.drawable.training_welcome)
+                } else Box(
+                    Modifier.fillMaxWidth().sizeIn(minHeight = 80.dp)
                         .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(20.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(64.dp))
+                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(44.dp))
                 }
-                Text(stringResource(title), style = MaterialTheme.typography.headlineMedium)
+                Text(stringResource(title), style = if (step == OnboardingStep.WELCOME) {
+                    MaterialTheme.typography.headlineLarge
+                } else MaterialTheme.typography.headlineMedium)
                 Text(stringResource(description), style = MaterialTheme.typography.bodyLarge)
                 when (step) {
                     OnboardingStep.WELCOME, OnboardingStep.PRIVACY -> Unit

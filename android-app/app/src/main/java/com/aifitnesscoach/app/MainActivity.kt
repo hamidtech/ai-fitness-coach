@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -31,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -56,6 +58,7 @@ import com.aifitnesscoach.feature.ai.AIProviderSettingsScreen
 import com.aifitnesscoach.feature.ai.LocalModelManagerScreen
 import com.aifitnesscoach.feature.ai.ScheduledAnalysisScreen
 import com.aifitnesscoach.feature.exercises.ExercisesScreen
+import com.aifitnesscoach.feature.exercises.ExerciseWorkoutSetup
 import com.aifitnesscoach.feature.health.HealthScreen
 import com.aifitnesscoach.feature.history.HistoryScreen
 import com.aifitnesscoach.feature.home.HomeScreen
@@ -88,9 +91,11 @@ sealed class MainDestination(val route: String) {
     data object Onboarding : MainDestination("onboarding")
     data object Home : MainDestination("home")
     data object Exercises : MainDestination("exercises")
+    data object ExerciseSetup : MainDestination("exercise_setup/{exercise}")
     data object QuickWorkout : MainDestination("quick_workout")
     data object History : MainDestination("history")
     data object Health : MainDestination("health")
+    data object HealthSettings : MainDestination("health_connect_settings")
     data object Settings : MainDestination("settings")
     data object SettingsDetail : MainDestination("settings/{section}")
     data object PersonalProfile : MainDestination("personal_profile")
@@ -226,9 +231,7 @@ private fun AIFitnessCoachAppRoot(
     }
     val workoutUiState by workoutViewModel.uiState.collectAsStateWithLifecycle()
 
-    var selectedCategoryFilter by remember { mutableStateOf<ExerciseCategory?>(null) }
-    var selectedExerciseId by rememberSaveable { mutableStateOf<String?>(null) }
-    val selectedExerciseDetail = selectedExerciseId?.let(ExerciseCatalog::findById)
+    var selectedCategoryFilter by rememberSaveable { mutableStateOf<ExerciseCategory?>(null) }
     var selectedAnalysisSessionId by remember { mutableStateOf<Long?>(null) }
 
     val quoteRepository = remember { VerifiedQuoteRepository() }
@@ -260,7 +263,6 @@ private fun AIFitnessCoachAppRoot(
             selectedAnalysisSessionId = null
             if (pendingDeepLinkRoute == MainDestination.QuickWorkout.route) {
                 selectedCategoryFilter = null
-                selectedExerciseId = null
             }
             navController.navigate(pendingDeepLinkRoute) {
                 launchSingleTop = true
@@ -289,9 +291,11 @@ private fun AIFitnessCoachAppRoot(
 
     Scaffold(
         bottomBar = {
-            if (currentRoute in topLevelRoutes &&
-                (currentRoute != MainDestination.Exercises.route || selectedExerciseDetail == null)) {
-                NavigationBar {
+            if (currentRoute in topLevelRoutes) {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    tonalElevation = 0.dp
+                ) {
                     bottomItems.forEach { (route, labelRes, icon) ->
                         NavigationBarItem(
                             selected = currentRoute == route,
@@ -350,13 +354,7 @@ private fun AIFitnessCoachAppRoot(
                             dailyQuote = dailyQuote,
                             onOpenProfileSetup = { navController.navigate(MainDestination.PersonalProfile.route) },
                             onStartQuickWorkout = {
-                                val defaultEx = ExerciseCatalog.findById("bodyweight_squat")
-                                    ?: ExerciseCatalog.allExercises.first()
-                                workoutViewModel.startQuickExercise(
-                                    exercise = defaultEx,
-                                    skipCameraGuide = preferences.cameraGuideAcknowledged
-                                )
-                                navController.navigate(MainDestination.Workout.route) { launchSingleTop = true }
+                                navController.navigate(MainDestination.QuickWorkout.route) { launchSingleTop = true }
                             },
                             onBuildMultiWorkout = {
                                 workoutViewModel.openSessionBuilder()
@@ -371,11 +369,10 @@ private fun AIFitnessCoachAppRoot(
                             },
                             onSelectCategory = { cat ->
                                 selectedCategoryFilter = cat
-                                navController.navigate(MainDestination.Exercises.route)
+                                navController.navigate(MainDestination.Exercises.route) { launchSingleTop = true }
                             },
                             onSelectExercise = { ex ->
-                                selectedExerciseId = ex.id
-                                navController.navigate(MainDestination.Exercises.route)
+                                navController.navigate("exercise_setup/${ex.id}") { launchSingleTop = true }
                             },
                             onOpenInsights = {
                                 selectedAnalysisSessionId = null
@@ -389,23 +386,34 @@ private fun AIFitnessCoachAppRoot(
                             val quickPicker = route == MainDestination.QuickWorkout.route
                             ExercisesScreen(
                                 isPersian = isPersian,
-                                downloadedAssets = downloadedAssetsMap,
                                 initialCategoryFilter = if (quickPicker) null else selectedCategoryFilter,
                                 onCloseQuickPicker = if (quickPicker) ({ navController.popBackStack() }) else null,
-                                selectedExerciseForDetail = selectedExerciseDetail,
-                                onSelectExerciseForDetail = { selectedExerciseId = it?.id },
-                                onOpenMedia = { id -> navController.navigate("media_library?exercise=$id") },
-                                onOpenCameraGuide = { id -> navController.navigate("camera_guide/$id") },
-                                onStartWorkoutWithItem = { plannedItem ->
-                                    workoutViewModel.startQuickExercise(
-                                        exercise = plannedItem.exercise,
-                                        customItem = plannedItem,
-                                        skipCameraGuide = preferences.cameraGuideAcknowledged
-                                    )
-                                    navController.navigate(MainDestination.Workout.route) { launchSingleTop = true }
+                                onSelectExerciseForDetail = { exercise ->
+                                    navController.navigate("exercise_setup/${exercise.id}") { launchSingleTop = true }
                                 }
                             )
                         }
+                    }
+
+                    composable(MainDestination.ExerciseSetup.route) { entry ->
+                        val exercise = entry.arguments?.getString("exercise")?.let(ExerciseCatalog::findById)
+                            ?: return@composable
+                        ExerciseWorkoutSetup(
+                            exercise = exercise,
+                            downloadedAsset = downloadedAssetsMap[exercise.id],
+                            isPersian = isPersian,
+                            onBack = { navController.popBackStack() },
+                            onOpenMedia = { navController.navigate("media_library?exercise=${exercise.id}") },
+                            onOpenCameraGuide = { navController.navigate("camera_guide/${exercise.id}") },
+                            onStartWorkout = { item ->
+                                workoutViewModel.startQuickExercise(
+                                    exercise = exercise,
+                                    customItem = item,
+                                    skipCameraGuide = preferences.cameraGuideAcknowledged
+                                )
+                                navController.navigate(MainDestination.Workout.route) { launchSingleTop = true }
+                            }
+                        )
                     }
 
                     composable(MainDestination.History.route) {
@@ -419,23 +427,32 @@ private fun AIFitnessCoachAppRoot(
                         )
                     }
 
-                    composable(MainDestination.Health.route) {
-                        HealthScreen(
-                            preferences = preferences,
-                            preferencesRepository = container.preferencesRepository,
-                            workoutDao = container.workoutDao,
-                            healthConnectManager = container.healthConnectManager,
-                            syncedWorkoutCount = syncedCount,
-                            onOpenInsights = {
-                                selectedAnalysisSessionId = null
-                                navController.navigate(MainDestination.AiInsights.route)
-                            }
-                        )
+                    listOf(MainDestination.Health.route, MainDestination.HealthSettings.route).forEach { route ->
+                        composable(route) {
+                            HealthScreen(
+                                preferences = preferences,
+                                preferencesRepository = container.preferencesRepository,
+                                workoutDao = container.workoutDao,
+                                healthConnectManager = container.healthConnectManager,
+                                syncedWorkoutCount = syncedCount,
+                                onBack = if (route == MainDestination.HealthSettings.route) ({ navController.popBackStack() }) else null,
+                                onOpenInsights = {
+                                    selectedAnalysisSessionId = null
+                                    navController.navigate(MainDestination.AiInsights.route)
+                                }
+                            )
+                        }
                     }
 
                     composable(MainDestination.Settings.route) {
-                        SettingsHome { page ->
-                            navController.navigate("settings/${page.name}") { launchSingleTop = true }
+                        SettingsHome(preferences) { page ->
+                            val route = when (page) {
+                                SettingsPage.PROFILE -> MainDestination.PersonalProfile.route
+                                SettingsPage.STORAGE -> MainDestination.MediaLibrary.route
+                                SettingsPage.HEALTH -> MainDestination.HealthSettings.route
+                                else -> "settings/${page.name}"
+                            }
+                            navController.navigate(route) { launchSingleTop = true }
                         }
                     }
 

@@ -11,7 +11,7 @@
 
     <!-- Profile & Gender-Adaptive Theme -->
     <string name="profile_title">Athlete Profile</string>
-    <string name="profile_setup_subtitle">Personalize your profile. Your theme adapts to your selected sex/gender.</string>
+    <string name="profile_setup_subtitle">Personalize the details used in your profile.</string>
     <string name="profile_greeting">Hello, %1$s</string>
     <string name="profile_greeting_default">Welcome, Athlete</string>
     <string name="profile_name_label">Full Name</string>
@@ -255,12 +255,12 @@
     <string name="workout_save_and_analyze">Save &amp; Analyze</string>
 
     <!-- Settings Sections & Preferences -->
-    <string name="settings_section_a_profile">A. Profile &amp; Appearance</string>
-    <string name="settings_section_b_workout">B. Workout Preferences</string>
-    <string name="settings_section_c_health">C. Health &amp; Synchronization</string>
-    <string name="settings_section_d_ai">D. AI &amp; Analysis</string>
-    <string name="settings_section_e_storage">E. Downloads &amp; Storage</string>
-    <string name="settings_section_f_privacy">F. Privacy &amp; Data</string>
+    <string name="settings_section_a_profile">Profile &amp; Appearance</string>
+    <string name="settings_section_b_workout">Workout Preferences</string>
+    <string name="settings_section_c_health">Health &amp; Synchronization</string>
+    <string name="settings_section_d_ai">AI &amp; Analysis</string>
+    <string name="settings_section_e_storage">Downloads &amp; Storage</string>
+    <string name="settings_section_f_privacy">Privacy &amp; Data</string>
     <string name="settings_profile_unset_sub">Name, gender, body metrics &amp; goals</string>
     <string name="settings_open_action">Open</string>
     <string name="settings_units">Measurement Units</string>
@@ -421,8 +421,8 @@
     <string name="theme_appearance_subtitle">Switch smoothly between System, Light, and Dark modes.</string>
     <string name="theme_palette_title">Color Palette</string>
     <string name="theme_palette_subtitle">Choose Auto to adapt from your profile, or lock in your preferred palette.</string>
-    <string name="palette_auto">Auto (Profile Suggested)</string>
-    <string name="palette_auto_desc">Currently suggests: %1$s</string>
+    <string name="palette_auto">Studio</string>
+    <string name="palette_auto_desc">The original AI Fitness Coach color palette.</string>
     <string name="palette_cobalt">Athletic Cobalt</string>
     <string name="palette_cobalt_desc">Crisp athletic blue and cyan-teal accents</string>
     <string name="palette_teal">Ocean Teal</string>
@@ -488,7 +488,7 @@
     <string name="guide_plank">Use the side view and keep a clear line of sight from the shoulder through the hip to the ankle.</string>
     <string name="wizard_progress">Step %1$d of %2$d</string>
     <string name="wizard_identity">Make it yours</string>
-    <string name="wizard_identity_body">Your name personalizes greetings. A gender preference can personalize the theme. Both are optional.</string>
+    <string name="wizard_identity_body">Your name personalizes greetings. You can leave any field blank.</string>
     <string name="wizard_metrics_body">These optional details help personalize your profile. Height and weight let the profile show BMI.</string>
     <string name="wizard_goals">Set your training goal</string>
     <string name="wizard_goals_body">Choose a goal and experience level. The exercise library includes bodyweight, dumbbell and resistance-band movements.</string>
@@ -517,4 +517,13 @@
     <string name="media_waiting_download">Download queued</string>
     <string name="exercise_search_empty">No exercises match these filters</string>
     <string name="wizard_review_value">%1$s · %2$s</string>
+    <string name="training_headline">Make time to train</string>
+    <string name="training_description">Choose a movement, check your form, and keep a record of your work.</string>
+    <string name="settings_group_account">Your profile</string>
+    <string name="settings_group_training">Training &amp; coaching</string>
+    <string name="settings_group_device">App &amp; data</string>
+    <string name="history_filter_empty">No sessions in this category.</string>
+    <string name="history_expand">View %1$d sets</string>
+    <string name="history_collapse">Hide %1$d sets</string>
+    <string name="exercise_camera_badge">Camera form tracking</string>
 </resources>

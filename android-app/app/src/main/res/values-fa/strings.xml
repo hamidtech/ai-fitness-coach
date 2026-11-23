@@ -11,7 +11,7 @@
 
     <!-- Profile & Gender-Adaptive Theme -->
     <string name="profile_title">پروفایل ورزشکار</string>
-    <string name="profile_setup_subtitle">مشخصات خود را وارد کنید. تم رنگی برنامه بر اساس جنسیت انتخابی تنظیم می‌شود.</string>
+    <string name="profile_setup_subtitle">اطلاعات پروفایلت را شخصی‌سازی کن.</string>
     <string name="profile_greeting">سلام، %1$s</string>
     <string name="profile_greeting_default">خوش آمدید، ورزشکار</string>
     <string name="profile_name_label">نام و نام خانوادگی</string>
@@ -255,12 +255,12 @@
     <string name="workout_save_and_analyze">ذخیره و تحلیل</string>
 
     <!-- Settings Sections & Preferences -->
-    <string name="settings_section_a_profile">الف. پروفایل و ظاهر برنامه</string>
-    <string name="settings_section_b_workout">ب. تنظیمات تمرین</string>
-    <string name="settings_section_c_health">پ. سلامت و همگام‌سازی</string>
-    <string name="settings_section_d_ai">ت. هوش مصنوعی و تحلیل</string>
-    <string name="settings_section_e_storage">ث. دانلودها و فضای ذخیره‌سازی</string>
-    <string name="settings_section_f_privacy">ج. حریم خصوصی و داده‌ها</string>
+    <string name="settings_section_a_profile">پروفایل و ظاهر برنامه</string>
+    <string name="settings_section_b_workout">تنظیمات تمرین</string>
+    <string name="settings_section_c_health">سلامت و همگام‌سازی</string>
+    <string name="settings_section_d_ai">هوش مصنوعی و تحلیل</string>
+    <string name="settings_section_e_storage">دانلودها و فضای ذخیره‌سازی</string>
+    <string name="settings_section_f_privacy">حریم خصوصی و داده‌ها</string>
     <string name="settings_profile_unset_sub">نام، جنسیت، مشخصات بدنی و اهداف</string>
     <string name="settings_open_action">باز کردن</string>
     <string name="settings_units">واحدهای اندازه‌گیری</string>
@@ -421,8 +421,8 @@
     <string name="theme_appearance_subtitle">جابجایی روان بین حالت سیستم، روشن و تیره.</string>
     <string name="theme_palette_title">پالت رنگی</string>
     <string name="theme_palette_subtitle">گزینه خودکار را برای پیشنهاد متناسب با پروفایل انتخاب کنید یا پالت دلخواه را ثابت نگه دارید.</string>
-    <string name="palette_auto">خودکار (پیشنهاد پروفایل)</string>
-    <string name="palette_auto_desc">پیشنهاد فعلی: %1$s</string>
+    <string name="palette_auto">استودیو</string>
+    <string name="palette_auto_desc">رنگ‌بندی اصلی مربی هوشمند تناسب اندام.</string>
     <string name="palette_cobalt">آبی کوبالت ورزشی</string>
     <string name="palette_cobalt_desc">آبی ورزشی شفاف با جزئیات فیروزه‌ای</string>
     <string name="palette_teal">سبز آبی اقیانوسی</string>
@@ -488,7 +488,7 @@
     <string name="guide_plank">از نمای کنار استفاده کنید و مسیر شانه، لگن تا مچ پا را در تصویر بدون مانع نگه دارید.</string>
     <string name="wizard_progress">مرحلهٔ %1$d از %2$d</string>
     <string name="wizard_identity">شخصی‌سازی پروفایل</string>
-    <string name="wizard_identity_body">نام شما در خوشامدگویی به کار می‌رود. جنسیت می‌تواند ظاهر برنامه را شخصی کند. هر دو اختیاری‌اند.</string>
+    <string name="wizard_identity_body">از نامت برای خوشامدگویی استفاده می‌کنیم. می‌توانی هر فیلدی را خالی بگذاری.</string>
     <string name="wizard_metrics_body">این داده‌ها اختیاری‌اند. قد و وزن برای نمایش شاخص تودهٔ بدنی در پروفایل استفاده می‌شوند.</string>
     <string name="wizard_goals">هدف تمرینی‌تان را مشخص کنید</string>
     <string name="wizard_goals_body">هدف و سطح تجربه‌تان را انتخاب کنید. کتابخانه شامل حرکات وزن بدن، دمبل و کش مقاومتی است.</string>
@@ -517,4 +517,13 @@
     <string name="media_waiting_download">در صف دانلود</string>
     <string name="exercise_search_empty">حرکتی با این فیلترها پیدا نشد</string>
     <string name="wizard_review_value">%1$s · %2$s</string>
+    <string name="training_headline">وقت تمرینه</string>
+    <string name="training_description">حرکتت را انتخاب کن، فرم اجرا را بررسی کن و تمرینت را ثبت کن.</string>
+    <string name="settings_group_account">پروفایل شما</string>
+    <string name="settings_group_training">تمرین و مربی</string>
+    <string name="settings_group_device">برنامه و داده‌ها</string>
+    <string name="history_filter_empty">تمرینی در این دسته ثبت نشده است.</string>
+    <string name="history_expand">نمایش %1$d ست</string>
+    <string name="history_collapse">بستن %1$d ست</string>
+    <string name="exercise_camera_badge">تحلیل فرم با دوربین</string>
 </resources>

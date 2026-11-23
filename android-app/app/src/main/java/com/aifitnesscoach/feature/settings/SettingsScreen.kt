@@ -2,6 +2,9 @@ package com.aifitnesscoach.feature.settings
 
 import android.Manifest
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
@@ -90,14 +93,39 @@ enum class SettingsPage(@StringRes val title: Int, @StringRes val description: I
 }
 
 @Composable
-fun SettingsHome(onOpenPage: (SettingsPage) -> Unit) {
+fun SettingsHome(preferences: UserPreferences, onOpenPage: (SettingsPage) -> Unit) {
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(LayoutSpacing.screen),
-        verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(LayoutSpacing.pagePadding),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         Text(stringResource(R.string.nav_settings), style = MaterialTheme.typography.headlineMedium)
-        SettingsPage.entries.forEach { page ->
-            SettingsNavCard(stringResource(page.title), stringResource(page.description), page.icon) { onOpenPage(page) }
+        SettingsGroup(R.string.settings_group_account, listOf(SettingsPage.PROFILE, SettingsPage.APPEARANCE), preferences, onOpenPage)
+        SettingsGroup(R.string.settings_group_training, listOf(SettingsPage.WORKOUT, SettingsPage.HEALTH, SettingsPage.AI), preferences, onOpenPage)
+        SettingsGroup(R.string.settings_group_device, listOf(SettingsPage.NOTIFICATIONS, SettingsPage.STORAGE, SettingsPage.PRIVACY), preferences, onOpenPage)
+    }
+}
+
+@Composable
+private fun SettingsGroup(
+    @StringRes heading: Int,
+    pages: List<SettingsPage>,
+    preferences: UserPreferences,
+    onOpenPage: (SettingsPage) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(heading), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+            Column {
+                pages.forEachIndexed { index, page ->
+                    if (index > 0) HorizontalDivider(modifier = Modifier.padding(start = 54.dp))
+                    val subtitle = when (page) {
+                        SettingsPage.PROFILE -> preferences.profile.name.ifBlank { stringResource(page.description) }
+                        SettingsPage.HEALTH -> stringResource(if (preferences.healthConnectEnabled) R.string.settings_health_enabled_sub else R.string.settings_health_disabled_sub)
+                        else -> stringResource(page.description)
+                    }
+                    SettingsRow(stringResource(page.title), subtitle, page.icon) { onOpenPage(page) }
+                }
+            }
         }
     }
 }
@@ -492,21 +520,25 @@ private fun SettingsNavCard(
     icon: ImageVector? = null,
     onClick: () -> Unit
 ) {
-    Card(shape = RoundedCornerShape(16.dp), onClick = onClick) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.small),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (icon != null) Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null)
+    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+        SettingsRow(title, subtitle, icon, onClick)
+    }
+}
+
+@Composable
+private fun SettingsRow(title: String, subtitle: String, icon: ImageVector?, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().sizeIn(minHeight = 64.dp).clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (icon != null) Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null)
     }
 }
 

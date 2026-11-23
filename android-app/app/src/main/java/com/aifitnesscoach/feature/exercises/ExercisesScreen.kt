@@ -1,6 +1,5 @@
 package com.aifitnesscoach.feature.exercises
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.sizeIn
@@ -9,6 +8,7 @@ import androidx.compose.ui.Alignment
 import com.aifitnesscoach.core.media.ExerciseIllustration
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
@@ -74,14 +74,9 @@ import com.aifitnesscoach.feature.workout.PlannedWorkoutItem
 @Composable
 fun ExercisesScreen(
     isPersian: Boolean,
-    downloadedAssets: Map<String, ExerciseAssetEntity> = emptyMap(),
     initialCategoryFilter: ExerciseCategory? = null,
     onCloseQuickPicker: (() -> Unit)? = null,
-    selectedExerciseForDetail: ExerciseDefinition? = null,
-    onSelectExerciseForDetail: (ExerciseDefinition?) -> Unit,
-    onOpenMedia: (String) -> Unit,
-    onOpenCameraGuide: (String) -> Unit,
-    onStartWorkoutWithItem: (PlannedWorkoutItem) -> Unit
+    onSelectExerciseForDetail: (ExerciseDefinition) -> Unit
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedCategory by rememberSaveable(initialCategoryFilter) { mutableStateOf(initialCategoryFilter) }
@@ -100,22 +95,6 @@ fun ExercisesScreen(
         }.let { list -> if (quickPicker) list.sortedByDescending { it.analyzerId != null } else list }
     }
 
-    if (selectedExerciseForDetail != null) {
-        val exercise = selectedExerciseForDetail
-        val close = { onSelectExerciseForDetail(null) }
-        BackHandler(onBack = close)
-        ExerciseWorkoutSetup(
-            exercise = exercise,
-            downloadedAsset = downloadedAssets[exercise.id],
-            isPersian = isPersian,
-            onBack = close,
-            onOpenMedia = { onOpenMedia(exercise.id) },
-            onOpenCameraGuide = { onOpenCameraGuide(exercise.id) },
-            onStartWorkout = onStartWorkoutWithItem
-        )
-        return
-    }
-
     Column(modifier = Modifier.fillMaxSize()) {
         if (onCloseQuickPicker != null) {
             Row(Modifier.fillMaxWidth().padding(horizontal = LayoutSpacing.small), verticalAlignment = Alignment.CenterVertically) {
@@ -124,6 +103,13 @@ fun ExercisesScreen(
                 }
                 Text(stringResource(R.string.widget_start), style = MaterialTheme.typography.headlineSmall)
             }
+        }
+        if (!quickPicker) {
+            Text(
+                stringResource(R.string.nav_exercises),
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(start = LayoutSpacing.pagePadding, top = 16.dp, end = LayoutSpacing.pagePadding)
+            )
         }
         OutlinedTextField(
             value = searchQuery,
@@ -194,7 +180,12 @@ fun ExercisesScreen(
 
 @Composable
 fun ExerciseListItem(exercise: ExerciseDefinition, isPersian: Boolean, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(LayoutSpacing.small),
             verticalAlignment = Alignment.CenterVertically,
@@ -204,18 +195,26 @@ fun ExerciseListItem(exercise: ExerciseDefinition, isPersian: Boolean, onClick: 
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(if (isPersian) exercise.nameFa else exercise.nameEn, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "${categoryLabel(exercise.category)} · ${statusLabel(exercise.implementationStatus)}",
+                    categoryLabel(exercise.category),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (exercise.analyzerId != null) {
+                    Text(
+                        stringResource(R.string.exercise_camera_badge),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
+            Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null)
         }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ExerciseWorkoutSetup(
+internal fun ExerciseWorkoutSetup(
     exercise: ExerciseDefinition,
     downloadedAsset: ExerciseAssetEntity?,
     isPersian: Boolean,
@@ -247,6 +246,14 @@ private fun ExerciseWorkoutSetup(
         null -> null
     }
     var launching by remember(exercise.id) { mutableStateOf(false) }
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(owner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) launching = false
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
+    }
     var showTechnique by rememberSaveable(exercise.id) { mutableStateOf(false) }
 
     Scaffold(

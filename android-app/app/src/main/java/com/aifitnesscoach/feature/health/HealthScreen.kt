@@ -12,6 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -52,6 +56,7 @@ fun HealthScreen(
     workoutDao: WorkoutDao,
     healthConnectManager: HealthConnectManager,
     syncedWorkoutCount: Int,
+    onBack: (() -> Unit)? = null,
     onOpenInsights: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -108,6 +113,15 @@ fun HealthScreen(
             .padding(LayoutSpacing.pagePadding),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        if (onBack != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.common_back))
+                }
+                Text(stringResource(R.string.nav_health), style = MaterialTheme.typography.headlineSmall)
+            }
+        }
+
         Card(
             shape = RoundedCornerShape(18.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
