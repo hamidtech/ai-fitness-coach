@@ -54,6 +54,23 @@ def capture(filename, expected_label):
     (OUTPUT / filename).write_bytes(adb("exec-out", "screencap", "-p"))
 
 
+def video_pixels():
+    # ADB screencap emits little-endian display dimensions and packed RGBA/RGBX pixels.
+    frame = adb("exec-out", "screencap")
+    width, height, pixel_format = struct.unpack_from("<III", frame)
+    header = len(frame) - width * height * 4
+    if pixel_format not in (1, 2) or header not in (12, 16):
+        raise RuntimeError("Unexpected emulator screenshot format")
+    pixels = []
+    for y in range(48):
+        row = round(height * (0.27 + y * 0.10 / 48))
+        for x in range(96):
+            column = round(width * (0.15 + x * 0.70 / 96))
+            offset = header + (row * width + column) * 4
+            pixels.append(sum(frame[offset:offset + 3]) / 3)
+    return pixels
+
+
 def capture_video_playback(pack):
     with ZipFile(pack) as archive:
         media = next(item for item in json.loads(archive.read("catalog.json"))["media"]
@@ -88,24 +105,15 @@ def capture_video_playback(pack):
         # The play button is centered in the preview at this position on the CI device.
         adb("shell", "input", "tap", str(width // 2), str(round(height * 0.34)))
         sleep(6)
-        first = adb("exec-out", "screencap", "-p")
+        before = video_pixels()
         sleep(1)
-        second = adb("exec-out", "screencap", "-p")
-
-        def video_pixels(frame):
-            # Sample only the video plane. System bars and the workout UI are outside this crop.
-            return subprocess.check_output([
-                "ffmpeg", "-v", "error", "-i", "pipe:0", "-vf",
-                "crop=iw*0.70:ih*0.10:iw*0.15:ih*0.27,scale=96:48,format=gray",
-                "-f", "rawvideo", "pipe:1"
-            ], input=frame, timeout=10)
-
-        before, after = video_pixels(first), video_pixels(second)
+        after = video_pixels()
+        screen = adb("exec-out", "screencap", "-p")
         difference = sum(abs(a - b) for a, b in zip(before, after)) / len(before)
         if difference < 0.25:
-            (OUTPUT / "18-video-playback-diagnostic.png").write_bytes(second)
+            (OUTPUT / "18-video-playback-diagnostic.png").write_bytes(screen)
             raise RuntimeError("Video frames did not advance in airplane mode")
-        (OUTPUT / "18-offline-video-playback.png").write_bytes(second)
+        (OUTPUT / "18-offline-video-playback.png").write_bytes(screen)
         print("Verified the catalog video SHA-256 and advancing frames in airplane mode.")
     finally:
         adb("shell", "cmd", "connectivity", "airplane-mode", "disable")
