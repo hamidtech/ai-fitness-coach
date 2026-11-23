@@ -102,7 +102,7 @@ fun ExercisesScreen(
             when {
                 initialCategoryFilter != null -> null
                 quickPicker && pickerTitle == R.string.widget_start -> ExerciseSource.BUILT_IN
-                else -> ExerciseSource.HASAN
+                else -> null
             }
         )
     }
@@ -126,12 +126,26 @@ fun ExercisesScreen(
         if (quickPicker) matches.sortedByDescending { it.exercise.analyzerId != null } else matches
     }
 
+    var showCatalogRefresh by rememberSaveable { mutableStateOf(false) }
+    if (showCatalogRefresh) {
+        AlertDialog(
+            onDismissRequest = { showCatalogRefresh = false },
+            title = { Text(stringResource(R.string.catalog_title)) },
+            text = { CatalogRefreshPanel() },
+            confirmButton = {
+                TextButton(onClick = { showCatalogRefresh = false }) { Text(stringResource(R.string.common_back)) }
+            }
+        )
+    }
+
+    val sourceCounts = remember(catalog) { catalog.groupingBy { it.source }.eachCount() }
     val filter = openFilter
     if (filter != null) {
         val options = when (filter) {
             DiscoveryFilter.SOURCE -> listOf(null to sourceLabel(null)) +
-                ExerciseSource.entries.filter { source -> catalog.any { it.source == source } }
-                    .map { it.name to sourceLabel(it) }
+                ExerciseSource.entries.filter { it in sourceCounts }.map { option ->
+                    option.name to stringResource(R.string.catalog_source_count, sourceLabel(option), sourceCounts.getValue(option))
+                }
             DiscoveryFilter.EQUIPMENT -> listOf(null to stringResource(R.string.discovery_all_equipment)) +
                 equipmentOptions.map { it to equipmentLabel(it, isPersian) }
             DiscoveryFilter.MUSCLE -> listOf(null to stringResource(R.string.discovery_all_muscles)) +
@@ -171,6 +185,16 @@ fun ExercisesScreen(
                             RadioButton(selected = current == value, onClick = null)
                             Text(label, Modifier.weight(1f))
                         }
+                    }
+                }
+            },
+            dismissButton = {
+                if (filter == DiscoveryFilter.SOURCE && !quickPicker) {
+                    TextButton(onClick = {
+                        openFilter = null
+                        showCatalogRefresh = true
+                    }) {
+                        Text(stringResource(R.string.catalog_title))
                     }
                 }
             },

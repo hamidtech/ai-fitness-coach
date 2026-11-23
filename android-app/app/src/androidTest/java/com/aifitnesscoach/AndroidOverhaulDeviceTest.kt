@@ -174,6 +174,7 @@ class AndroidOverhaulDeviceTest {
             val initial = read.preferencesFlow.first()
             assertEquals(InterfaceMode.SIMPLE, initial.interfacePreferences.mode)
             assertTrue(!initial.interfacePreferences.shows(AppFeature.PLAN))
+            assertTrue(initial.interfacePreferences.shows(AppFeature.AI))
             write.setFeatureVisibility(InterfaceMode.SIMPLE, AppFeature.MEDIA, true)
             write.setInterfaceMode(InterfaceMode.ADVANCED)
             write.setFeatureVisibility(InterfaceMode.ADVANCED, AppFeature.MEDIA, false)

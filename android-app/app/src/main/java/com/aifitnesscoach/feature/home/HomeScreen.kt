@@ -67,6 +67,7 @@ fun HomeScreen(
     onOpenProfileSetup: () -> Unit,
     onOpenSettings: () -> Unit,
     onStartQuickWorkout: () -> Unit,
+    onOpenPlan: (() -> Unit)? = null,
     onBuildMultiWorkout: () -> Unit,
     onContinueLastWorkout: (WorkoutSessionWithDetails) -> Unit,
     onSelectCategory: (ExerciseCategory) -> Unit,
@@ -120,6 +121,12 @@ fun HomeScreen(
                     Icon(Icons.Outlined.PlayArrow, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.home_start_workout))
+                }
+                if (onOpenPlan != null) {
+                    OutlinedButton(
+                        onClick = onOpenPlan,
+                        modifier = Modifier.fillMaxWidth().sizeIn(minHeight = 48.dp)
+                    ) { Text(stringResource(R.string.nav_plan)) }
                 }
                 OutlinedButton(
                     onClick = onBuildMultiWorkout,

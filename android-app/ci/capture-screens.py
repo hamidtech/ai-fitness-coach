@@ -86,11 +86,18 @@ def main():
     # Return to the top-level tabs after entering the Quick Start deep link from Settings.
     for _ in range(4):
         adb("shell", "input", "keyevent", "KEYCODE_BACK")
+    tap(label("nav_ai_analysis"))
+    capture("13-ai-analysis-tab.png", label("ai_coach_insights_title"))
+    tap(label("nav_home"))
+    adb("shell", "input", "swipe", "540", "1660", "540", "1120", "300")
     tap(label("nav_plan"))
     capture("07-weekly-plan.png", label("plan_rest_day"))
     tap(label("nav_progress"))
     capture("08-progress-empty.png", label("history_empty"))
     tap(label("nav_exercises"))
+    tap(label("discovery_source_value").replace("%1$s", label("discovery_all_sources")))
+    capture("14-catalog-sources.png", label("catalog_title"))
+    adb("shell", "input", "keyevent", "KEYCODE_BACK")
     tap(label("discovery_equipment"))
     capture("09-equipment-filter.png", label("discovery_all_equipment"))
     adb("shell", "input", "keyevent", "KEYCODE_BACK")

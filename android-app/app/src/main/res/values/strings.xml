@@ -590,7 +590,7 @@
     <string name="license_litert">Optional on-device language model runtime. Each downloaded model has its own terms.</string>
     <string name="feature_layout">App features</string>
     <string name="feature_layout_subtitle">Simple or advanced layout, with your choice of features</string>
-    <string name="feature_layout_help">Simple starts with workouts, exercises, and history. Advanced shows more tools by default.</string>
+    <string name="feature_layout_help">Simple starts with workouts, exercises, history, and AI Analysis. Advanced shows more tools by default.</string>
     <string name="feature_simple">Simple</string>
     <string name="feature_advanced">Advanced</string>
     <string name="feature_switch_help">Choose what appears in this mode. Saved data, permissions, and scheduled tasks stay intact.</string>
@@ -611,4 +611,6 @@
     <string name="plan_push">Push</string>
     <string name="plan_pull">Pull</string>
     <string name="plan_five_by_five">5 × 5 strength</string>
+    <string name="nav_ai_analysis">AI Analysis</string>
+    <string name="catalog_source_count">%1$s · %2$d</string>
 </resources>

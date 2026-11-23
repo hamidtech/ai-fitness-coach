@@ -11,7 +11,7 @@ data class InterfacePreferences(
     fun shows(feature: AppFeature): Boolean {
         val prefix = "${mode.name}:${feature.name}="
         return overrides.firstOrNull { it.startsWith(prefix) }?.substringAfter('=')?.toBooleanStrictOrNull()
-            ?: (mode == InterfaceMode.ADVANCED)
+            ?: (mode == InterfaceMode.ADVANCED || feature == AppFeature.AI)
     }
 
     fun withFeature(feature: AppFeature, enabled: Boolean): Set<String> {

@@ -590,7 +590,7 @@
     <string name="license_litert">اجرای اختیاری مدل زبانی روی دستگاه. هر مدل قابل دانلود شرایط جداگانه دارد.</string>
     <string name="feature_layout">قابلیت‌های اپ</string>
     <string name="feature_layout_subtitle">حالت ساده یا پیشرفته با قابلیت‌های دلخواه شما</string>
-    <string name="feature_layout_help">حالت ساده با تمرین، فهرست حرکات و تاریخچه شروع می‌شود. حالت پیشرفته به‌طور پیش‌فرض ابزارهای بیشتری نشان می‌دهد.</string>
+    <string name="feature_layout_help">حالت ساده با تمرین، فهرست حرکات، تاریخچه و تحلیل هوش مصنوعی شروع می‌شود. حالت پیشرفته به‌طور پیش‌فرض ابزارهای بیشتری نشان می‌دهد.</string>
     <string name="feature_simple">ساده</string>
     <string name="feature_advanced">پیشرفته</string>
     <string name="feature_switch_help">انتخاب کنید در این حالت چه قابلیت‌هایی دیده شوند. اطلاعات ذخیره‌شده، مجوزها و زمان‌بندی‌ها حفظ می‌شوند.</string>
@@ -611,4 +611,6 @@
     <string name="plan_push">فشاری</string>
     <string name="plan_pull">کششی</string>
     <string name="plan_five_by_five">قدرتی ۵ × ۵</string>
+    <string name="nav_ai_analysis">تحلیل AI</string>
+    <string name="catalog_source_count">%1$s · %2$d</string>
 </resources>

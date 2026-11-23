@@ -60,7 +60,7 @@ The AndroidX Test runner 1.6.2 is pinned for instrumentation only. It supports t
 
 ## Expanded offline exercise library
 
-Exercises defaults to the MIT-licensed [Exercises Dataset](https://github.com/hasaneyldrm/exercises-dataset) exercise records. The built-in library remains visible with either external source and can be selected on its own. Choose OpenExerciseBase to see the validated snapshot of its main branch. Search accepts both scripts for built-in names and filters, and tolerates a one-character typo in an exercise name. Equipment and muscle group filters intersect. The workout builder uses the same search and filters.
+Exercises defaults to all available sources. The source picker shows counts for the MIT-licensed [Exercises Dataset](https://github.com/hasaneyldrm/exercises-dataset), OpenExerciseBase, and built-in exercises. The built-in library remains visible with either external source and can be selected on its own. Choose OpenExerciseBase to see the validated snapshot of its main branch. Search accepts both scripts for built-in names and filters, and tolerates a one-character typo in an exercise name. Equipment and muscle group filters intersect. The workout builder uses the same search and filters.
 
 The combined view contains 39 built-in records, 1,324 Exercises Dataset records, and 191 professionally reviewed OpenExerciseBase records. IDs are namespaced by provider and preserved in the log. Some movements occur in more than one source. The native camera analyzers remain limited to the supported built-in exercises. Imported rows have manual logging and English source names/instructions, with a Persian UI and localized filter labels.
 
@@ -77,7 +77,7 @@ Use the two revisions pinned in the script. The tool removes restricted media fi
 
 ## Plan and progress
 
-Home, Plan, Start, Progress, and Exercises are the primary destinations. Open Settings from Home and Health Connect from Settings. Set up an editable routine for any weekday in Plan. Start launches today's saved routine or opens the quick picker when the day is unscheduled. The workout builder preserves set, rep, duration, rest and equipment values in the saved routine. Single-exercise setup can prefill the last logged weight. The screen stays awake while a set or rest timer is active.
+The bottom bar contains Home, Exercises, Start, History or Progress, and AI Analysis. Start stays centered. Open Plan and Settings from Home, and Health Connect from Settings. Set up an editable routine for any weekday in Plan. Start launches today's saved routine or opens the quick picker when the day is unscheduled. The workout builder preserves set, rep, duration, rest and equipment values in the saved routine. Single-exercise setup can prefill the last logged weight. The screen stays awake while a set or rest timer is active.
 
 Progress opens with the daily training heatmap, consecutive-day streaks, seven days of completed sets by muscle group, and best estimated one-rep maxima from sets of 1–12 reps. Estimated maxima separate total and per-dumbbell loads. The log and its AI analysis remain under Progress → History. These changes use existing Room records and add DataStore keys only. See [the OpenGym feature audit](../docs/opengym-feature-audit.md) for the detailed comparison.
 
