@@ -24,6 +24,7 @@ import com.aifitnesscoach.core.database.ExerciseAssetEntity
 import com.aifitnesscoach.core.media.AssetDownloadStatus
 import com.aifitnesscoach.core.media.AssetMediaType
 import com.aifitnesscoach.core.media.ExerciseMediaManifestEntry
+import com.aifitnesscoach.core.media.hasUsableDownloadedMedia
 import com.aifitnesscoach.core.media.resolveEffectiveStatus
 import com.aifitnesscoach.core.ui.LayoutSpacing
 
