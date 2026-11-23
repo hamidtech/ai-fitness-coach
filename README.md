@@ -39,9 +39,9 @@ Use JDK 17, Android SDK Platform 36, and the checked-in Gradle wrapper.
 
 ```bash
 cd android-app
-./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+bash ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 # With an emulator or Android device connected:
-./gradlew :app:connectedDebugAndroidTest
+bash ./gradlew :app:connectedDebugAndroidTest
 ```
 
 The APK is written to `android-app/app/build/outputs/apk/debug/app-debug.apk`. See the [Android guide](android-app/README.md) for camera troubleshooting and the device test checklist.
