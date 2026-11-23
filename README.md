@@ -13,8 +13,8 @@ An offline-first Android workout tracker and camera-based form coach with Englis
 | Feature | Where to find it |
 | --- | --- |
 | Start and track a workout | **Start** is in the center of the bottom bar. Log sets, reps, weights or hold times. Supported exercises offer on-device camera tracking and a positioning guide. |
-| Find exercises | **Exercises → Source** shows the available catalogs and exercise counts. Search by name and combine equipment and muscle group filters. |
-| Download or import exercise media | Open an exercise and tap its media action. Download available licensed demos or import a personal photo, GIF, or MP4. Download options depend on the exercise and its source. |
+| Find exercises | **Exercises → Source** shows the available catalogs and exercise counts. Search by name and combine equipment, muscle group, and video filters. |
+| Download or import exercise media | Download an available demo below the preview on the exercise detail screen. Play a saved video there offline or use the media manager to import a personal photo, GIF, or MP4. Download options depend on the exercise and its source. |
 | Update the exercise catalog | In **Exercises**, use **Check for catalog updates**. The same action is under **Settings → Exercise catalog**. The app keeps the last valid catalog for offline use. |
 | Make a routine | Open **Plan** from Home after enabling it in **Settings → App features**. Build a weekly schedule or run your saved routines in rotation. |
 | Inspect workout history and progress | Open **History** in Simple mode. Enable progress charts to see activity, streaks, muscle groups, and estimated strength records under **Progress**. |

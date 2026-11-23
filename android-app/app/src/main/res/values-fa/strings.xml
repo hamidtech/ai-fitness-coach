@@ -613,4 +613,16 @@
     <string name="plan_five_by_five">قدرتی ۵ × ۵</string>
     <string name="nav_ai_analysis">تحلیل AI</string>
     <string name="catalog_source_count">%1$s · %2$d</string>
+    <string name="exercise_media_video">ویدیو</string>
+    <string name="exercise_media_gif">گیف</string>
+    <string name="exercise_media_image">تصویر</string>
+    <string name="exercise_media_format_size">%1$s · %2$s</string>
+    <string name="exercise_media_offline">آمادهٔ استفادهٔ آفلاین</string>
+    <string name="exercise_download_video">دانلود ویدیو</string>
+    <string name="exercise_download_gif">دانلود گیف</string>
+    <string name="exercise_download_image">دانلود تصویر</string>
+    <string name="exercise_media_no_download">برای این حرکت فایل نمایشی قابل دانلود در دسترس نیست.</string>
+    <string name="exercise_media_manage">مدیریت رسانه</string>
+    <string name="exercise_filter_video">ویدیو یا گیف</string>
+    <string name="exercise_list_media_offline">%1$s · آفلاین</string>
 </resources>

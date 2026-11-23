@@ -50,3 +50,24 @@ pack includes the same MIT exercise data and CC BY-NC 4.0 OpenExerciseBase mater
 as the APK. The [bundled source notices](../android-app/app/src/main/assets/exercise_sources)
 record the original copyrights and terms. The feed installer accepts data and
 images and keeps downloaded media under app storage.
+
+## Version 2 media pilot
+
+Eight H.264 MP4 clips reference the upstream [Workout Free Videos CC0 collection](https://github.com/namnq/workout-free-videos/tree/346c9709eaecfe160a0500650a5f7a43b8425762).
+Each clip was matched to the movement and equipment, downloaded from the pinned
+commit, and checked against the upstream byte count and SHA-256.
+
+| Exercise ID | Clip |
+| --- | --- |
+| `hasan-0289` | Dumbbell bench press |
+| `hasan-0251` | Chest dip |
+| `hasan-0334` | Dumbbell lateral raise |
+| `hasan-0095` | Barbell shrug |
+| `hasan-0406` | Dumbbell shrug |
+| `hasan-0120` | Barbell upright row |
+| `hasan-0861` | Seated cable row |
+| `hasan-1429` | Wide-grip pull-up |
+
+Check for catalog updates from the Exercises toolbar, then use the Video or
+GIF filter to find these movements. The package contains the media references.
+Android fetches individual clips when requested.

@@ -47,6 +47,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import com.aifitnesscoach.core.media.AssetDownloadStatus
+import com.aifitnesscoach.core.media.AssetMediaType
+import com.aifitnesscoach.core.media.ExerciseAssetCatalog
+import com.aifitnesscoach.core.media.ExerciseMediaManifestEntry
+import com.aifitnesscoach.core.media.hasUsableDownloadedMedia
+import com.aifitnesscoach.core.media.resolveEffectiveStatus
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -91,6 +100,8 @@ fun ExercisesScreen(
     initialCategoryFilter: ExerciseCategory? = null,
     onCloseQuickPicker: (() -> Unit)? = null,
     pickerTitle: Int = R.string.widget_start,
+    downloadedAssets: Map<String, ExerciseAssetEntity> = emptyMap(),
+    pendingDownloads: Set<String> = emptySet(),
     onSelectExerciseForDetail: (ExerciseDefinition) -> Unit
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -106,23 +117,32 @@ fun ExercisesScreen(
             }
         )
     }
+    var videoOnly by rememberSaveable { mutableStateOf(false) }
     var equipment by rememberSaveable { mutableStateOf<String?>(null) }
     var region by rememberSaveable { mutableStateOf<MuscleRegion?>(null) }
     var openFilter by rememberSaveable { mutableStateOf<DiscoveryFilter?>(null) }
     val catalogVersion by ExternalExerciseSources.version.collectAsStateWithLifecycle()
     val catalog = remember(catalogVersion) { ExerciseCatalog.allExercises.map(::discoveryEntry) }
+    val downloadable = remember(catalog) {
+        catalog.map { it.exercise.id to ExerciseAssetCatalog.entryFor(it.exercise.id) }
+            .filter { it.second.primaryUrl != null }.toMap()
+    }
     val catalogBySource = remember(catalog, source, selectedCategory) {
         catalog.filter {
-            (source == null || it.source == source || it.source == ExerciseSource.BUILT_IN) &&
+            (source == null || it.source == source) &&
                 (selectedCategory == null || it.exercise.category == selectedCategory)
         }
     }
     val equipmentOptions = remember(catalogBySource) {
         catalogBySource.flatMap { it.equipment }.distinct().sorted()
     }
-    val filtered = remember(catalogBySource, searchQuery, equipment, region, quickPicker) {
+    val filtered = remember(catalogBySource, searchQuery, equipment, region, quickPicker, videoOnly, downloadable, downloadedAssets) {
         val query = searchKey(searchQuery)
-        val matches = catalogBySource.filter { it.matches(query, equipment, region) }
+        val matches = catalogBySource.filter { entry ->
+            entry.matches(query, equipment, region) && (!videoOnly || hasMotionMedia(
+                downloadable[entry.exercise.id], downloadedAssets[entry.exercise.id]
+            ))
+        }
         if (quickPicker) matches.sortedByDescending { it.exercise.analyzerId != null } else matches
     }
 
@@ -214,18 +234,23 @@ fun ExercisesScreen(
             }
         }
         if (!quickPicker) {
-            Text(
-                stringResource(R.string.nav_exercises),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(start = LayoutSpacing.pagePadding, top = 16.dp, end = LayoutSpacing.pagePadding)
-            )
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = LayoutSpacing.pagePadding, vertical = LayoutSpacing.small),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(stringResource(R.string.nav_exercises), Modifier.weight(1f),
+                    style = MaterialTheme.typography.headlineMedium)
+                IconButton(onClick = { showCatalogRefresh = true }) {
+                    Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.catalog_title))
+                }
+            }
         }
-        OutlinedTextField(
+        TextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = LayoutSpacing.pagePadding),
             placeholder = { Text(stringResource(R.string.exercises_search_hint)) },
             leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
             trailingIcon = {
@@ -236,23 +261,28 @@ fun ExercisesScreen(
                 }
             },
             singleLine = true,
-            shape = RoundedCornerShape(14.dp)
+            shape = RoundedCornerShape(14.dp),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
+            )
         )
 
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(LayoutSpacing.pagePadding),
+            contentPadding = PaddingValues(horizontal = LayoutSpacing.pagePadding, vertical = LayoutSpacing.small),
             verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)
         ) {
             item(key = "filters", contentType = "filters") {
                 Column(verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
-                    OutlinedButton(
-                        onClick = { openFilter = DiscoveryFilter.SOURCE },
-                        modifier = Modifier.fillMaxWidth().sizeIn(minHeight = LayoutSpacing.touchTarget)
-                    ) {
-                        Text(stringResource(R.string.discovery_source_value, sourceLabel(source)))
-                    }
                     ControlFlow {
+                        FilterChip(
+                            selected = source != null,
+                            onClick = { openFilter = DiscoveryFilter.SOURCE },
+                            label = { Text(stringResource(R.string.discovery_source_value, sourceLabel(source))) }
+                        )
                         FilterChip(
                             selected = equipment != null,
                             onClick = { openFilter = DiscoveryFilter.EQUIPMENT },
@@ -264,6 +294,13 @@ fun ExercisesScreen(
                             onClick = { openFilter = DiscoveryFilter.MUSCLE },
                             label = { Text(region?.label(isPersian) ?: stringResource(R.string.discovery_muscles)) }
                         )
+                        if (!quickPicker) {
+                            FilterChip(
+                                selected = videoOnly,
+                                onClick = { videoOnly = !videoOnly },
+                                label = { Text(stringResource(R.string.exercise_filter_video)) }
+                            )
+                        }
                         selectedCategory?.let { category ->
                             FilterChip(
                                 selected = true,
@@ -276,28 +313,36 @@ fun ExercisesScreen(
                     Text(stringResource(R.string.discovery_results, filtered.size),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (source != ExerciseSource.BUILT_IN) {
-                        Text(stringResource(R.string.discovery_open_credit), style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
                 }
             }
             if (filtered.isEmpty()) {
                 item(key = "empty", contentType = "empty") {
                     Column(verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
                         Text(stringResource(R.string.exercise_search_empty), style = MaterialTheme.typography.titleMedium)
+                        if (videoOnly && !quickPicker) {
+                            TextButton(onClick = { showCatalogRefresh = true }) {
+                                Text(stringResource(R.string.catalog_refresh_button))
+                            }
+                        }
                         TextButton(onClick = {
                             searchQuery = ""
                             selectedCategory = null
                             equipment = null
                             region = null
+                            videoOnly = false
                         }) { Text(stringResource(R.string.common_clear)) }
                     }
                 }
             }
-            if (!quickPicker) item(key = "refresh", contentType = "action") { CatalogRefreshPanel() }
             items(filtered, key = { it.exercise.id }, contentType = { "exercise" }) { entry ->
-                ExerciseListItem(entry.exercise, isPersian, entry) { onSelectExerciseForDetail(entry.exercise) }
+                val id = entry.exercise.id
+                ExerciseListItem(entry.exercise, isPersian, entry, downloadable[id], downloadedAssets[id],
+                    id in pendingDownloads) { onSelectExerciseForDetail(entry.exercise) }
+            }
+            if (source != ExerciseSource.BUILT_IN && filtered.isNotEmpty()) {
+                item(key = "catalog_credit", contentType = "credit") {
+                    Text(stringResource(R.string.discovery_open_credit), style = MaterialTheme.typography.labelSmall)
+                }
             }
         }
 
@@ -311,6 +356,9 @@ fun ExerciseListItem(
     exercise: ExerciseDefinition,
     isPersian: Boolean,
     entry: DiscoverableExercise = remember(exercise) { discoveryEntry(exercise) },
+    manifest: ExerciseMediaManifestEntry? = null,
+    downloaded: ExerciseAssetEntity? = null,
+    pending: Boolean = false,
     onClick: () -> Unit
 ) {
     Surface(
@@ -324,7 +372,7 @@ fun ExerciseListItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(LayoutSpacing.screen)
         ) {
-            ExerciseArtwork(exercise.id, Modifier.size(68.dp).clip(RoundedCornerShape(12.dp)))
+            ExerciseArtwork(exercise.id, Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(if (isPersian) exercise.nameFa else exercise.nameEn, style = MaterialTheme.typography.titleMedium)
                 val metadata = (entry.muscleRegions.take(1).map { it.label(isPersian) } +
@@ -337,6 +385,21 @@ fun ExerciseListItem(
                 if (entry.source != ExerciseSource.BUILT_IN) {
                     Text(sourceLabel(entry.source), style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                val stored = remember(downloaded, manifest) {
+                    if (manifest != null) resolveEffectiveStatus(manifest, downloaded) == AssetDownloadStatus.DOWNLOADED
+                    else hasUsableDownloadedMedia(downloaded)
+                }
+                val kind = if (stored) AssetMediaType.entries.firstOrNull { it.name == downloaded?.mediaType }
+                    else manifest?.mediaType
+                val mediaLabel = when {
+                    pending -> stringResource(R.string.media_status_downloading)
+                    kind == null -> null
+                    stored -> stringResource(R.string.exercise_list_media_offline, stringResource(kind.labelResource()))
+                    else -> stringResource(kind.labelResource())
+                }
+                if (mediaLabel != null) {
+                    Text(mediaLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
                 if (exercise.analyzerId != null) {
                     Text(
@@ -357,7 +420,10 @@ internal fun ExerciseWorkoutSetup(
     downloadedAsset: ExerciseAssetEntity?,
     isPersian: Boolean,
     onBack: () -> Unit,
-    onOpenMedia: (() -> Unit)?,
+    onOpenMedia: () -> Unit,
+    downloadPending: Boolean,
+    onDownloadMedia: () -> Unit,
+    onCancelDownload: () -> Unit,
     onOpenCameraGuide: () -> Unit,
     recentLoad: WeightEntry? = null,
     onStartWorkout: (PlannedWorkoutItem) -> Unit
@@ -400,6 +466,8 @@ internal fun ExerciseWorkoutSetup(
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
     var showTechnique by rememberSaveable(exercise.id) { mutableStateOf(false) }
+    val catalogVersion by ExternalExerciseSources.version.collectAsStateWithLifecycle()
+    val manifest = remember(exercise.id, catalogVersion) { ExerciseAssetCatalog.entryFor(exercise.id) }
 
     Scaffold(
         modifier = Modifier.imePadding(),
@@ -472,9 +540,14 @@ internal fun ExerciseWorkoutSetup(
                 downloadedAsset = downloadedAsset
             )
 
-            if (onOpenMedia != null) {
-                TextButton(onClick = onOpenMedia) { Text(stringResource(R.string.exercise_media_actions)) }
-            }
+            ExerciseMediaControls(
+                manifest = manifest,
+                downloaded = downloadedAsset,
+                pending = downloadPending,
+                onDownload = onDownloadMedia,
+                onCancelDownload = onCancelDownload,
+                onManage = onOpenMedia
+            )
             Text(
                 stringResource(if (exercise.analyzerId != null) R.string.setup_camera_analysis else R.string.setup_manual_mode),
                 style = MaterialTheme.typography.bodyMedium

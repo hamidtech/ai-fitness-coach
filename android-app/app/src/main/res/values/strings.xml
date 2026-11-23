@@ -613,4 +613,16 @@
     <string name="plan_five_by_five">5 × 5 strength</string>
     <string name="nav_ai_analysis">AI Analysis</string>
     <string name="catalog_source_count">%1$s · %2$d</string>
+    <string name="exercise_media_video">Video</string>
+    <string name="exercise_media_gif">GIF</string>
+    <string name="exercise_media_image">Image</string>
+    <string name="exercise_media_format_size">%1$s · %2$s</string>
+    <string name="exercise_media_offline">Available offline</string>
+    <string name="exercise_download_video">Download video</string>
+    <string name="exercise_download_gif">Download GIF</string>
+    <string name="exercise_download_image">Download image</string>
+    <string name="exercise_media_no_download">No demo download is available for this exercise.</string>
+    <string name="exercise_media_manage">Manage media</string>
+    <string name="exercise_filter_video">Video or GIF</string>
+    <string name="exercise_list_media_offline">%1$s · Offline</string>
 </resources>

@@ -126,7 +126,7 @@ fun ExerciseDemoMediaView(
                             repeatMode = Player.REPEAT_MODE_ALL
                             volume = 0f
                             prepare()
-                            playWhenReady = true
+                            playWhenReady = false
                         }
                     }
                     DisposableEffect(exoPlayer) {
@@ -143,7 +143,7 @@ fun ExerciseDemoMediaView(
                     AndroidView(
                         factory = { ctx ->
                             PlayerView(ctx).apply {
-                                useController = false
+                                useController = true
                                 player = exoPlayer
                             }
                         },
@@ -204,7 +204,7 @@ fun ExerciseDemoMediaView(
                             repeatMode = Player.REPEAT_MODE_ALL
                             volume = 0f
                             prepare()
-                            playWhenReady = true
+                            playWhenReady = false
                         }
                     }
                     DisposableEffect(exoPlayer) {
@@ -221,7 +221,7 @@ fun ExerciseDemoMediaView(
                     AndroidView(
                         factory = { ctx ->
                             PlayerView(ctx).apply {
-                                useController = false
+                                useController = true
                                 player = exoPlayer
                             }
                         },

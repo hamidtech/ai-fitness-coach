@@ -52,6 +52,10 @@ def capture(filename, expected_label):
 def main():
     OUTPUT.mkdir(exist_ok=True)
     adb("install", "-r", "app/build/outputs/apk/debug/app-debug.apk")
+    # Install this PR's catalog in the emulator cache before it is published on main.
+    pack = Path("../catalog-content/pack.zip")
+    install_pack = "run-as com.aifitnesscoach sh -c 'mkdir -p files && cat > files/exercise-catalog.pack'"
+    subprocess.run(["adb", "exec-in", install_pack], input=pack.read_bytes(), timeout=25, check=True)
     adb("shell", "svc", "power", "stayon", "true")
     adb("shell", "input", "keyevent", "KEYCODE_WAKEUP")
     adb("shell", "wm", "dismiss-keyguard")
@@ -101,6 +105,21 @@ def main():
     tap(label("discovery_equipment"))
     capture("09-equipment-filter.png", label("discovery_all_equipment"))
     adb("shell", "input", "keyevent", "KEYCODE_BACK")
+
+    tap(label("exercise_filter_video"))
+    capture("15-video-filter.png", "Dumbbell bench press")
+    tap("Dumbbell bench press")
+    capture("16-video-download.png", label("exercise_download_video"))
+    tap(label("exercise_download_video"))
+    capture("17-video-available-offline.png", label("exercise_media_offline"))
+    adb("shell", "cmd", "connectivity", "airplane-mode", "enable")
+    try:
+        tap("Play")
+        capture("18-offline-video-playback.png", "Pause")
+    finally:
+        adb("shell", "cmd", "connectivity", "airplane-mode", "disable")
+    adb("shell", "input", "keyevent", "KEYCODE_BACK")
+    tap(label("exercise_filter_video"))
 
     # Break UI with a practical narrow-display and large-type configuration.
     initial_font = adb("shell", "settings", "get", "system", "font_scale").decode().strip()

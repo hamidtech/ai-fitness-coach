@@ -234,6 +234,8 @@ private fun AIFitnessCoachAppRoot(
         .collectAsStateWithLifecycle(initialValue = emptyList())
     val syncedCount by container.workoutDao.observeSyncedCount()
         .collectAsStateWithLifecycle(initialValue = 0)
+    val pendingDownloads by container.exerciseAssetDownloadManager.activeDownloads
+        .collectAsStateWithLifecycle(initialValue = emptySet())
     val downloadedAssetsMap by remember {
         container.exerciseAssetDao.observeAll().map { list -> list.associateBy { it.exerciseId } }
     }.collectAsStateWithLifecycle(initialValue = emptyMap())
@@ -464,6 +466,8 @@ private fun AIFitnessCoachAppRoot(
                                 isPersian = isPersian,
                                 initialCategoryFilter = if (quickPicker) null else selectedCategoryFilter,
                                 onCloseQuickPicker = if (quickPicker) ({ navController.popBackStack() }) else null,
+                                downloadedAssets = downloadedAssetsMap,
+                                pendingDownloads = pendingDownloads,
                                 onSelectExerciseForDetail = { exercise ->
                                     navController.navigate("exercise_setup/${exercise.id}") { launchSingleTop = true }
                                 }
@@ -493,6 +497,11 @@ private fun AIFitnessCoachAppRoot(
                             isPersian = isPersian,
                             onBack = { navController.popBackStack() },
                             onOpenMedia = { navController.navigate("media_library?exercise=${exercise.id}") },
+                            downloadPending = exercise.id in pendingDownloads,
+                            onDownloadMedia = {
+                                container.exerciseAssetDownloadManager.enqueueDownload(exercise.id, preferences.mediaWifiOnly)
+                            },
+                            onCancelDownload = { container.exerciseAssetDownloadManager.pauseOrCancel(exercise.id) },
                             onOpenCameraGuide = { navController.navigate("camera_guide/${exercise.id}") },
                             onStartWorkout = { item ->
                                 workoutViewModel.startQuickExercise(
