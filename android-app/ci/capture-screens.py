@@ -1,10 +1,14 @@
 """Capture native screens on a clean CI emulator using the installed debug APK."""
 
 from pathlib import Path
+import hashlib
+import json
 import re
+import struct
 import subprocess
 from time import monotonic, sleep
 import xml.etree.ElementTree as ET
+from zipfile import ZipFile
 
 
 COMPONENT = "com.aifitnesscoach/.app.MainActivity"
@@ -20,9 +24,9 @@ def label(name):
     return STRINGS.find(f"./string[@name='{name}']").text
 
 
-def find_node(text, *, timeout=25, failure_label=None):
+def find_node(text):
     xml_path = "/data/local/tmp/fitness-screen.xml"
-    deadline = monotonic() + timeout
+    deadline = monotonic() + 25
     while monotonic() < deadline:
         adb("shell", "rm", "-f", xml_path)
         try:
@@ -33,8 +37,6 @@ def find_node(text, *, timeout=25, failure_label=None):
             continue
         for node in tree.iter("node"):
             labels = [node.get("text", ""), node.get("content-desc", "")]
-            if failure_label and failure_label in labels:
-                raise RuntimeError(f"The app reported {failure_label!r} while waiting for {text!r}")
             if any(value == text or value.startswith((text + ",", text + "\n")) for value in labels):
                 return node
         sleep(0.3)
@@ -47,9 +49,68 @@ def tap(text):
     adb("shell", "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2))
 
 
-def capture(filename, expected_label, **wait_options):
-    find_node(expected_label, **wait_options)
+def capture(filename, expected_label):
+    find_node(expected_label)
     (OUTPUT / filename).write_bytes(adb("exec-out", "screencap", "-p"))
+
+
+def capture_video_playback(pack):
+    with ZipFile(pack) as archive:
+        media = next(item for item in json.loads(archive.read("catalog.json"))["media"]
+                     if item["exerciseId"] == "hasan-0289")
+
+    # Media3's controls can keep uiautomator waiting for an idle accessibility tree.
+    # Verify the app-private file before interacting with the player in the fixed Pixel 6 AVD.
+    pattern = "files/exercise_media/hasan-0289_*_primary.mp4"
+    deadline = monotonic() + 75
+    while monotonic() < deadline:
+        command = f"run-as com.aifitnesscoach sh -c 'sha256sum {pattern} 2>/dev/null'"
+        check = subprocess.run(["adb", "shell", command], capture_output=True, timeout=10)
+        if check.stdout.decode().startswith(media["sha256"] + " "):
+            break
+        sleep(1)
+    else:
+        (OUTPUT / "17-video-download-diagnostic.png").write_bytes(adb("exec-out", "screencap", "-p"))
+        events = adb("logcat", "-d", "-s", "ExerciseMediaDownload", "WM-WorkerWrapper").decode()
+        print("\n".join(line for line in events.splitlines() if "hasan-0289" in line))
+        raise RuntimeError("The downloaded video did not match the catalog SHA-256")
+
+    sleep(2)
+    ready = adb("exec-out", "screencap", "-p")
+    (OUTPUT / "17-video-available-offline.png").write_bytes(ready)
+    width, height = struct.unpack(">II", ready[16:24])
+    wifi_enabled = adb("shell", "settings", "get", "global", "wifi_on").strip() == b"1"
+    adb("shell", "cmd", "connectivity", "airplane-mode", "enable")
+    try:
+        adb("shell", "svc", "wifi", "disable")
+        if adb("shell", "settings", "get", "global", "airplane_mode_on").strip() != b"1":
+            raise RuntimeError("The emulator did not enter airplane mode")
+        # The play button is centered in the preview at this position on the CI device.
+        adb("shell", "input", "tap", str(width // 2), str(round(height * 0.34)))
+        sleep(6)
+        first = adb("exec-out", "screencap", "-p")
+        sleep(1)
+        second = adb("exec-out", "screencap", "-p")
+
+        def video_pixels(frame):
+            # Sample only the video plane. System bars and the workout UI are outside this crop.
+            return subprocess.check_output([
+                "ffmpeg", "-v", "error", "-i", "pipe:0", "-vf",
+                "crop=iw*0.70:ih*0.10:iw*0.15:ih*0.27,scale=96:48,format=gray",
+                "-f", "rawvideo", "pipe:1"
+            ], input=frame, timeout=10)
+
+        before, after = video_pixels(first), video_pixels(second)
+        difference = sum(abs(a - b) for a, b in zip(before, after)) / len(before)
+        if difference < 0.25:
+            (OUTPUT / "18-video-playback-diagnostic.png").write_bytes(second)
+            raise RuntimeError("Video frames did not advance in airplane mode")
+        (OUTPUT / "18-offline-video-playback.png").write_bytes(second)
+        print("Verified the catalog video SHA-256 and advancing frames in airplane mode.")
+    finally:
+        adb("shell", "cmd", "connectivity", "airplane-mode", "disable")
+        if wifi_enabled:
+            adb("shell", "svc", "wifi", "enable")
 
 
 def main():
@@ -114,19 +175,7 @@ def main():
     tap("Dumbbell bench press")
     capture("16-video-download.png", label("exercise_download_video"))
     tap(label("exercise_download_video"))
-    try:
-        capture("17-video-available-offline.png", label("exercise_media_offline"), timeout=75,
-                failure_label=label("media_status_failed"))
-    except RuntimeError:
-        (OUTPUT / "17-video-download-diagnostic.png").write_bytes(adb("exec-out", "screencap", "-p"))
-        print(adb("logcat", "-d", "-s", "ExerciseMediaDownload", "WM-WorkerWrapper").decode())
-        raise
-    adb("shell", "cmd", "connectivity", "airplane-mode", "enable")
-    try:
-        tap("Play")
-        capture("18-offline-video-playback.png", "Pause")
-    finally:
-        adb("shell", "cmd", "connectivity", "airplane-mode", "disable")
+    capture_video_playback(pack)
     adb("shell", "input", "keyevent", "KEYCODE_BACK")
     tap(label("exercise_filter_video"))
 
