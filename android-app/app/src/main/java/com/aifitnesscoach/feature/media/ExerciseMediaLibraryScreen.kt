@@ -3,6 +3,16 @@ package com.aifitnesscoach.feature.media
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalUriHandler
+import android.text.format.Formatter
+import com.aifitnesscoach.core.media.ExerciseArtwork
+import com.aifitnesscoach.core.media.AssetMediaType
+import com.aifitnesscoach.core.media.AssetSourceType
+import com.aifitnesscoach.core.database.UserPreferencesRepository
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -42,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.ControlFlow
 import com.aifitnesscoach.core.media.AssetDownloadStatus
 import com.aifitnesscoach.core.media.ExerciseAssetCatalog
 import com.aifitnesscoach.core.media.ExerciseAssetDownloadManager
@@ -55,16 +66,21 @@ fun ExerciseMediaLibraryScreen(
     isPersian: Boolean,
     assetRepository: ExerciseAssetRepository,
     downloadManager: ExerciseAssetDownloadManager,
+    preferencesRepository: UserPreferencesRepository,
+    wifiOnly: Boolean,
+    exerciseId: String? = null,
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    val pending by downloadManager.activeDownloads.collectAsStateWithLifecycle(initialValue = emptySet())
     val items by assetRepository.observeAllAssetItems()
         .collectAsStateWithLifecycle(initialValue = emptyList())
 
     var statusFilter by remember { mutableStateOf<AssetDownloadStatus?>(null) }
-    var wifiOnly by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val uriHandler = LocalUriHandler.current
     var storageBytes by remember { mutableLongStateOf(0L) }
-    var pendingImportExerciseId by remember { mutableStateOf<String?>(null) }
+    var pendingImportExerciseId by rememberSaveable { mutableStateOf<String?>(null) }
     var importFeedback by remember { mutableStateOf<String?>(null) }
 
     val importLauncher = rememberLauncherForActivityResult(
@@ -77,7 +93,7 @@ fun ExerciseMediaLibraryScreen(
                 val res = assetRepository.importLocalMediaForExercise(exId, uri)
                 importFeedback = res.fold(
                     onSuccess = { null },
-                    onFailure = { it.localizedMessage }
+                    onFailure = { context.getString(R.string.media_import_failed) }
                 )
                 storageBytes = assetRepository.computeStorageBytes()
             }
@@ -88,17 +104,20 @@ fun ExerciseMediaLibraryScreen(
         storageBytes = assetRepository.computeStorageBytes()
     }
 
-    val downloadableIds = remember(items) {
+    val downloadableIds = remember(items, pending) {
         items.filter {
-            it.effectiveStatus == AssetDownloadStatus.AVAILABLE ||
-                it.effectiveStatus == AssetDownloadStatus.FAILED ||
-                it.effectiveStatus == AssetDownloadStatus.PAUSED
+            (exerciseId == null || it.exercise.id == exerciseId) &&
+                it.manifest.sourceType == AssetSourceType.REPDB_FREE_TIER &&
+                it.exercise.id !in pending && it.manifest.primaryUrl != null &&
+                it.effectiveStatus in setOf(AssetDownloadStatus.AVAILABLE, AssetDownloadStatus.FAILED, AssetDownloadStatus.PAUSED)
         }.map { it.exercise.id }
     }
     val downloadedCount = items.count { it.effectiveStatus == AssetDownloadStatus.DOWNLOADED }
 
-    val filtered = remember(items, statusFilter) {
-        if (statusFilter == null) items else items.filter { it.effectiveStatus == statusFilter }
+    var showAll by rememberSaveable(exerciseId) { mutableStateOf(exerciseId == null) }
+    val filtered = remember(items, showAll, exerciseId, statusFilter) {
+        items.filter { (showAll || it.exercise.id == exerciseId) &&
+            (statusFilter == null || it.effectiveStatus == statusFilter) }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -119,7 +138,7 @@ fun ExerciseMediaLibraryScreen(
         }
 
         LazyColumn(
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(LayoutSpacing.pagePadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
@@ -147,9 +166,16 @@ fun ExerciseMediaLibraryScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(stringResource(R.string.common_wifi_only), style = MaterialTheme.typography.bodyMedium)
-                            Switch(checked = wifiOnly, onCheckedChange = { wifiOnly = it })
+                            Switch(checked = wifiOnly, onCheckedChange = { value ->
+                                scope.launch { preferencesRepository.setMediaWifiOnly(value) }
+                            })
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (!showAll) {
+                            TextButton(onClick = { showAll = true }) {
+                                Text(stringResource(R.string.media_show_library))
+                            }
+                        }
+                        if (showAll) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
                                 onClick = { downloadManager.enqueueBatchDownload(downloadableIds, wifiOnly = wifiOnly) },
                                 enabled = downloadableIds.isNotEmpty(),
@@ -165,7 +191,7 @@ fun ExerciseMediaLibraryScreen(
                                         storageBytes = assetRepository.computeStorageBytes()
                                     }
                                 },
-                                enabled = downloadedCount > 0,
+                                enabled = downloadedCount > 0 && pending.isEmpty(),
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text(stringResource(R.string.media_delete_all))
@@ -178,7 +204,7 @@ fun ExerciseMediaLibraryScreen(
                 }
             }
 
-            item {
+            if (showAll) item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     item {
                         FilterChip(
@@ -204,16 +230,24 @@ fun ExerciseMediaLibraryScreen(
                 }
             }
 
-            items(filtered, key = { it.exercise.id }) { item ->
+            items(filtered, key = { it.exercise.id }, contentType = { "exercise_media" }) { item ->
+                val workPending = item.exercise.id in pending
+                val status = if (workPending) AssetDownloadStatus.DOWNLOADING else item.effectiveStatus
+                val statusText = if (workPending && item.effectiveStatus != AssetDownloadStatus.DOWNLOADING) {
+                    stringResource(R.string.media_waiting_download)
+                } else {
+                    statusDisplay(status)
+                }
                 Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        ExerciseArtwork(item.exercise.id, Modifier.size(72.dp))
                         Text(
                             text = if (isPersian) item.exercise.nameFa else item.exercise.nameEn,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "${categoryLabel(item.exercise.category)} · ${statusDisplay(item.effectiveStatus)}",
+                            text = "${categoryLabel(item.exercise.category)} · $statusText",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -225,12 +259,44 @@ fun ExerciseMediaLibraryScreen(
                             }
                         }
 
+                        if (item.effectiveStatus == AssetDownloadStatus.DOWNLOADED) {
+                            Text(stringResource(R.string.media_on_device, Formatter.formatShortFileSize(context, item.totalBytes)))
+                            item.entity?.licenseName?.takeIf { it.isNotBlank() }?.let { Text(it) }
+                        }
+                        if (item.manifest.primaryUrl != null) {
+                            val size = Formatter.formatShortFileSize(context, item.manifest.expectedBytes ?: 0)
+                            if (item.manifest.sourceType == AssetSourceType.CATALOG_FEED) {
+                                Text(listOf(item.manifest.mediaType.name.substringBefore('_'), size,
+                                    item.manifest.attribution).joinToString(" · "))
+                            } else {
+                                Text(stringResource(
+                                    if (item.manifest.mediaType == AssetMediaType.PNG_SINGLE) R.string.media_png_source else R.string.media_webp_source,
+                                    item.manifest.resolution.orEmpty(), size
+                                ))
+                            }
+                            item.manifest.licenseUrl?.let { url ->
+                                TextButton(onClick = { uriHandler.openUri(url) }) {
+                                    Text(item.manifest.licenseName)
+                                }
+                            }
+                        }
+                        if (status == AssetDownloadStatus.DOWNLOADING) {
+                            if (item.effectiveStatus == AssetDownloadStatus.DOWNLOADING && item.totalBytes > 0) {
+                                LinearProgressIndicator(
+                                    progress = { (item.bytesDownloaded.toFloat() / item.totalBytes).coerceIn(0f, 1f) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            } else {
+                                LinearProgressIndicator(Modifier.fillMaxWidth())
+                            }
+                        }
+
                         item.errorMessage?.let { err ->
                             Text(err, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         }
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            when (item.effectiveStatus) {
+                        ControlFlow {
+                            when (status) {
                                 AssetDownloadStatus.AVAILABLE,
                                 AssetDownloadStatus.PAUSED,
                                 AssetDownloadStatus.FAILED -> {
@@ -263,8 +329,7 @@ fun ExerciseMediaLibraryScreen(
                                 AssetDownloadStatus.LICENSE_RESTRICTED -> Unit
                             }
 
-                            Spacer(Modifier.weight(1f))
-                            TextButton(onClick = {
+                            TextButton(enabled = status != AssetDownloadStatus.DOWNLOADING, onClick = {
                                 pendingImportExerciseId = item.exercise.id
                                 importLauncher.launch(arrayOf("video/mp4", "image/*"))
                             }) {

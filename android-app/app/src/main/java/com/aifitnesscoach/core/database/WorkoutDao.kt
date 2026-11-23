@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
+import com.aifitnesscoach.feature.widget.WidgetActivity
 
 @Dao
 interface WorkoutDao {
@@ -30,6 +31,14 @@ interface WorkoutDao {
 
     @Query("SELECT COUNT(*) FROM workout_sessions WHERE syncedToHealthConnect = 1")
     fun observeSyncedCount(): Flow<Int>
+
+    @Query("""
+        SELECT COUNT(*) AS workouts, COALESCE(SUM(totalDurationMs), 0) AS durationMs
+        FROM workout_sessions AS s
+        WHERE endedAtEpochMs >= :startMs AND endedAtEpochMs < :endMs
+        AND EXISTS (SELECT 1 FROM exercise_sets WHERE sessionId = s.id)
+        """)
+    suspend fun getWidgetActivity(startMs: Long, endMs: Long): WidgetActivity
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSession(session: WorkoutSessionEntity): Long

@@ -2,8 +2,6 @@ package com.aifitnesscoach.feature.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,6 +42,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.ControlFlow
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.database.ExperienceLevel
 import com.aifitnesscoach.core.database.FitnessGoal
 import com.aifitnesscoach.core.database.MeasurementUnit
@@ -56,7 +56,6 @@ import com.aifitnesscoach.core.personalization.ProfileValidator
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(
     preferences: UserPreferences,
@@ -125,7 +124,7 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = LayoutSpacing.pagePadding, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
@@ -189,7 +188,7 @@ fun ProfileScreen(
                         text = stringResource(R.string.profile_gender_optional_label),
                         style = MaterialTheme.typography.labelLarge
                     )
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ControlFlow {
                         listOf(
                             UserGender.MALE to stringResource(R.string.gender_male),
                             UserGender.FEMALE to stringResource(R.string.gender_female),
@@ -365,7 +364,7 @@ fun ProfileScreen(
             Card(shape = RoundedCornerShape(16.dp)) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(stringResource(R.string.onboarding_goal_label), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ControlFlow {
                         listOf(
                             FitnessGoal.GENERAL_FITNESS to stringResource(R.string.goal_general_fitness),
                             FitnessGoal.STRENGTH to stringResource(R.string.goal_strength),
@@ -405,7 +404,7 @@ fun ProfileScreen(
                     HorizontalDivider()
 
                     Text(stringResource(R.string.onboarding_experience_label), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ControlFlow {
                         listOf(
                             ExperienceLevel.BEGINNER to stringResource(R.string.exp_beginner),
                             ExperienceLevel.INTERMEDIATE to stringResource(R.string.exp_intermediate),

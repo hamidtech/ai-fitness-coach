@@ -25,7 +25,8 @@ enum class RecommendedCameraView(val labelEn: String, val labelFa: String) {
 enum class ImplementationStatus {
     IMPLEMENTED_NEEDS_VALIDATION,
     EXPERIMENTAL,
-    COMING_SOON
+    COMING_SOON,
+    MANUAL_ONLY
 }
 
 enum class EquipmentCategoryType {
@@ -33,7 +34,8 @@ enum class EquipmentCategoryType {
     BODYWEIGHT,
     MAT_OR_FLOOR,
     WALL,
-    RESISTANCE_BAND
+    RESISTANCE_BAND,
+    OTHER
 }
 
 data class CameraSetupGuide(

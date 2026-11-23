@@ -202,6 +202,32 @@ private val NeutralDarkScheme = darkColorScheme(
     onError = Color(0xFF450A0A)
 )
 
+private val StudioLight = lightColorScheme(
+    primary = Color(0xFF365214), onPrimary = Color.White,
+    primaryContainer = Color(0xFFDDF6A4), onPrimaryContainer = Color(0xFF172506),
+    secondary = Color(0xFF52614B), onSecondary = Color.White,
+    secondaryContainer = Color(0xFFE5EDDF), onSecondaryContainer = Color(0xFF233220),
+    tertiary = Color(0xFF79593C), tertiaryContainer = Color(0xFFFFDCC0),
+    background = Color(0xFFF7F8F2), onBackground = Color(0xFF182119),
+    surface = Color(0xFFF7F8F2), onSurface = Color(0xFF182119),
+    surfaceVariant = Color(0xFFE4E9DE), onSurfaceVariant = Color(0xFF465142),
+    surfaceContainer = Color(0xFFECF0E7), surfaceContainerLow = Color.White,
+    outline = Color(0xFF727D6D), outlineVariant = Color(0xFFCDD6C8)
+)
+
+private val StudioDark = darkColorScheme(
+    primary = Color(0xFFD6FF72), onPrimary = Color(0xFF243300),
+    primaryContainer = Color(0xFF35491C), onPrimaryContainer = Color(0xFFE4FFA9),
+    secondary = Color(0xFFC3D2B7), onSecondary = Color(0xFF273225),
+    secondaryContainer = Color(0xFF293527), onSecondaryContainer = Color(0xFFDBE9D2),
+    tertiary = Color(0xFFFFC49A), tertiaryContainer = Color(0xFF493124),
+    background = Color(0xFF131A14), onBackground = Color(0xFFF0F4EB),
+    surface = Color(0xFF131A14), onSurface = Color(0xFFF0F4EB),
+    surfaceVariant = Color(0xFF283428), onSurfaceVariant = Color(0xFFBFCABA),
+    surfaceContainer = Color(0xFF202A20), surfaceContainerLow = Color(0xFF192219),
+    outline = Color(0xFF93A18E), outlineVariant = Color(0xFF42513F)
+)
+
 fun resolveEffectivePalette(
     palettePreference: AppColorPalette,
     gender: UserGender
@@ -232,8 +258,15 @@ fun selectColorScheme(
 }
 
 fun palettePreviewPrimaryColor(palette: AppColorPalette, gender: UserGender, darkTheme: Boolean): Color {
-    return selectColorScheme(gender = gender, darkTheme = darkTheme, palettePreference = palette).primary
+    return appPalette(gender, darkTheme, palette).primary
 }
+
+private fun appPalette(gender: UserGender, darkTheme: Boolean, palette: AppColorPalette): ColorScheme =
+    if (palette == AppColorPalette.AUTO) {
+        if (darkTheme) StudioDark else StudioLight
+    } else {
+        selectColorScheme(gender, darkTheme, palette)
+    }
 
 private fun resolveCoachFontFamily(context: Context): FontFamily {
     val regularId = context.resources.getIdentifier("vazirmatn_regular", "font", context.packageName)
@@ -266,11 +299,7 @@ fun AIFitnessCoachTheme(
     val colorScheme = if (useDynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     } else {
-        selectColorScheme(
-            gender = gender,
-            darkTheme = darkTheme,
-            palettePreference = colorPalette
-        )
+        appPalette(gender, darkTheme, colorPalette)
     }
 
     val fontFamily = resolveCoachFontFamily(context)
@@ -281,6 +310,12 @@ fun AIFitnessCoachTheme(
             fontWeight = FontWeight.Bold,
             fontSize = 56.sp,
             lineHeight = 64.sp
+        ),
+        headlineLarge = TextStyle(
+            fontFamily = fontFamily,
+            fontWeight = FontWeight.Bold,
+            fontSize = 34.sp,
+            lineHeight = 42.sp
         ),
         headlineMedium = TextStyle(
             fontFamily = fontFamily,

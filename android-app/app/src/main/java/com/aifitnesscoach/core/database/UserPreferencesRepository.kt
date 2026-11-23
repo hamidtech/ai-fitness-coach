@@ -9,7 +9,12 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.aifitnesscoach.core.motivation.DailyQuoteSelector
+import com.aifitnesscoach.core.motivation.MotivationalQuote
+import com.aifitnesscoach.core.motivation.VerifiedQuoteRepository
+import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlin.math.pow
@@ -120,10 +125,16 @@ data class UserPreferences(
     val useDynamicColor: Boolean = false,
     val measurementUnit: MeasurementUnit = MeasurementUnit.METRIC,
     val cameraLens: CameraLensPreference = CameraLensPreference.FRONT,
+    val onboardingDraft: String? = null,
+    val weeklyPlan: Map<Int, String> = emptyMap(),
+    val interfacePreferences: InterfacePreferences = InterfacePreferences(),
+    val rotationEnabled: Boolean = false,
+    val lastRotationSlot: Int = 0,
     val cameraGuideAcknowledged: Boolean = false,
     val voiceFeedbackEnabled: Boolean = true,
     val skeletonOverlayEnabled: Boolean = true,
     val developerMetricsEnabled: Boolean = false,
+    val mediaWifiOnly: Boolean = false,
     // Daily English Motivational Quote Persistence
     val dailyQuoteDateIso: String? = null,
     val dailyQuoteId: String? = null,
@@ -164,7 +175,10 @@ data class UserPreferences(
     val lastAnalyzedWatermarkMs: Long? = null
 )
 
-class UserPreferencesRepository(private val context: Context) {
+class UserPreferencesRepository(
+    context: Context,
+    private val store: DataStore<Preferences> = context.dataStore
+) {
 
     private object Keys {
         val PERSON_NAME = stringPreferencesKey("person_name")
@@ -176,6 +190,12 @@ class UserPreferencesRepository(private val context: Context) {
         val FITNESS_GOAL = stringPreferencesKey("person_fitness_goal")
         val CUSTOM_GOAL_LABEL = stringPreferencesKey("person_custom_goal_label")
         val EXPERIENCE_LEVEL = stringPreferencesKey("person_experience_level")
+        val ONBOARDING_DRAFT = stringPreferencesKey("onboarding_draft")
+        val PLAN_DAYS = (1..7).associateWith { stringPreferencesKey("weekly_plan_day_$it") }
+        val INTERFACE_MODE = stringPreferencesKey("interface_mode")
+        val INTERFACE_OVERRIDES = stringSetPreferencesKey("interface_overrides")
+        val ROTATION_ENABLED = booleanPreferencesKey("rotation_enabled")
+        val LAST_ROTATION_SLOT = intPreferencesKey("last_rotation_slot")
         val PROFILE_COMPLETED = booleanPreferencesKey("profile_completed")
 
         val LANGUAGE = stringPreferencesKey("app_language")
@@ -187,6 +207,7 @@ class UserPreferencesRepository(private val context: Context) {
         val CAMERA_GUIDE_ACK = booleanPreferencesKey("camera_guide_acknowledged")
         val VOICE_FEEDBACK = booleanPreferencesKey("voice_feedback")
         val SKELETON_OVERLAY = booleanPreferencesKey("skeleton_overlay")
+        val MEDIA_WIFI_ONLY = booleanPreferencesKey("media_wifi_only")
         val DEV_METRICS = booleanPreferencesKey("dev_metrics")
 
         val DAILY_QUOTE_DATE = stringPreferencesKey("daily_quote_date")
@@ -228,7 +249,7 @@ class UserPreferencesRepository(private val context: Context) {
         val SCHED_WATERMARK_MS = longPreferencesKey("sched_watermark_ms")
     }
 
-    val preferencesFlow: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
+    val preferencesFlow: Flow<UserPreferences> = store.data.map { prefs ->
         UserPreferences(
             profile = UserProfile(
                 name = prefs[Keys.PERSON_NAME] ?: "",
@@ -242,6 +263,14 @@ class UserPreferencesRepository(private val context: Context) {
                 experienceLevel = enumOrDefault(prefs[Keys.EXPERIENCE_LEVEL], ExperienceLevel.BEGINNER),
                 hasCompletedOnboarding = prefs[Keys.PROFILE_COMPLETED] ?: false
             ),
+            onboardingDraft = prefs[Keys.ONBOARDING_DRAFT],
+            interfacePreferences = InterfacePreferences(
+                enumOrDefault(prefs[Keys.INTERFACE_MODE], InterfaceMode.SIMPLE),
+                prefs[Keys.INTERFACE_OVERRIDES].orEmpty()
+            ),
+            rotationEnabled = prefs[Keys.ROTATION_ENABLED] ?: false,
+            lastRotationSlot = prefs[Keys.LAST_ROTATION_SLOT] ?: 0,
+            weeklyPlan = Keys.PLAN_DAYS.mapNotNull { (day, key) -> prefs[key]?.let { day to it } }.toMap(),
             language = enumOrDefault(prefs[Keys.LANGUAGE], AppLanguage.SYSTEM),
             themeMode = enumOrDefault(prefs[Keys.THEME_MODE], AppThemeMode.SYSTEM),
             colorPalette = enumOrDefault(prefs[Keys.COLOR_PALETTE], AppColorPalette.AUTO),
@@ -251,6 +280,7 @@ class UserPreferencesRepository(private val context: Context) {
             cameraGuideAcknowledged = prefs[Keys.CAMERA_GUIDE_ACK] ?: false,
             voiceFeedbackEnabled = prefs[Keys.VOICE_FEEDBACK] ?: true,
             skeletonOverlayEnabled = prefs[Keys.SKELETON_OVERLAY] ?: true,
+            mediaWifiOnly = prefs[Keys.MEDIA_WIFI_ONLY] ?: false,
             developerMetricsEnabled = prefs[Keys.DEV_METRICS] ?: false,
             dailyQuoteDateIso = prefs[Keys.DAILY_QUOTE_DATE]?.takeIf { it.isNotBlank() },
             dailyQuoteId = prefs[Keys.DAILY_QUOTE_ID]?.takeIf { it.isNotBlank() },
@@ -292,8 +322,14 @@ class UserPreferencesRepository(private val context: Context) {
         )
     }
 
+    suspend fun saveOnboardingDraft(encoded: String) {
+        store.edit { prefs ->
+            if (prefs[Keys.PROFILE_COMPLETED] != true) prefs[Keys.ONBOARDING_DRAFT] = encoded
+        }
+    }
+
     suspend fun saveProfile(profile: UserProfile) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[Keys.PERSON_NAME] = profile.name.trim()
             prefs[Keys.GENDER] = profile.gender.name
             if (profile.age != null) prefs[Keys.AGE] = profile.age else prefs.remove(Keys.AGE)
@@ -304,99 +340,118 @@ class UserPreferencesRepository(private val context: Context) {
             prefs[Keys.CUSTOM_GOAL_LABEL] = profile.customGoalLabel.trim()
             prefs[Keys.EXPERIENCE_LEVEL] = profile.experienceLevel.name
             prefs[Keys.PROFILE_COMPLETED] = true
+            prefs.remove(Keys.ONBOARDING_DRAFT)
         }
     }
 
     suspend fun markOnboardingSkipped() {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[Keys.PROFILE_COMPLETED] = true
+            prefs.remove(Keys.ONBOARDING_DRAFT)
         }
     }
 
     suspend fun setOnboardingCompleted(completed: Boolean) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[Keys.PROFILE_COMPLETED] = completed
         }
     }
 
     suspend fun setLanguage(language: AppLanguage) {
-        context.dataStore.edit { it[Keys.LANGUAGE] = language.name }
+        store.edit { it[Keys.LANGUAGE] = language.name }
     }
 
     suspend fun setThemeMode(mode: AppThemeMode) {
-        context.dataStore.edit { it[Keys.THEME_MODE] = mode.name }
+        store.edit { it[Keys.THEME_MODE] = mode.name }
     }
 
     suspend fun setColorPalette(palette: AppColorPalette) {
-        context.dataStore.edit { it[Keys.COLOR_PALETTE] = palette.name }
+        store.edit { it[Keys.COLOR_PALETTE] = palette.name }
     }
 
     suspend fun setUseDynamicColor(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.USE_DYNAMIC_COLOR] = enabled }
+        store.edit { it[Keys.USE_DYNAMIC_COLOR] = enabled }
     }
 
-    suspend fun saveDailyQuoteSelection(dateIso: String, quoteId: String, recentIds: List<String>) {
-        context.dataStore.edit { prefs ->
-            prefs[Keys.DAILY_QUOTE_DATE] = dateIso
-            prefs[Keys.DAILY_QUOTE_ID] = quoteId
-            prefs[Keys.DAILY_QUOTE_RECENT_IDS] = recentIds.takeLast(14).joinToString(",")
+    suspend fun dailyQuote(today: LocalDate, repository: VerifiedQuoteRepository): MotivationalQuote? {
+        var quote: MotivationalQuote? = null
+        store.edit { prefs ->
+            val selection = DailyQuoteSelector.selectForDate(
+                repository = repository,
+                today = today,
+                savedDateIso = prefs[Keys.DAILY_QUOTE_DATE],
+                savedQuoteId = prefs[Keys.DAILY_QUOTE_ID],
+                recentIds = prefs[Keys.DAILY_QUOTE_RECENT_IDS].orEmpty().split(",").filter(String::isNotBlank)
+            )
+            quote = selection.quote
+            val chosen = selection.quote
+            if (selection.didChange && chosen != null) {
+                prefs[Keys.DAILY_QUOTE_DATE] = selection.dateIso
+                prefs[Keys.DAILY_QUOTE_ID] = chosen.id
+                prefs[Keys.DAILY_QUOTE_RECENT_IDS] = selection.updatedRecentIds.takeLast(14).joinToString(",")
+            }
         }
+        return quote
     }
 
     suspend fun setMeasurementUnit(unit: MeasurementUnit) {
-        context.dataStore.edit { it[Keys.MEASUREMENT_UNIT] = unit.name }
+        store.edit { it[Keys.MEASUREMENT_UNIT] = unit.name }
     }
 
     suspend fun setCameraLens(lens: CameraLensPreference) {
-        context.dataStore.edit { it[Keys.CAMERA_LENS] = lens.name }
+        store.edit { it[Keys.CAMERA_LENS] = lens.name }
     }
 
     suspend fun setCameraGuideAcknowledged(acknowledged: Boolean) {
-        context.dataStore.edit { it[Keys.CAMERA_GUIDE_ACK] = acknowledged }
+        store.edit { it[Keys.CAMERA_GUIDE_ACK] = acknowledged }
     }
 
     suspend fun setVoiceFeedback(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.VOICE_FEEDBACK] = enabled }
+        store.edit { it[Keys.VOICE_FEEDBACK] = enabled }
     }
 
     suspend fun setSkeletonOverlay(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.SKELETON_OVERLAY] = enabled }
+        store.edit { it[Keys.SKELETON_OVERLAY] = enabled }
+    }
+
+    suspend fun setMediaWifiOnly(enabled: Boolean) {
+        store.edit { it[Keys.MEDIA_WIFI_ONLY] = enabled }
     }
 
     suspend fun setDeveloperMetrics(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.DEV_METRICS] = enabled }
+        store.edit { it[Keys.DEV_METRICS] = enabled }
     }
 
     suspend fun setHealthConnectEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.HC_ENABLED] = enabled }
+        store.edit { it[Keys.HC_ENABLED] = enabled }
     }
 
     suspend fun setHealthAutoSync(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.HC_AUTO_SYNC] = enabled }
+        store.edit { it[Keys.HC_AUTO_SYNC] = enabled }
     }
 
     suspend fun setHcWriteWorkouts(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.HC_WRITE_WORKOUTS] = enabled }
+        store.edit { it[Keys.HC_WRITE_WORKOUTS] = enabled }
     }
 
     suspend fun setHcReadWorkouts(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.HC_READ_WORKOUTS] = enabled }
+        store.edit { it[Keys.HC_READ_WORKOUTS] = enabled }
     }
 
     suspend fun setHcReadSteps(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.HC_READ_STEPS] = enabled }
+        store.edit { it[Keys.HC_READ_STEPS] = enabled }
     }
 
     suspend fun setHcReadSleep(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.HC_READ_SLEEP] = enabled }
+        store.edit { it[Keys.HC_READ_SLEEP] = enabled }
     }
 
     suspend fun setHcReadHeartRate(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.HC_READ_HEART_RATE] = enabled }
+        store.edit { it[Keys.HC_READ_HEART_RATE] = enabled }
     }
 
     suspend fun setLastHealthSync(epochMs: Long) {
-        context.dataStore.edit { it[Keys.HC_LAST_SYNC] = epochMs.toString() }
+        store.edit { it[Keys.HC_LAST_SYNC] = epochMs.toString() }
     }
 
     suspend fun setNotificationPreferences(
@@ -405,7 +460,7 @@ class UserPreferencesRepository(private val context: Context) {
         downloads: Boolean? = null,
         workoutReminder: Boolean? = null
     ) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             enabled?.let { prefs[Keys.NOTIF_ENABLED] = it }
             analysisComplete?.let { prefs[Keys.NOTIF_ANALYSIS] = it }
             downloads?.let { prefs[Keys.NOTIF_DOWNLOADS] = it }
@@ -421,7 +476,7 @@ class UserPreferencesRepository(private val context: Context) {
         clearExternalProviderId: Boolean = false,
         allowExternalSharing: Boolean? = null
     ) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             mode?.let { prefs[Keys.AI_EXEC_MODE] = it.name }
             if (clearLocalModelId) {
                 prefs.remove(Keys.ACTIVE_LOCAL_MODEL_ID)
@@ -448,7 +503,7 @@ class UserPreferencesRepository(private val context: Context) {
         scope: AnalysisRangeScope? = null,
         notifyOnComplete: Boolean? = null
     ) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             enabled?.let { prefs[Keys.SCHED_ENABLED] = it }
             hour?.let { prefs[Keys.SCHED_HOUR] = it.coerceIn(0, 23) }
             minute?.let { prefs[Keys.SCHED_MINUTE] = it.coerceIn(0, 59) }
@@ -468,7 +523,7 @@ class UserPreferencesRepository(private val context: Context) {
         newWatermarkMs: Long?,
         error: String?
     ) {
-        context.dataStore.edit { prefs ->
+        store.edit { prefs ->
             prefs[Keys.SCHED_LAST_RUN_MS] = runAtMs
             prefs[Keys.SCHED_LAST_COUNT] = analyzedCount
             if (success) {
@@ -481,8 +536,39 @@ class UserPreferencesRepository(private val context: Context) {
         }
     }
 
+    suspend fun setInterfaceMode(mode: InterfaceMode) {
+        store.edit { it[Keys.INTERFACE_MODE] = mode.name }
+    }
+
+    suspend fun setFeatureVisibility(mode: InterfaceMode, feature: AppFeature, enabled: Boolean) {
+        store.edit {
+            val layout = InterfacePreferences(mode, it[Keys.INTERFACE_OVERRIDES].orEmpty())
+            it[Keys.INTERFACE_OVERRIDES] = layout.withFeature(feature, enabled)
+        }
+    }
+
+    suspend fun setRotationEnabled(enabled: Boolean) {
+        store.edit { it[Keys.ROTATION_ENABLED] = enabled }
+    }
+
+    suspend fun completeRotationSlot(slot: Int) {
+        store.edit { prefs ->
+            val saved = Keys.PLAN_DAYS.filterValues { prefs[it] != null }.keys
+            if (prefs[Keys.ROTATION_ENABLED] == true &&
+                nextRotationSlot(saved, prefs[Keys.LAST_ROTATION_SLOT] ?: 0) == slot
+            ) prefs[Keys.LAST_ROTATION_SLOT] = slot
+        }
+    }
+
+    suspend fun savePlanDay(day: Int, encoded: String?) {
+        val key = Keys.PLAN_DAYS.getValue(day)
+        store.edit { prefs ->
+            if (encoded == null) prefs.remove(key) else prefs[key] = encoded
+        }
+    }
+
     suspend fun clearAll() {
-        context.dataStore.edit { it.clear() }
+        store.edit { it.clear() }
     }
 
     private inline fun <reified T : Enum<T>> enumOrDefault(raw: String?, fallback: T): T {

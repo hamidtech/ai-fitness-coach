@@ -274,7 +274,7 @@ object ExerciseCatalog {
         implementationStatus = status
     )
 
-    val allExercises: List<ExerciseDefinition> = listOf(
+    val builtInExercises: List<ExerciseDefinition> = listOf(
         // ============================================================
         // CATEGORY A — WEIGHTED TRAINING (8 Exercises)
         // ============================================================
@@ -1444,7 +1444,15 @@ object ExerciseCatalog {
         )
     )
 
-    fun findById(id: String): ExerciseDefinition? = allExercises.firstOrNull { it.id == id }
+    private val builtInById by lazy { builtInExercises.associateBy { it.id } }
+
+    val allExercises: List<ExerciseDefinition>
+        get() = builtInExercises + ExternalExerciseSources.exercises
+
+    internal fun isBuiltIn(id: String) = id in builtInById
+
+    fun findById(id: String): ExerciseDefinition? = builtInById[id]
+        ?: ExternalExerciseSources.entry(id)?.definition
 
     fun byCategory(category: ExerciseCategory): List<ExerciseDefinition> =
         allExercises.filter { it.category == category }

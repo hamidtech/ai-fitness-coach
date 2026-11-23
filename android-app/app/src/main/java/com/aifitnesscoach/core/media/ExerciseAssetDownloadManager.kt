@@ -1,6 +1,13 @@
 package com.aifitnesscoach.core.media
 
 import android.content.Context
+import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.ensureActive
+import java.util.UUID
+import kotlin.coroutines.coroutineContext
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.Data
@@ -16,9 +23,11 @@ import com.aifitnesscoach.core.database.UserPreferencesRepository
 import com.aifitnesscoach.core.notifications.AppNotificationManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import com.aifitnesscoach.core.exercise.definitions.ExternalExerciseSources
 import java.io.File
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
@@ -28,6 +37,14 @@ class ExerciseAssetDownloadManager(
     private val assetRepository: ExerciseAssetRepository
 ) {
     private val workManager = WorkManager.getInstance(context)
+
+    val activeDownloads = workManager.getWorkInfosByTagFlow(TAG_ASSET_DOWNLOAD).map { work ->
+        work.asSequence().filterNot { it.state.isFinished }
+            .flatMap { it.tags.asSequence() }
+            .filter { it.startsWith(EXERCISE_TAG_PREFIX) }
+            .map { it.removePrefix(EXERCISE_TAG_PREFIX) }
+            .toSet()
+    }
 
     fun enqueueDownload(exerciseId: String, wifiOnly: Boolean = false) {
         val manifest = ExerciseAssetCatalog.entryFor(exerciseId)
@@ -42,11 +59,12 @@ class ExerciseAssetDownloadManager(
             .setConstraints(constraints)
             .setInputData(Data.Builder().putString(KEY_EXERCISE_ID, exerciseId).build())
             .addTag(TAG_ASSET_DOWNLOAD)
+            .addTag(EXERCISE_TAG_PREFIX + exerciseId)
             .build()
 
         workManager.enqueueUniqueWork(
             uniqueWorkName(exerciseId),
-            ExistingWorkPolicy.REPLACE,
+            ExistingWorkPolicy.KEEP,
             request
         )
     }
@@ -66,6 +84,7 @@ class ExerciseAssetDownloadManager(
     companion object {
         const val KEY_EXERCISE_ID = "exercise_id"
         const val TAG_ASSET_DOWNLOAD = "aifc_asset_download"
+        private const val EXERCISE_TAG_PREFIX = "aifc_asset_exercise:"
         fun uniqueWorkName(exerciseId: String) = "aifc_asset_dl_$exerciseId"
     }
 }
@@ -79,6 +98,7 @@ class ExerciseAssetDownloadWorker(
         val exerciseId = inputData.getString(ExerciseAssetDownloadManager.KEY_EXERCISE_ID)
             ?: return@withContext Result.failure()
 
+        ExternalExerciseSources.load(applicationContext)
         val manifest = ExerciseAssetCatalog.entryFor(exerciseId)
         val primaryUrl = manifest.primaryUrl
         if (manifest.defaultStatus != AssetDownloadStatus.AVAILABLE || primaryUrl == null) {
@@ -92,135 +112,160 @@ class ExerciseAssetDownloadWorker(
         val prefs = UserPreferencesRepository(applicationContext).preferencesFlow.first()
 
         val existing = assetDao.getById(exerciseId)
-        assetDao.upsert(
-            ExerciseAssetEntity(
-                exerciseId = exerciseId,
-                sourceId = manifest.sourceType.name,
-                status = AssetDownloadStatus.DOWNLOADING.name,
-                version = manifest.version,
-                localPrimaryPath = existing?.localPrimaryPath,
-                localSecondaryPath = existing?.localSecondaryPath,
-                mediaType = manifest.mediaType.name,
-                checksumSha256 = existing?.checksumSha256,
-                bytesDownloaded = existing?.bytesDownloaded ?: 0L,
-                totalBytes = existing?.totalBytes ?: 0L,
-                attribution = manifest.attribution,
-                licenseName = manifest.licenseName,
-                errorMessage = null,
-                updatedAtMs = System.currentTimeMillis()
-            )
+        if (resolveEffectiveStatus(manifest, existing) == AssetDownloadStatus.DOWNLOADED) {
+            return@withContext Result.success()
+        }
+        val previous = existing?.takeIf {
+            it.status == AssetDownloadStatus.DOWNLOADED.name &&
+                it.localPrimaryPath?.let { path -> File(path).isFile } == true
+        }
+
+        val attempt = UUID.randomUUID().toString()
+        var received = 0L
+        val staged = mutableListOf<File>()
+        val working = ExerciseAssetEntity(
+            exerciseId = exerciseId,
+            sourceId = manifest.sourceType.name,
+            status = AssetDownloadStatus.DOWNLOADING.name,
+            version = manifest.version,
+            mediaType = manifest.mediaType.name,
+            bytesDownloaded = 0,
+            totalBytes = manifest.expectedBytes ?: 0,
+            attribution = manifest.attribution,
+            licenseName = manifest.licenseName,
+            updatedAtMs = System.currentTimeMillis()
         )
-
+        if (previous == null) assetDao.upsert(working)
         val client = OkHttpClient.Builder()
+            .followRedirects(false)
             .connectTimeout(20, TimeUnit.SECONDS)
-            .readTimeout(45, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .callTimeout(30, TimeUnit.SECONDS)
             .build()
-
-        val result = runCatching {
-            val ext = when (manifest.mediaType) {
-                AssetMediaType.MP4 -> "mp4"
-                AssetMediaType.GIF -> "gif"
-                else -> "webp"
+        var saved = false
+        try {
+            val (extension, mimeType) = when (manifest.mediaType) {
+                AssetMediaType.PNG_SINGLE -> "png" to "image/png"
+                AssetMediaType.JPEG_SINGLE -> "jpg" to "image/jpeg"
+                AssetMediaType.GIF -> "gif" to "image/gif"
+                AssetMediaType.MP4 -> "mp4" to "video/mp4"
+                else -> "webp" to "image/webp"
+            }
+            val limit = manifest.expectedBytes ?: 2_000_000L
+            suspend fun receive(url: String, role: String): Pair<File, String> {
+                val file = ExerciseAssetCatalog.resolveConfinedMediaFile(
+                    mediaDir, "${exerciseId}_${attempt}_$role.$extension"
+                )
+                staged.add(file)
+                val hash = downloadFile(client, url, file, mimeType, limit) { bytes ->
+                    received += bytes
+                    if (previous == null) assetDao.upsert(working.copy(bytesDownloaded = received))
+                }
+                return file to hash
             }
 
-            val primaryDest = ExerciseAssetCatalog.resolveConfinedMediaFile(mediaDir, "${exerciseId}_primary.$ext")
-            val primaryHash = downloadFile(client, primaryUrl, primaryDest)
-
-            val secondaryDest = manifest.secondaryUrl?.let { secUrl ->
-                val secFile = ExerciseAssetCatalog.resolveConfinedMediaFile(mediaDir, "${exerciseId}_secondary.$ext")
-                downloadFile(client, secUrl, secFile)
-                secFile
+            val (primary, hash) = receive(primaryUrl, "primary")
+            val secondary = manifest.secondaryUrl?.let { receive(it, "secondary").first }
+            require(manifest.expectedBytes == null || received == manifest.expectedBytes) {
+                "Downloaded size differs from the published manifest"
             }
-
-            val totalBytes = primaryDest.length() + (secondaryDest?.length() ?: 0L)
-            val entity = ExerciseAssetEntity(
-                exerciseId = exerciseId,
-                sourceId = manifest.sourceType.name,
-                status = AssetDownloadStatus.DOWNLOADED.name,
-                version = manifest.version,
-                localPrimaryPath = primaryDest.absolutePath,
-                localSecondaryPath = secondaryDest?.absolutePath,
-                mediaType = manifest.mediaType.name,
-                checksumSha256 = primaryHash,
-                bytesDownloaded = totalBytes,
-                totalBytes = totalBytes,
-                attribution = manifest.attribution,
-                licenseName = manifest.licenseName,
-                errorMessage = null,
-                updatedAtMs = System.currentTimeMillis()
-            )
-            assetDao.upsert(entity)
-            if (prefs.notificationsEnabled && prefs.notifyDownloads) {
+            require(manifest.expectedSha256 == null || hash == manifest.expectedSha256) { "Media checksum mismatch" }
+            coroutineContext.ensureActive()
+            withContext(NonCancellable) {
+                assetDao.upsert(working.copy(
+                    status = AssetDownloadStatus.DOWNLOADED.name,
+                    localPrimaryPath = primary.absolutePath,
+                    localSecondaryPath = secondary?.absolutePath,
+                    checksumSha256 = hash,
+                    bytesDownloaded = received,
+                    totalBytes = received
+                ))
+                saved = true
+            }
+            listOfNotNull(existing?.localPrimaryPath, existing?.localSecondaryPath).forEach { File(it).delete() }
+        } catch (error: CancellationException) {
+            withContext(NonCancellable) {
+                if (!saved && previous == null) assetDao.upsert(working.copy(status = AssetDownloadStatus.PAUSED.name, bytesDownloaded = 0))
+            }
+            throw error
+        } catch (error: Exception) {
+            val cancelled = isStopped
+            withContext(NonCancellable) {
+                if (previous == null) assetDao.upsert(working.copy(
+                    status = if (cancelled) AssetDownloadStatus.PAUSED.name else AssetDownloadStatus.FAILED.name,
+                    bytesDownloaded = 0,
+                    errorMessage = if (cancelled) null else applicationContext.getString(R.string.media_status_failed)
+                ))
+            }
+            if (!cancelled && prefs.notificationsEnabled && prefs.notifyDownloads) {
                 notifications.notifyDownloadEvent(
                     notificationId = 1500 + (exerciseId.hashCode() and 0xFF),
-                    title = applicationContext.getString(R.string.notif_download_complete_title),
+                    title = applicationContext.getString(R.string.notif_download_failed_title),
                     body = exerciseId.replace('_', ' ')
                 )
             }
+            return@withContext Result.failure()
+        } finally {
+            if (!saved) staged.forEach { it.delete() }
         }
-
-        return@withContext result.fold(
-            onSuccess = { Result.success() },
-            onFailure = { err ->
-                val wasStopped = isStopped
-                assetDao.upsert(
-                    ExerciseAssetEntity(
-                        exerciseId = exerciseId,
-                        sourceId = manifest.sourceType.name,
-                        status = if (wasStopped) AssetDownloadStatus.PAUSED.name else AssetDownloadStatus.FAILED.name,
-                        version = manifest.version,
-                        localPrimaryPath = null,
-                        localSecondaryPath = null,
-                        mediaType = manifest.mediaType.name,
-                        bytesDownloaded = 0L,
-                        totalBytes = 0L,
-                        attribution = manifest.attribution,
-                        licenseName = manifest.licenseName,
-                        errorMessage = if (wasStopped) null else (err.localizedMessage ?: "Download failed"),
-                        updatedAtMs = System.currentTimeMillis()
-                    )
-                )
-                if (!wasStopped && prefs.notificationsEnabled && prefs.notifyDownloads) {
-                    notifications.notifyDownloadEvent(
-                        notificationId = 1500 + (exerciseId.hashCode() and 0xFF),
-                        title = applicationContext.getString(R.string.notif_download_failed_title),
-                        body = err.localizedMessage ?: exerciseId
-                    )
-                }
-                if (wasStopped) Result.success() else Result.failure()
-            }
-        )
+        if (prefs.notificationsEnabled && prefs.notifyDownloads) {
+            notifications.notifyDownloadEvent(
+                notificationId = 1500 + (exerciseId.hashCode() and 0xFF),
+                title = applicationContext.getString(R.string.notif_download_complete_title),
+                body = exerciseId.replace('_', ' ')
+            )
+        }
+        Result.success()
     }
 
-    private fun downloadFile(client: OkHttpClient, url: String, destFile: File): String {
-        val partFile = File(destFile.parentFile, "${destFile.name}.part")
-        val request = Request.Builder().url(url).get().build()
+    private suspend fun downloadFile(
+        client: OkHttpClient,
+        url: String,
+        destFile: File,
+        mimeType: String,
+        maxBytes: Long,
+        onBytes: suspend (Int) -> Unit
+    ): String {
         val digest = MessageDigest.getInstance("SHA-256")
+        val request = Request.Builder().url(url).get().build()
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                error("HTTP ${response.code} downloading media")
-            }
+            check(response.isSuccessful) { "HTTP ${response.code} downloading media" }
             val body = response.body ?: error("Empty response body")
             body.byteStream().use { input ->
-                partFile.outputStream().use { output ->
+                destFile.outputStream().use { output ->
                     val buffer = ByteArray(16 * 1024)
                     var total = 0L
                     while (true) {
-                        if (isStopped) error("Cancelled")
+                        coroutineContext.ensureActive()
                         val read = input.read(buffer)
-                        if (read <= 0) break
+                        if (read < 0) break
+                        total += read
+                        require(total <= maxBytes) { "Media exceeds the download limit" }
                         output.write(buffer, 0, read)
                         digest.update(buffer, 0, read)
-                        total += read
+                        onBytes(read)
                     }
-                    require(total > 0L) { "Empty media file received" }
+                    require(total > 0 && (body.contentLength() < 0 || total == body.contentLength())) {
+                        "Incomplete media file"
+                    }
                 }
             }
         }
-        if (destFile.exists()) destFile.delete()
-        if (!partFile.renameTo(destFile)) {
-            partFile.copyTo(destFile, overwrite = true)
-            partFile.delete()
+        if (mimeType == "video/mp4") {
+            val metadata = MediaMetadataRetriever()
+            try {
+                metadata.setDataSource(destFile.absolutePath)
+                require(metadata.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                    ?.toIntOrNull()?.let { it > 0 } == true)
+            } finally {
+                metadata.release()
+            }
+        } else {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(destFile.absolutePath, options)
+            require(options.outMimeType == mimeType && options.outWidth in 1..8192 && options.outHeight in 1..8192) {
+                "Invalid image file"
+            }
         }
         return digest.digest().joinToString("") { "%02x".format(it) }
     }

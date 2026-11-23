@@ -1,12 +1,31 @@
 package com.aifitnesscoach.feature.workout
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import android.os.SystemClock
+import android.util.Log
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.core.app.ActivityCompat
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.heightIn
+import com.aifitnesscoach.core.ui.LayoutSpacing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,16 +54,16 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -65,7 +84,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.aifitnesscoach.R
-import com.aifitnesscoach.core.camera.CameraPoseAnalyzer
+import com.aifitnesscoach.core.camera.WorkoutCameraState
+import com.aifitnesscoach.core.camera.CameraPermissionState
+import com.aifitnesscoach.core.camera.cameraPermissionState
 import com.aifitnesscoach.core.camera.CameraPreviewWithOverlay
 import com.aifitnesscoach.core.database.CameraLensPreference
 import com.aifitnesscoach.core.database.UserPreferences
@@ -76,12 +97,17 @@ import com.aifitnesscoach.core.equipment.WeightLoadMode
 import com.aifitnesscoach.core.exercise.CoachExplanationProvider
 import com.aifitnesscoach.core.exercise.ExerciseCategory
 import com.aifitnesscoach.core.exercise.ExerciseMode
-import com.aifitnesscoach.core.exercise.definitions.ExerciseCatalog
 import com.aifitnesscoach.core.localization.LocaleManager
 import com.aifitnesscoach.core.personalization.PersonalizedGreeting
-import com.aifitnesscoach.core.pose.PoseLandmarkerHelper
 import com.aifitnesscoach.core.pose.TrackingQuality
 import com.aifitnesscoach.feature.exercises.statusLabel
+import com.aifitnesscoach.feature.exercises.ExercisesScreen
+import com.aifitnesscoach.core.exercise.EquipmentCategoryType
+import com.aifitnesscoach.core.ui.ControlFlow
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalView
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 
 @Composable
@@ -92,27 +118,64 @@ fun WorkoutScreen(
     coachExplanationProvider: CoachExplanationProvider,
     viewModel: WorkoutViewModel,
     onCameraGuideAcknowledged: () -> Unit = {},
+    onOpenCameraGuide: (String) -> Unit = {},
     onPoseTrackingActiveChanged: (Boolean) -> Unit = {},
-    onSaveAndAnalyze: () -> Unit = {},
+    onSaveAndAnalyze: (() -> Unit)? = null,
+    onSavePlan: ((List<PlannedWorkoutItem>) -> Unit)? = null,
     onExitWorkout: () -> Unit
 ) {
     val context = LocalContext.current
-    var hasCameraPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
-                PackageManager.PERMISSION_GRANTED
-        )
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val view = LocalView.current
+    val keepAwake = uiState.stage == WorkoutStage.LIVE_TRACKING || uiState.stage == WorkoutStage.REST_TIMER
+    DisposableEffect(view, keepAwake) {
+        val previous = view.keepScreenOn
+        if (keepAwake) view.keepScreenOn = true
+        onDispose { view.keepScreenOn = previous }
     }
+    fun hasPermission() = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+        PackageManager.PERMISSION_GRANTED
+    var hasCameraPermission by remember { mutableStateOf(hasPermission()) }
+    var requestedPermission by rememberSaveable { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) { granted -> hasCameraPermission = granted }
+    ) { granted ->
+        requestedPermission = true
+        hasCameraPermission = granted
+        Log.i("WorkoutCamera", "permission_result granted=$granted")
+    }
+    DisposableEffect(lifecycleOwner, context) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) hasCameraPermission = hasPermission()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val activity = remember(context) {
+        generateSequence(context) { (it as? ContextWrapper)?.baseContext }
+            .filterIsInstance<Activity>().firstOrNull()
+    }
+    val permissionState = cameraPermissionState(
+        granted = hasCameraPermission,
+        requested = requestedPermission,
+        showRationale = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, Manifest.permission.CAMERA) } ?: true
+    )
+    val requestPermission = {
+        if (permissionState == CameraPermissionState.SETTINGS_REQUIRED) {
+            context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
+        } else {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
 
-    var useFrontCamera by remember(preferences.cameraLens) {
+    val requiresAnalysis = uiState.currentItem?.exercise?.analyzerId != null
+    var useFrontCamera by rememberSaveable(preferences.cameraLens) {
         mutableStateOf(preferences.cameraLens == CameraLensPreference.FRONT)
     }
 
-    LaunchedEffect(uiState.stage) {
-        onPoseTrackingActiveChanged(uiState.stage == WorkoutStage.LIVE_TRACKING)
+    LaunchedEffect(uiState.stage, hasCameraPermission, uiState.currentItem?.exercise?.analyzerId) {
+        onPoseTrackingActiveChanged(uiState.stage == WorkoutStage.LIVE_TRACKING && hasCameraPermission &&
+            uiState.currentItem?.exercise?.analyzerId != null)
     }
     DisposableEffect(Unit) {
         onDispose { onPoseTrackingActiveChanged(false) }
@@ -125,6 +188,7 @@ fun WorkoutScreen(
                 isPersian = isPersian,
                 viewModel = viewModel,
                 skipCameraGuide = preferences.cameraGuideAcknowledged,
+                onSavePlan = onSavePlan,
                 onCancel = onExitWorkout
             )
         }
@@ -134,7 +198,10 @@ fun WorkoutScreen(
                 uiState = uiState,
                 isPersian = isPersian,
                 hasCameraPermission = hasCameraPermission,
-                onRequestPermission = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                requiresAnalysis = requiresAnalysis,
+                onRequestPermission = requestPermission,
+                permissionState = permissionState,
+                onOpenGuide = { uiState.currentItem?.exercise?.id?.let(onOpenCameraGuide) },
                 onStartTracking = {
                     onCameraGuideAcknowledged()
                     viewModel.startLiveTracking()
@@ -144,9 +211,11 @@ fun WorkoutScreen(
         }
 
         WorkoutStage.LIVE_TRACKING -> {
-            if (!hasCameraPermission) {
+            if (requiresAnalysis && !hasCameraPermission) {
                 CameraPermissionRationaleView(
-                    onRequestPermission = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                    onRequestPermission = requestPermission,
+                    permissionState = permissionState,
+                    onOpenGuide = { uiState.currentItem?.exercise?.id?.let(onOpenCameraGuide) },
                     onBack = onExitWorkout
                 )
             } else {
@@ -155,7 +224,9 @@ fun WorkoutScreen(
                     preferences = preferences,
                     isPersian = isPersian,
                     useFrontCamera = useFrontCamera,
+                    hasCameraPermission = hasCameraPermission,
                     onToggleCamera = { useFrontCamera = !useFrontCamera },
+                    onOpenGuide = { uiState.currentItem?.exercise?.id?.let(onOpenCameraGuide) },
                     coachExplanationProvider = coachExplanationProvider,
                     viewModel = viewModel
                 )
@@ -186,14 +257,14 @@ fun WorkoutScreen(
                         onSaved = onExitWorkout
                     )
                 },
-                onSaveAndAnalyze = {
+                onSaveAndAnalyze = if (onSaveAndAnalyze != null) ({
                     viewModel.saveWorkoutSession(
                         syncToHealthConnect = preferences.healthConnectEnabled &&
                             preferences.hcWriteWorkoutsEnabled &&
                             preferences.healthAutoSyncEnabled,
                         onSaved = onSaveAndAnalyze
                     )
-                },
+                }) else null,
                 onDiscard = { viewModel.discardWorkout(onExitWorkout) }
             )
         }
@@ -207,9 +278,23 @@ private fun SessionBuilderView(
     isPersian: Boolean,
     viewModel: WorkoutViewModel,
     skipCameraGuide: Boolean,
+    onSavePlan: ((List<PlannedWorkoutItem>) -> Unit)?,
     onCancel: () -> Unit
 ) {
-    var pickerExpanded by remember { mutableStateOf(false) }
+    var pickerExpanded by rememberSaveable { mutableStateOf(false) }
+    BackHandler(pickerExpanded) { pickerExpanded = false }
+    if (pickerExpanded) {
+        ExercisesScreen(
+            isPersian = isPersian,
+            onCloseQuickPicker = { pickerExpanded = false },
+            pickerTitle = R.string.workout_add_exercise,
+            onSelectExerciseForDetail = {
+                viewModel.addExerciseToPlan(it)
+                pickerExpanded = false
+            }
+        )
+        return
+    }
 
     Column(modifier = Modifier.fillMaxSize().imePadding().padding(16.dp)) {
         Text(
@@ -218,34 +303,12 @@ private fun SessionBuilderView(
         )
         Spacer(Modifier.height(10.dp))
 
-        ExposedDropdownMenuBox(
-            expanded = pickerExpanded,
-            onExpandedChange = { pickerExpanded = it }
+        OutlinedButton(
+            onClick = { pickerExpanded = true },
+            modifier = Modifier.fillMaxWidth().sizeIn(minHeight = LayoutSpacing.touchTarget)
         ) {
-            OutlinedButton(
-                onClick = { pickerExpanded = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .sizeIn(minHeight = 48.dp)
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
-            ) {
-                Icon(Icons.Outlined.Add, contentDescription = null)
-                Text(stringResource(R.string.workout_add_exercise_all_categories))
-            }
-            ExposedDropdownMenu(
-                expanded = pickerExpanded,
-                onDismissRequest = { pickerExpanded = false }
-            ) {
-                ExerciseCatalog.allExercises.forEach { ex ->
-                    DropdownMenuItem(
-                        text = { Text(if (isPersian) ex.nameFa else ex.nameEn) },
-                        onClick = {
-                            viewModel.addExerciseToPlan(ex)
-                            pickerExpanded = false
-                        }
-                    )
-                }
-            }
+            Icon(Icons.Outlined.Add, contentDescription = null)
+            Text(stringResource(R.string.workout_add_exercise))
         }
 
         Spacer(Modifier.height(12.dp))
@@ -268,16 +331,19 @@ private fun SessionBuilderView(
         }
 
         Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
+        ControlFlow {
+            OutlinedButton(onClick = onCancel) {
                 Text(stringResource(R.string.workout_discard))
             }
             Button(
-                onClick = { viewModel.beginSessionFromPlan(skipCameraGuide = skipCameraGuide) },
-                enabled = uiState.plannedItems.isNotEmpty(),
-                modifier = Modifier.weight(2f)
+                onClick = {
+                    if (onSavePlan != null) onSavePlan(uiState.plannedItems)
+                    else viewModel.beginSessionFromPlan(skipCameraGuide = skipCameraGuide)
+                },
+                enabled = onSavePlan != null || uiState.plannedItems.isNotEmpty(),
+                modifier = Modifier.sizeIn(minHeight = LayoutSpacing.touchTarget)
             ) {
-                Text(stringResource(R.string.home_start_workout))
+                Text(stringResource(if (onSavePlan == null) R.string.home_start_workout else R.string.plan_save))
             }
         }
     }
@@ -375,16 +441,19 @@ private fun PlannedItemCard(
             // Weighted Training Manual Entry (Per Dumbbell vs Total Load)
             if (item.exercise.category == ExerciseCategory.WEIGHTED_TRAINING) {
                 val w = item.weightEntry ?: WeightEntry(5f)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
                     OutlinedTextField(
                         value = w.value.toString(),
                         onValueChange = { v ->
-                            v.toFloatOrNull()?.let { onUpdate(item.copy(weightEntry = w.copy(value = it))) }
+                            v.toFloatOrNull()?.takeIf { it.isFinite() && it >= 0f }?.let {
+                                onUpdate(item.copy(weightEntry = w.copy(value = it)))
+                            }
                         },
                         label = { Text(stringResource(R.string.equip_weight_value)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     )
+                    if (item.exercise.equipmentType == EquipmentCategoryType.DUMBBELL) ControlFlow {
                     FilterChip(
                         selected = w.loadMode == WeightLoadMode.PER_DUMBBELL,
                         onClick = { onUpdate(item.copy(weightEntry = w.copy(loadMode = WeightLoadMode.PER_DUMBBELL))) },
@@ -395,6 +464,7 @@ private fun PlannedItemCard(
                         onClick = { onUpdate(item.copy(weightEntry = w.copy(loadMode = WeightLoadMode.TOTAL_LOAD))) },
                         label = { Text(stringResource(R.string.equip_weight_mode_total)) }
                     )
+                    }
                 }
             }
 
@@ -402,7 +472,7 @@ private fun PlannedItemCard(
             if (item.exercise.category == ExerciseCategory.RESISTANCE_BAND_TRAINING) {
                 val band = item.bandMetadata ?: ResistanceBandMetadata()
                 Text(stringResource(R.string.band_type_label), style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ControlFlow {
                     item.exercise.supportedBandTypes.forEach { bt ->
                         FilterChip(
                             selected = band.bandType == bt,
@@ -411,7 +481,7 @@ private fun PlannedItemCard(
                         )
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ControlFlow {
                     listOf(
                         ResistanceLevel.LIGHT,
                         ResistanceLevel.MEDIUM,
@@ -453,66 +523,71 @@ private fun CameraSetupGuideView(
     uiState: WorkoutUiState,
     isPersian: Boolean,
     hasCameraPermission: Boolean,
+    requiresAnalysis: Boolean,
     onRequestPermission: () -> Unit,
+    permissionState: CameraPermissionState,
+    onOpenGuide: () -> Unit,
     onStartTracking: () -> Unit,
     onBack: () -> Unit
 ) {
     val item = uiState.currentItem ?: return
     val ex = item.exercise
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Text(stringResource(R.string.camera_setup_title), style = MaterialTheme.typography.headlineMedium)
-        Text(
-            text = if (isPersian) ex.nameFa else ex.nameEn,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary
-        )
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            Surface(tonalElevation = 3.dp) {
+                Column(
+                    Modifier.fillMaxWidth().padding(LayoutSpacing.screen),
+                    verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)
+                ) {
+                    if (!hasCameraPermission && requiresAnalysis) {
+                        Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth().sizeIn(minHeight = LayoutSpacing.touchTarget)) {
+                            Text(stringResource(if (permissionState == CameraPermissionState.SETTINGS_REQUIRED) R.string.camera_open_settings else R.string.camera_grant_permission))
+                        }
+                    } else {
+                        Button(onClick = onStartTracking, modifier = Modifier.fillMaxWidth().sizeIn(minHeight = LayoutSpacing.touchTarget)) {
+                            Text(
+                                stringResource(if (requiresAnalysis) R.string.camera_start_tracking else R.string.home_start_workout),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                    }
 
-        Card(shape = RoundedCornerShape(16.dp)) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                val viewText = if (isPersian) ex.cameraGuide.recommendedView.labelFa else ex.cameraGuide.recommendedView.labelEn
-                val distText = if (isPersian) ex.cameraGuide.distanceFa else ex.cameraGuide.distanceEn
-                val heightText = if (isPersian) ex.cameraGuide.heightFa else ex.cameraGuide.heightEn
-                Text(viewText, style = MaterialTheme.typography.titleMedium)
-                Text(stringResource(R.string.camera_setup_distance, distText))
-                Text(stringResource(R.string.camera_setup_height, heightText))
-                Text(
-                    stringResource(
-                        R.string.camera_setup_landmarks,
-                        ex.requiredLandmarks.joinToString(", ") { it.name.lowercase().replace('_', ' ') }
+                    OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.workout_discard))
+                    }
+                }
+            }
+        }
+    ) { insets ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(insets)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(stringResource(R.string.camera_setup_title), style = MaterialTheme.typography.headlineMedium)
+            Text(
+                text = if (isPersian) ex.nameFa else ex.nameEn,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            CameraFramingExample(ex.id, Modifier.align(Alignment.CenterHorizontally))
+            CameraPositionInstructions(ex, isPersian)
+            TextButton(onClick = onOpenGuide) { Text(stringResource(R.string.guide_full)) }
+
+            if (ex.analyzerId == null) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                    Text(
+                        text = stringResource(R.string.workout_no_analyzer_notice, statusLabel(ex.implementationStatus)),
+                        modifier = Modifier.padding(14.dp)
                     )
-                )
-                Text(stringResource(R.string.camera_setup_instruction), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-        }
-
-        if (ex.analyzerId == null) {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                Text(
-                    text = stringResource(R.string.workout_no_analyzer_notice, statusLabel(ex.implementationStatus)),
-                    modifier = Modifier.padding(14.dp)
-                )
-            }
-        }
-
-        if (!hasCameraPermission) {
-            Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Text(stringResource(R.string.camera_grant_permission))
-            }
-        } else {
-            Button(onClick = onStartTracking, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-                Text(stringResource(R.string.camera_start_tracking), style = MaterialTheme.typography.titleMedium)
-            }
-        }
-
-        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.workout_discard))
         }
     }
 }
@@ -520,20 +595,30 @@ private fun CameraSetupGuideView(
 @Composable
 private fun CameraPermissionRationaleView(
     onRequestPermission: () -> Unit,
+    permissionState: CameraPermissionState,
+    onOpenGuide: () -> Unit,
     onBack: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(stringResource(R.string.camera_permission_title), style = MaterialTheme.typography.headlineMedium)
+        Text(
+            stringResource(if (permissionState == CameraPermissionState.REQUIRED) {
+                R.string.camera_permission_title
+            } else {
+                R.string.camera_access_denied
+            }),
+            style = MaterialTheme.typography.headlineMedium
+        )
         Spacer(Modifier.height(10.dp))
         Text(stringResource(R.string.camera_permission_rationale), style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(20.dp))
         Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-            Text(stringResource(R.string.camera_grant_permission))
+            Text(stringResource(if (permissionState == CameraPermissionState.SETTINGS_REQUIRED) R.string.camera_open_settings else R.string.camera_grant_permission))
         }
+        TextButton(onClick = onOpenGuide) { Text(stringResource(R.string.camera_setup_title)) }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.workout_discard))
@@ -547,69 +632,63 @@ private fun LiveTrackingWorkoutView(
     preferences: UserPreferences,
     isPersian: Boolean,
     useFrontCamera: Boolean,
+    hasCameraPermission: Boolean,
     onToggleCamera: () -> Unit,
+    onOpenGuide: () -> Unit,
     coachExplanationProvider: CoachExplanationProvider,
     viewModel: WorkoutViewModel
 ) {
-    val context = LocalContext.current
     val item = uiState.currentItem ?: return
     val analysis = uiState.latestAnalysis
     val ttsLocale = remember(preferences.language) { LocaleManager.activeLocale(preferences.language) }
 
-    val poseHelper = remember {
-        PoseLandmarkerHelper(
-            context = context,
-            onResult = { frame ->
-                viewModel.onPoseFrame(
-                    frame = frame,
-                    voiceEnabled = preferences.voiceFeedbackEnabled,
-                    ttsLocale = ttsLocale,
-                    isPersian = isPersian
-                )
-            },
-            onError = { err -> viewModel.onPoseInitStatus(false, err) }
-        )
+    var timerNow by remember(uiState.manualHoldStartedAtMs) {
+        mutableLongStateOf(SystemClock.elapsedRealtime())
     }
-
-    LaunchedEffect(poseHelper) {
-        val ok = poseHelper.initialize()
-        viewModel.onPoseInitStatus(
-            usingGpu = poseHelper.isUsingGpu(),
-            error = if (ok) null else "Pose model not bundled in assets (pose_landmarker_lite.task)."
-        )
+    LaunchedEffect(uiState.manualHoldStartedAtMs) {
+        if (!uiState.isManualHold || uiState.manualHoldStartedAtMs == null) return@LaunchedEffect
+        while (isActive) {
+            timerNow = SystemClock.elapsedRealtime()
+            delay(250)
+        }
     }
-
-    DisposableEffect(poseHelper) {
-        onDispose { poseHelper.close() }
+    var cameraAttempt by remember { mutableIntStateOf(0) }
+    var cameraState by remember(useFrontCamera, cameraAttempt) {
+        mutableStateOf(WorkoutCameraState.INITIALIZING_CAMERA)
     }
+    val cameraFailed = cameraState in setOf(
+        WorkoutCameraState.CAMERA_UNAVAILABLE, WorkoutCameraState.PREVIEW_ERROR, WorkoutCameraState.POSE_ERROR
+    )
+    val canCompleteSet = item.exercise.analyzerId == null || cameraState == WorkoutCameraState.WORKOUT_READY
 
-    val cameraAnalyzer = remember(poseHelper) {
-        CameraPoseAnalyzer(
-            landmarkerHelper = poseHelper,
-            isFrontCameraProvider = { useFrontCamera },
-            onFpsUpdated = { fps -> viewModel.onFpsUpdated(fps) }
-        )
-    }
-
-    var showCameraHelpDialog by remember { mutableStateOf(false) }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        CameraPreviewWithOverlay(
-            useFrontCamera = useFrontCamera,
-            showSkeletonOverlay = preferences.skeletonOverlayEnabled,
-            latestPoseFrame = uiState.latestPoseFrame,
-            analyzer = cameraAnalyzer,
-            skeletonColor = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.fillMaxSize()
-        )
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color(0xFF111827))) {
+        val headerLimit = maxHeight * 0.40f
+        val controlsLimit = maxHeight * 0.55f
+        if (hasCameraPermission) androidx.compose.runtime.key(cameraAttempt, item.exercise.id) {
+            CameraPreviewWithOverlay(
+                useFrontCamera = useFrontCamera,
+                showSkeletonOverlay = preferences.skeletonOverlayEnabled && cameraState == WorkoutCameraState.WORKOUT_READY,
+                latestPoseFrame = uiState.latestPoseFrame,
+                needsPose = item.exercise.analyzerId != null,
+                onPose = { frame ->
+                    viewModel.onPoseFrame(frame, preferences.voiceFeedbackEnabled, ttsLocale, isPersian)
+                },
+                onFps = viewModel::onFpsUpdated,
+                onState = { cameraState = it },
+                skeletonColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         // Top HUD (Exercise Name, Set, Tracking Status, Help, Camera Switch)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
+                .heightIn(max = headerLimit)
                 .background(Color.Black.copy(alpha = 0.62f))
-                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(LayoutSpacing.screen)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -631,7 +710,7 @@ private fun LiveTrackingWorkoutView(
                 }
                 Row {
                     IconButton(
-                        onClick = { showCameraHelpDialog = true },
+                        onClick = onOpenGuide,
                         modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                     ) {
                         Icon(
@@ -640,7 +719,7 @@ private fun LiveTrackingWorkoutView(
                             tint = Color.White
                         )
                     }
-                    IconButton(
+                    if (hasCameraPermission) IconButton(
                         onClick = onToggleCamera,
                         modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                     ) {
@@ -653,11 +732,19 @@ private fun LiveTrackingWorkoutView(
                 }
             }
 
-            val trackingText = when (analysis?.trackingQuality) {
-                TrackingQuality.GOOD -> stringResource(R.string.workout_tracking_ok)
-                TrackingQuality.LOW_CONFIDENCE -> stringResource(R.string.workout_tracking_low_conf)
-                TrackingQuality.LOST -> stringResource(R.string.workout_tracking_lost)
-                null -> uiState.poseInitError ?: stringResource(R.string.workout_tracking_ok)
+            val trackingText = if (!hasCameraPermission) stringResource(R.string.workout_manual_only) else when (cameraState) {
+                WorkoutCameraState.INITIALIZING_CAMERA -> stringResource(R.string.camera_initializing)
+                WorkoutCameraState.INITIALIZING_POSE -> stringResource(R.string.camera_pose_initializing)
+                WorkoutCameraState.CAMERA_READY -> stringResource(R.string.camera_preview_ready)
+                WorkoutCameraState.CAMERA_UNAVAILABLE -> stringResource(R.string.camera_lens_unavailable)
+                WorkoutCameraState.PREVIEW_ERROR -> stringResource(R.string.camera_preview_error)
+                WorkoutCameraState.POSE_ERROR -> stringResource(R.string.camera_pose_error)
+                WorkoutCameraState.WORKOUT_READY -> when (analysis?.trackingQuality) {
+                    TrackingQuality.GOOD -> stringResource(R.string.workout_tracking_ok)
+                    TrackingQuality.LOW_CONFIDENCE -> stringResource(R.string.workout_tracking_low_conf)
+                    TrackingQuality.LOST -> stringResource(R.string.workout_tracking_lost)
+                    null -> stringResource(R.string.camera_enter_frame)
+                }
             }
             Text(
                 text = trackingText,
@@ -666,14 +753,18 @@ private fun LiveTrackingWorkoutView(
                 fontWeight = FontWeight.Medium
             )
 
-            if (preferences.developerMetricsEnabled) {
+            if (cameraFailed) {
+                Button(onClick = { cameraAttempt++ }) { Text(stringResource(R.string.camera_retry)) }
+            }
+
+            if (preferences.developerMetricsEnabled && cameraState == WorkoutCameraState.WORKOUT_READY) {
                 val avgConfPct = uiState.latestPoseFrame
                     ?.averageConfidence(item.exercise.requiredLandmarks)
                     ?.times(100f)
                     ?.roundToInt() ?: 0
                 val phaseLabel = analysis?.phase?.name ?: "IDLE"
                 Text(
-                    text = "FPS: ${uiState.liveFps.toInt()} · Inf: ${uiState.latestPoseFrame?.inferenceTimeMs ?: 0}ms · Conf: $avgConfPct% · $phaseLabel · ${if (uiState.isUsingGpu) "GPU" else "CPU"}",
+                    text = "FPS: ${uiState.liveFps.toInt()} · Inf: ${uiState.latestPoseFrame?.inferenceTimeMs ?: 0}ms · Conf: $avgConfPct% · $phaseLabel · CPU",
                     color = Color.White.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -685,8 +776,10 @@ private fun LiveTrackingWorkoutView(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
+                .heightIn(max = controlsLimit)
                 .background(Color.Black.copy(alpha = 0.72f))
-                .padding(16.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(LayoutSpacing.screen),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
@@ -696,7 +789,9 @@ private fun LiveTrackingWorkoutView(
             ) {
                 Column {
                     if (item.exercise.exerciseMode == ExerciseMode.TIMED_HOLD) {
-                        val sec = (analysis?.holdDurationMs ?: 0L) / 1000L
+                        val holdMs = if (uiState.isManualHold) uiState.manualHoldElapsedMs(timerNow)
+                            else analysis?.holdDurationMs ?: 0L
+                        val sec = holdMs / 1000L
                         Text(
                             text = "${sec}s",
                             color = Color.White,
@@ -755,7 +850,7 @@ private fun LiveTrackingWorkoutView(
                 )
             }
 
-            if (item.exercise.analyzerId == null) {
+            if (item.exercise.analyzerId == null && !uiState.isManualHold) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = { viewModel.adjustManualReps(-1) },
@@ -774,7 +869,7 @@ private fun LiveTrackingWorkoutView(
             ) {
                 OutlinedButton(
                     onClick = { viewModel.togglePause() },
-                    modifier = Modifier.weight(1f).height(52.dp)
+                    modifier = Modifier.weight(1f).sizeIn(minHeight = LayoutSpacing.touchTarget)
                 ) {
                     Icon(
                         imageVector = if (uiState.isPaused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
@@ -789,35 +884,15 @@ private fun LiveTrackingWorkoutView(
 
                 Button(
                     onClick = { viewModel.completeCurrentSet() },
-                    modifier = Modifier.weight(1.3f).height(52.dp)
+                    enabled = canCompleteSet,
+                    modifier = Modifier.weight(1.3f).sizeIn(minHeight = LayoutSpacing.touchTarget)
                 ) {
                     Text(stringResource(R.string.workout_next_set), style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
 
-        if (showCameraHelpDialog) {
-            val viewText = if (isPersian) item.exercise.cameraGuide.recommendedView.labelFa else item.exercise.cameraGuide.recommendedView.labelEn
-            val distText = if (isPersian) item.exercise.cameraGuide.distanceFa else item.exercise.cameraGuide.distanceEn
-            val heightText = if (isPersian) item.exercise.cameraGuide.heightFa else item.exercise.cameraGuide.heightEn
-            AlertDialog(
-                onDismissRequest = { showCameraHelpDialog = false },
-                title = { Text(stringResource(R.string.camera_setup_title)) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(viewText, fontWeight = FontWeight.SemiBold)
-                        Text(stringResource(R.string.camera_setup_distance, distText))
-                        Text(stringResource(R.string.camera_setup_height, heightText))
-                        Text(stringResource(R.string.camera_setup_instruction))
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showCameraHelpDialog = false }) {
-                        Text(stringResource(R.string.common_ok))
-                    }
-                }
-            )
-        }
+
     }
 }
 
@@ -829,7 +904,7 @@ private fun RestTimerView(
     onFinishEarly: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -857,7 +932,7 @@ private fun WorkoutSummaryView(
     athleteName: String,
     isPersian: Boolean,
     onSave: () -> Unit,
-    onSaveAndAnalyze: () -> Unit,
+    onSaveAndAnalyze: (() -> Unit)?,
     onDiscard: () -> Unit
 ) {
     Column(
@@ -912,7 +987,7 @@ private fun WorkoutSummaryView(
         ) {
             Text(stringResource(R.string.workout_save_session))
         }
-        OutlinedButton(
+        if (onSaveAndAnalyze != null) OutlinedButton(
             onClick = onSaveAndAnalyze,
             enabled = !uiState.isSaving && uiState.completedSets.isNotEmpty(),
             modifier = Modifier.fillMaxWidth().height(48.dp)

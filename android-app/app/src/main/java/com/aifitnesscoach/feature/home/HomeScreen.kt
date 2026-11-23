@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -40,7 +41,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aifitnesscoach.R
-import com.aifitnesscoach.core.database.FitnessGoal
+import com.aifitnesscoach.core.ui.TrainingPhotography
+import com.aifitnesscoach.core.media.ExerciseIllustration
+import com.aifitnesscoach.core.media.ExerciseArtwork
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.database.SavedInsightEntity
 import com.aifitnesscoach.core.database.UserProfile
 import com.aifitnesscoach.core.database.WorkoutSessionWithDetails
@@ -61,7 +65,9 @@ fun HomeScreen(
     latestInsight: SavedInsightEntity?,
     dailyQuote: MotivationalQuote?,
     onOpenProfileSetup: () -> Unit,
+    onOpenSettings: () -> Unit,
     onStartQuickWorkout: () -> Unit,
+    onOpenPlan: (() -> Unit)? = null,
     onBuildMultiWorkout: () -> Unit,
     onContinueLastWorkout: (WorkoutSessionWithDetails) -> Unit,
     onSelectCategory: (ExerciseCategory) -> Unit,
@@ -74,165 +80,75 @@ fun HomeScreen(
     val lastSession = allSessions.firstOrNull()
     val recentExercises = recentExerciseIds.mapNotNull { ExerciseCatalog.findById(it) }
 
-    val goalText = when (profile.fitnessGoal) {
-        FitnessGoal.GENERAL_FITNESS -> stringResource(R.string.goal_general_fitness)
-        FitnessGoal.STRENGTH -> stringResource(R.string.goal_strength)
-        FitnessGoal.MUSCLE_BUILDING -> stringResource(R.string.goal_muscle)
-        FitnessGoal.MOBILITY -> stringResource(R.string.goal_mobility)
-        FitnessGoal.CORE_STABILITY -> stringResource(R.string.goal_core)
-        FitnessGoal.WEIGHT_MANAGEMENT -> stringResource(R.string.goal_weight_mgmt)
-        FitnessGoal.CUSTOM -> profile.customGoalLabel.ifBlank { stringResource(R.string.goal_custom) }
-    }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(LayoutSpacing.pagePadding),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Section A — Time-Aware Personalized Greeting Header + Profile Shortcut
         item {
-            Card(
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = PersonalizedGreeting.homeGreeting(profile.name, isPersian),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Text(
-                            text = PersonalizedGreeting.readyPrompt(
-                                name = profile.name,
-                                isPersian = isPersian,
-                                hasWorkouts = allSessions.isNotEmpty()
-                            ),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.88f)
-                        )
-                    }
-                    FilledTonalIconButton(
-                        onClick = onOpenProfileSetup,
-                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp),
-                        shape = CircleShape
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Person,
-                            contentDescription = stringResource(R.string.profile_edit)
-                        )
-                    }
+                Text(
+                    PersonalizedGreeting.homeGreeting(profile.name, isPersian),
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                FilledTonalIconButton(onClick = onOpenSettings) {
+                    Icon(Icons.Outlined.Settings, stringResource(R.string.nav_settings))
+                }
+                FilledTonalIconButton(onClick = onOpenProfileSetup) {
+                    Icon(Icons.Outlined.Person, stringResource(R.string.profile_edit))
                 }
             }
         }
 
-        // Section B — Primary Workout Actions
         item {
-            Card(shape = RoundedCornerShape(20.dp)) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                TrainingPhotography(184.dp)
+                Text(stringResource(R.string.training_headline), style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    stringResource(R.string.training_description),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Button(
+                    onClick = onStartQuickWorkout,
+                    modifier = Modifier.fillMaxWidth().sizeIn(minHeight = 52.dp)
                 ) {
-                    Button(
-                        onClick = onStartQuickWorkout,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Icon(Icons.Outlined.PlayArrow, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.home_start_workout),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = onBuildMultiWorkout,
-                            modifier = Modifier
-                                .weight(1f)
-                                .sizeIn(minHeight = 48.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(stringResource(R.string.home_build_session))
-                        }
-
-                        if (lastSession != null) {
-                            FilledTonalButton(
-                                onClick = { onContinueLastWorkout(lastSession) },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .sizeIn(minHeight = 48.dp),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(stringResource(R.string.home_continue_previous))
-                            }
-                        }
-                    }
+                    Icon(Icons.Outlined.PlayArrow, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.home_start_workout))
                 }
+                if (onOpenPlan != null) {
+                    OutlinedButton(
+                        onClick = onOpenPlan,
+                        modifier = Modifier.fillMaxWidth().sizeIn(minHeight = 48.dp)
+                    ) { Text(stringResource(R.string.nav_plan)) }
+                }
+                OutlinedButton(
+                    onClick = onBuildMultiWorkout,
+                    modifier = Modifier.fillMaxWidth().sizeIn(minHeight = 48.dp)
+                ) { Text(stringResource(R.string.home_build_session)) }
             }
         }
 
-        // Section C — Weekly Overview & Active Goal (Real data only)
         item {
-            Card(shape = RoundedCornerShape(18.dp)) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(R.string.home_weekly_summary),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer
-                        ) {
-                            Text(
-                                text = goalText,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = stringResource(R.string.home_weekly_sessions, weeklySessions.size),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = stringResource(R.string.home_weekly_minutes, weeklyMinutes),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                    }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.home_weekly_summary), style = MaterialTheme.typography.titleLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(
+                        stringResource(R.string.home_weekly_sessions, weeklySessions.size),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        stringResource(R.string.home_weekly_minutes, weeklyMinutes),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
@@ -268,11 +184,13 @@ fun HomeScreen(
                                 )
                             ) {
                                 Column(modifier = Modifier.padding(14.dp)) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.FitnessCenter,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
+                                    val previewId = when (cat) {
+                                        ExerciseCategory.WEIGHTED_TRAINING -> "dumbbell_biceps_curl"
+                                        ExerciseCategory.BODYWEIGHT_TRAINING -> "bodyweight_squat"
+                                        ExerciseCategory.CORE_TRAINING -> "forearm_plank"
+                                        ExerciseCategory.RESISTANCE_BAND_TRAINING -> "band_row"
+                                    }
+                                    ExerciseIllustration(previewId, Modifier.fillMaxWidth().height(58.dp))
                                     Spacer(Modifier.height(8.dp))
                                     Text(
                                         text = label,
@@ -309,6 +227,8 @@ fun HomeScreen(
                             shape = RoundedCornerShape(14.dp)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
+                                ExerciseArtwork(ex.id, Modifier.fillMaxWidth().height(88.dp))
+                                Spacer(Modifier.height(LayoutSpacing.small))
                                 Text(
                                     text = if (isPersian) ex.nameFa else ex.nameEn,
                                     style = MaterialTheme.typography.titleMedium,
@@ -361,6 +281,9 @@ fun HomeScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        TextButton(onClick = { onContinueLastWorkout(lastSession) }) {
+                            Text(stringResource(R.string.home_continue_previous))
+                        }
                     }
                 }
             }

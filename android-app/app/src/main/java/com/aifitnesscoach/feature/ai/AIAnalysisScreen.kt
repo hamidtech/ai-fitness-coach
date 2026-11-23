@@ -2,8 +2,6 @@ package com.aifitnesscoach.feature.ai
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,6 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.ControlFlow
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.ai.analysis.AIAnalysisCoordinator
 import com.aifitnesscoach.core.ai.analysis.AnalysisRequestOutcome
 import com.aifitnesscoach.core.ai.analysis.AnalysisType
@@ -52,7 +52,6 @@ import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AIAnalysisScreen(
     isPersian: Boolean,
@@ -132,14 +131,14 @@ fun AIAnalysisScreen(
         }
 
         LazyColumn(
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(LayoutSpacing.pagePadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
                 Card(shape = RoundedCornerShape(16.dp)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(stringResource(R.string.ai_provider_mode_label), style = MaterialTheme.typography.titleMedium)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ControlFlow {
                             listOf(
                                 AiExecutionMode.RULE_BASED_ONLY to R.string.ai_mode_rule_based,
                                 AiExecutionMode.LOCAL_LLM to R.string.ai_mode_local_llm,

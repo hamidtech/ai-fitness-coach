@@ -1,6 +1,7 @@
 package com.aifitnesscoach.core.notifications
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -94,9 +95,7 @@ class AppNotificationManager(private val context: Context) {
             .setAutoCancel(true)
             .build()
 
-        runCatching {
-            NotificationManagerCompat.from(context).notify(1001, notification)
-        }
+        postNotification(1001, notification)
     }
 
     fun notifyDownloadEvent(
@@ -112,9 +111,7 @@ class AppNotificationManager(private val context: Context) {
             .setContentText(body)
             .setAutoCancel(true)
             .build()
-        runCatching {
-            NotificationManagerCompat.from(context).notify(notificationId, notification)
-        }
+        postNotification(notificationId, notification)
     }
 
     fun notifyWorkoutReminder(title: String, body: String) {
@@ -136,8 +133,14 @@ class AppNotificationManager(private val context: Context) {
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
-        runCatching {
-            NotificationManagerCompat.from(context).notify(2001, notification)
+        postNotification(2001, notification)
+    }
+
+    private fun postNotification(id: Int, notification: Notification) {
+        try {
+            NotificationManagerCompat.from(context).notify(id, notification)
+        } catch (_: SecurityException) {
+            // Android can revoke notification permission after the caller's permission check.
         }
     }
 }

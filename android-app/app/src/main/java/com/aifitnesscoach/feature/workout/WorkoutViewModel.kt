@@ -1,5 +1,6 @@
 package com.aifitnesscoach.feature.workout
 
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aifitnesscoach.core.database.ExerciseSetEntity
@@ -14,6 +15,7 @@ import com.aifitnesscoach.core.exercise.AnalysisResult
 import com.aifitnesscoach.core.exercise.AnalyzerRegistry
 import com.aifitnesscoach.core.exercise.CoachExplanationProvider
 import com.aifitnesscoach.core.exercise.ExerciseAnalyzer
+import com.aifitnesscoach.core.exercise.EquipmentCategoryType
 import com.aifitnesscoach.core.exercise.ExerciseCategory
 import com.aifitnesscoach.core.exercise.ExerciseDefinition
 import com.aifitnesscoach.core.exercise.ExerciseMode
@@ -41,7 +43,13 @@ data class PlannedWorkoutItem(
     val targetHoldSec: Int = 30,
     val restDurationSec: Int = 60,
     val weightEntry: WeightEntry? = if (exercise.category == ExerciseCategory.WEIGHTED_TRAINING) {
-        WeightEntry(value = 5f, unit = WeightUnit.KG, loadMode = WeightLoadMode.PER_DUMBBELL)
+        WeightEntry(
+            value = 5f,
+            unit = WeightUnit.KG,
+            loadMode = if (exercise.equipmentType == EquipmentCategoryType.DUMBBELL) {
+                WeightLoadMode.PER_DUMBBELL
+            } else WeightLoadMode.TOTAL_LOAD
+        )
     } else null,
     val bandMetadata: ResistanceBandMetadata? = if (exercise.category == ExerciseCategory.RESISTANCE_BAND_TRAINING) {
         ResistanceBandMetadata(bandType = exercise.supportedBandTypes.firstOrNull() ?: com.aifitnesscoach.core.equipment.ResistanceBandType.LONG_LOOP)
@@ -65,6 +73,7 @@ enum class WorkoutStage {
 }
 
 data class WorkoutUiState(
+    val rotationSlot: Int? = null,
     val stage: WorkoutStage = WorkoutStage.PLANNING,
     val plannedItems: List<PlannedWorkoutItem> = emptyList(),
     val currentItemIndex: Int = 0,
@@ -76,19 +85,35 @@ data class WorkoutUiState(
     val latestPoseFrame: PoseFrame? = null,
     val latestAnalysis: AnalysisResult? = null,
     val liveFps: Float = 0f,
-    val isUsingGpu: Boolean = true,
-    val poseInitError: String? = null,
     val manualRepAdjustment: Int = 0,
+    val manualHoldStartedAtMs: Long? = null,
+    val manualHoldAccumulatedMs: Long = 0L,
     val isSaving: Boolean = false
 ) {
     val currentItem: PlannedWorkoutItem? get() = plannedItems.getOrNull(currentItemIndex)
+
+    val isManualHold: Boolean get() = currentItem?.exercise?.let {
+        it.analyzerId == null && it.exerciseMode == ExerciseMode.TIMED_HOLD
+    } == true
+
+    fun manualHoldElapsedMs(nowMs: Long): Long = manualHoldAccumulatedMs +
+        (manualHoldStartedAtMs?.let { (nowMs - it).coerceAtLeast(0L) } ?: 0L)
+
+    fun startManualHold(nowMs: Long): WorkoutUiState =
+        if (isManualHold && stage == WorkoutStage.LIVE_TRACKING && !isPaused) {
+            copy(manualHoldStartedAtMs = nowMs)
+        } else {
+            this
+        }
 }
 
 class WorkoutViewModel(
     private val workoutDao: WorkoutDao,
     private val coachExplanationProvider: CoachExplanationProvider,
     private val ttsCoachManager: TtsCoachManager,
-    private val healthConnectManager: HealthConnectManager
+    private val healthConnectManager: HealthConnectManager,
+    private val onWorkoutPersisted: () -> Unit = {},
+    private val onRotationCompleted: suspend (Int) -> Unit = {}
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WorkoutUiState())
@@ -102,19 +127,25 @@ class WorkoutViewModel(
         customItem: PlannedWorkoutItem? = null,
         skipCameraGuide: Boolean = false
     ) {
+        restTimerJob?.cancel()
         val item = customItem ?: PlannedWorkoutItem(exercise = exercise, targetSets = 3)
         _uiState.value = WorkoutUiState(
-            stage = if (skipCameraGuide) WorkoutStage.LIVE_TRACKING else WorkoutStage.CAMERA_SETUP_GUIDE,
+            stage = if (skipCameraGuide || item.exercise.analyzerId == null) WorkoutStage.LIVE_TRACKING else WorkoutStage.CAMERA_SETUP_GUIDE,
             plannedItems = listOf(item),
             sessionStartedAtMs = System.currentTimeMillis()
-        )
+        ).startManualHold(SystemClock.elapsedRealtime())
         prepareAnalyzerForCurrentItem()
     }
 
     fun openSessionBuilder(initialExercises: List<ExerciseDefinition> = emptyList()) {
+        openConfiguredPlan(initialExercises.map { PlannedWorkoutItem(exercise = it) })
+    }
+
+    fun openConfiguredPlan(items: List<PlannedWorkoutItem>) {
+        restTimerJob?.cancel()
         _uiState.value = WorkoutUiState(
             stage = WorkoutStage.PLANNING,
-            plannedItems = initialExercises.map { PlannedWorkoutItem(exercise = it) }
+            plannedItems = items
         )
     }
 
@@ -147,16 +178,21 @@ class WorkoutViewModel(
         }
     }
 
-    fun beginSessionFromPlan(skipCameraGuide: Boolean = false) {
+    fun beginSessionFromPlan(skipCameraGuide: Boolean = false, rotationSlot: Int? = null) {
         if (_uiState.value.plannedItems.isEmpty()) return
         _uiState.update {
             it.copy(
-                stage = if (skipCameraGuide) WorkoutStage.LIVE_TRACKING else WorkoutStage.CAMERA_SETUP_GUIDE,
+                rotationSlot = rotationSlot,
+                stage = if (skipCameraGuide || it.plannedItems.first().exercise.analyzerId == null) {
+                    WorkoutStage.LIVE_TRACKING
+                } else {
+                    WorkoutStage.CAMERA_SETUP_GUIDE
+                },
                 currentItemIndex = 0,
                 currentSetNumber = 1,
                 sessionStartedAtMs = System.currentTimeMillis(),
                 completedSets = emptyList()
-            )
+            ).startManualHold(SystemClock.elapsedRealtime())
         }
         prepareAnalyzerForCurrentItem()
     }
@@ -168,12 +204,23 @@ class WorkoutViewModel(
                 stage = WorkoutStage.LIVE_TRACKING,
                 isPaused = false,
                 manualRepAdjustment = 0
-            )
+            ).startManualHold(SystemClock.elapsedRealtime())
         }
     }
 
     fun togglePause() {
-        _uiState.update { it.copy(isPaused = !it.isPaused) }
+        val now = SystemClock.elapsedRealtime()
+        _uiState.update { current ->
+            val updated = current.copy(isPaused = !current.isPaused)
+            when {
+                !current.isManualHold -> updated
+                updated.isPaused -> updated.copy(
+                    manualHoldStartedAtMs = null,
+                    manualHoldAccumulatedMs = current.manualHoldElapsedMs(now)
+                )
+                else -> updated.startManualHold(now)
+            }
+        }
     }
 
     fun adjustManualReps(delta: Int) {
@@ -231,12 +278,9 @@ class WorkoutViewModel(
         _uiState.update { it.copy(liveFps = fps) }
     }
 
-    fun onPoseInitStatus(usingGpu: Boolean, error: String?) {
-        _uiState.update { it.copy(isUsingGpu = usingGpu, poseInitError = error) }
-    }
-
     fun completeCurrentSet() {
         val state = _uiState.value
+        if (state.stage != WorkoutStage.LIVE_TRACKING) return
         val item = state.currentItem ?: return
         val analysis = state.latestAnalysis
 
@@ -245,7 +289,11 @@ class WorkoutViewModel(
         } else {
             (analysis?.repCount ?: 0) + state.manualRepAdjustment
         }
-        val holdMs = analysis?.holdDurationMs ?: 0L
+        val holdMs = if (state.isManualHold) {
+            state.manualHoldElapsedMs(SystemClock.elapsedRealtime())
+        } else {
+            analysis?.holdDurationMs ?: 0L
+        }
 
         val record = CompletedSetRecord(
             item = item,
@@ -324,9 +372,12 @@ class WorkoutViewModel(
             it.copy(
                 stage = WorkoutStage.LIVE_TRACKING,
                 restRemainingSec = 0,
+                isPaused = false,
                 manualRepAdjustment = 0,
+                manualHoldStartedAtMs = null,
+                manualHoldAccumulatedMs = 0L,
                 latestAnalysis = null
-            )
+            ).startManualHold(SystemClock.elapsedRealtime())
         }
     }
 
@@ -406,6 +457,14 @@ class WorkoutViewModel(
             }
 
             val insertedId = workoutDao.saveFullWorkout(session, sets, observations)
+            onWorkoutPersisted()
+            if (sets.isNotEmpty()) state.rotationSlot?.let { slot ->
+                try {
+                    onRotationCompleted(slot)
+                } catch (error: java.io.IOException) {
+                    android.util.Log.w("WorkoutViewModel", "Unable to advance the saved rotation", error)
+                }
+            }
 
             if (syncToHealthConnect) {
                 healthConnectManager.writeWorkoutSession(session.copy(id = insertedId), sets)

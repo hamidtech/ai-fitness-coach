@@ -89,6 +89,9 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.gson)
 
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.junit)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)

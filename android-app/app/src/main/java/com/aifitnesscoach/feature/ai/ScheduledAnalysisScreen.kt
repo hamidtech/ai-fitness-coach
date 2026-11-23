@@ -2,8 +2,6 @@ package com.aifitnesscoach.feature.ai
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,6 +34,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.ui.ControlFlow
+import com.aifitnesscoach.core.ui.LayoutSpacing
 import com.aifitnesscoach.core.ai.schedule.AnalysisScheduler
 import com.aifitnesscoach.core.database.AiExecutionMode
 import com.aifitnesscoach.core.database.AnalysisFrequency
@@ -47,7 +47,6 @@ import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ScheduledAnalysisScreen(
     preferences: UserPreferences,
@@ -89,7 +88,7 @@ fun ScheduledAnalysisScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(LayoutSpacing.pagePadding),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Card(shape = RoundedCornerShape(16.dp)) {
@@ -158,7 +157,7 @@ fun ScheduledAnalysisScreen(
                     }
 
                     Text(stringResource(R.string.schedule_scope_label), style = MaterialTheme.typography.labelLarge)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ControlFlow {
                         listOf(
                             AnalysisRangeScope.SINCE_LAST_ANALYSIS to R.string.schedule_scope_since_last,
                             AnalysisRangeScope.LAST_DAY to R.string.schedule_scope_last_day,
@@ -173,7 +172,7 @@ fun ScheduledAnalysisScreen(
                     }
 
                     Text(stringResource(R.string.ai_provider_mode_label), style = MaterialTheme.typography.labelLarge)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ControlFlow {
                         listOf(
                             AiExecutionMode.RULE_BASED_ONLY to R.string.ai_mode_rule_based,
                             AiExecutionMode.LOCAL_LLM to R.string.ai_mode_local_llm,
