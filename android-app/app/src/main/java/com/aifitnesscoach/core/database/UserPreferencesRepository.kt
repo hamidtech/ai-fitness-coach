@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.aifitnesscoach.core.motivation.DailyQuoteSelector
 import com.aifitnesscoach.core.motivation.MotivationalQuote
@@ -126,6 +127,9 @@ data class UserPreferences(
     val cameraLens: CameraLensPreference = CameraLensPreference.FRONT,
     val onboardingDraft: String? = null,
     val weeklyPlan: Map<Int, String> = emptyMap(),
+    val interfacePreferences: InterfacePreferences = InterfacePreferences(),
+    val rotationEnabled: Boolean = false,
+    val lastRotationSlot: Int = 0,
     val cameraGuideAcknowledged: Boolean = false,
     val voiceFeedbackEnabled: Boolean = true,
     val skeletonOverlayEnabled: Boolean = true,
@@ -188,6 +192,10 @@ class UserPreferencesRepository(
         val EXPERIENCE_LEVEL = stringPreferencesKey("person_experience_level")
         val ONBOARDING_DRAFT = stringPreferencesKey("onboarding_draft")
         val PLAN_DAYS = (1..7).associateWith { stringPreferencesKey("weekly_plan_day_$it") }
+        val INTERFACE_MODE = stringPreferencesKey("interface_mode")
+        val INTERFACE_OVERRIDES = stringSetPreferencesKey("interface_overrides")
+        val ROTATION_ENABLED = booleanPreferencesKey("rotation_enabled")
+        val LAST_ROTATION_SLOT = intPreferencesKey("last_rotation_slot")
         val PROFILE_COMPLETED = booleanPreferencesKey("profile_completed")
 
         val LANGUAGE = stringPreferencesKey("app_language")
@@ -256,6 +264,12 @@ class UserPreferencesRepository(
                 hasCompletedOnboarding = prefs[Keys.PROFILE_COMPLETED] ?: false
             ),
             onboardingDraft = prefs[Keys.ONBOARDING_DRAFT],
+            interfacePreferences = InterfacePreferences(
+                enumOrDefault(prefs[Keys.INTERFACE_MODE], InterfaceMode.SIMPLE),
+                prefs[Keys.INTERFACE_OVERRIDES].orEmpty()
+            ),
+            rotationEnabled = prefs[Keys.ROTATION_ENABLED] ?: false,
+            lastRotationSlot = prefs[Keys.LAST_ROTATION_SLOT] ?: 0,
             weeklyPlan = Keys.PLAN_DAYS.mapNotNull { (day, key) -> prefs[key]?.let { day to it } }.toMap(),
             language = enumOrDefault(prefs[Keys.LANGUAGE], AppLanguage.SYSTEM),
             themeMode = enumOrDefault(prefs[Keys.THEME_MODE], AppThemeMode.SYSTEM),
@@ -519,6 +533,30 @@ class UserPreferencesRepository(
             } else if (!error.isNullOrBlank()) {
                 prefs[Keys.SCHED_LAST_ERROR] = error.take(400)
             }
+        }
+    }
+
+    suspend fun setInterfaceMode(mode: InterfaceMode) {
+        store.edit { it[Keys.INTERFACE_MODE] = mode.name }
+    }
+
+    suspend fun setFeatureVisibility(mode: InterfaceMode, feature: AppFeature, enabled: Boolean) {
+        store.edit {
+            val layout = InterfacePreferences(mode, it[Keys.INTERFACE_OVERRIDES].orEmpty())
+            it[Keys.INTERFACE_OVERRIDES] = layout.withFeature(feature, enabled)
+        }
+    }
+
+    suspend fun setRotationEnabled(enabled: Boolean) {
+        store.edit { it[Keys.ROTATION_ENABLED] = enabled }
+    }
+
+    suspend fun completeRotationSlot(slot: Int) {
+        store.edit { prefs ->
+            val saved = Keys.PLAN_DAYS.filterValues { prefs[it] != null }.keys
+            if (prefs[Keys.ROTATION_ENABLED] == true &&
+                nextRotationSlot(saved, prefs[Keys.LAST_ROTATION_SLOT] ?: 0) == slot
+            ) prefs[Keys.LAST_ROTATION_SLOT] = slot
         }
     }
 

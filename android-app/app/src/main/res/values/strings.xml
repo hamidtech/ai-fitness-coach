@@ -588,4 +588,27 @@
     <string name="license_okhttp">HTTP client and file I/O.</string>
     <string name="license_gson">JSON parsing and serialization.</string>
     <string name="license_litert">Optional on-device language model runtime. Each downloaded model has its own terms.</string>
+    <string name="feature_layout">App features</string>
+    <string name="feature_layout_subtitle">Simple or advanced layout, with your choice of features</string>
+    <string name="feature_layout_help">Simple starts with workouts, exercises, and history. Advanced shows more tools by default.</string>
+    <string name="feature_simple">Simple</string>
+    <string name="feature_advanced">Advanced</string>
+    <string name="feature_switch_help">Choose what appears in this mode. Saved data, permissions, and scheduled tasks stay intact.</string>
+    <string name="catalog_title">Exercise catalog</string>
+    <string name="catalog_subtitle">Get exercise and media updates</string>
+    <string name="catalog_help">Check for new exercise records, thumbnails, and downloads. Your current catalog is available offline.</string>
+    <string name="catalog_refresh_button">Check for catalog updates</string>
+    <string name="catalog_refresh_busy">Checking for updates…</string>
+    <string name="catalog_refresh_updated">Updated to catalog version %1$d</string>
+    <string name="catalog_refresh_current">You have the latest catalog, version %1$d</string>
+    <string name="catalog_refresh_error">Could not get the update. Your current catalog is still available.</string>
+    <string name="catalog_version">Catalog version %1$d</string>
+    <string name="catalog_other_sources">Other sources</string>
+    <string name="rotation_enable">Use rotating routines</string>
+    <string name="rotation_help">Start follows your saved slots in order. Saving the next workout advances the rotation.</string>
+    <string name="rotation_slot">Routine %1$d</string>
+    <string name="rotation_next">Next · %1$s</string>
+    <string name="plan_push">Push</string>
+    <string name="plan_pull">Pull</string>
+    <string name="plan_five_by_five">5 × 5 strength</string>
 </resources>

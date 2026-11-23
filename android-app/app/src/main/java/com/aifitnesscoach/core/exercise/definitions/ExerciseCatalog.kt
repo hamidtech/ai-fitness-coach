@@ -1449,6 +1449,8 @@ object ExerciseCatalog {
     val allExercises: List<ExerciseDefinition>
         get() = builtInExercises + ExternalExerciseSources.exercises
 
+    internal fun isBuiltIn(id: String) = id in builtInById
+
     fun findById(id: String): ExerciseDefinition? = builtInById[id]
         ?: ExternalExerciseSources.entry(id)?.definition
 

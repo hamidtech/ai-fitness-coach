@@ -588,4 +588,27 @@
     <string name="license_okhttp">ارتباط HTTP و کار با فایل.</string>
     <string name="license_gson">خواندن و نوشتن داده‌های JSON.</string>
     <string name="license_litert">اجرای اختیاری مدل زبانی روی دستگاه. هر مدل قابل دانلود شرایط جداگانه دارد.</string>
+    <string name="feature_layout">قابلیت‌های اپ</string>
+    <string name="feature_layout_subtitle">حالت ساده یا پیشرفته با قابلیت‌های دلخواه شما</string>
+    <string name="feature_layout_help">حالت ساده با تمرین، فهرست حرکات و تاریخچه شروع می‌شود. حالت پیشرفته به‌طور پیش‌فرض ابزارهای بیشتری نشان می‌دهد.</string>
+    <string name="feature_simple">ساده</string>
+    <string name="feature_advanced">پیشرفته</string>
+    <string name="feature_switch_help">انتخاب کنید در این حالت چه قابلیت‌هایی دیده شوند. اطلاعات ذخیره‌شده، مجوزها و زمان‌بندی‌ها حفظ می‌شوند.</string>
+    <string name="catalog_title">فهرست تمرین‌ها</string>
+    <string name="catalog_subtitle">دریافت به‌روزرسانی تمرین‌ها و رسانه‌ها</string>
+    <string name="catalog_help">حرکات، بندانگشتی‌ها و رسانه‌های جدید را بررسی کنید. فهرست فعلی آفلاین هم در دسترس است.</string>
+    <string name="catalog_refresh_button">بررسی به‌روزرسانی فهرست تمرین‌ها</string>
+    <string name="catalog_refresh_busy">در حال بررسی به‌روزرسانی…</string>
+    <string name="catalog_refresh_updated">فهرست به نسخهٔ %1$d به‌روز شد</string>
+    <string name="catalog_refresh_current">آخرین نسخهٔ فهرست را دارید، نسخهٔ %1$d</string>
+    <string name="catalog_refresh_error">دریافت به‌روزرسانی ممکن نشد. فهرست فعلی در دسترس است.</string>
+    <string name="catalog_version">نسخهٔ %1$d فهرست</string>
+    <string name="catalog_other_sources">منابع دیگر</string>
+    <string name="rotation_enable">تمرین به ترتیب چرخشی</string>
+    <string name="rotation_help">شروع، برنامه‌های ذخیره‌شده را به ترتیب اجرا می‌کند. با ثبت تمرین بعدی، نوبت به برنامهٔ بعد می‌رسد.</string>
+    <string name="rotation_slot">برنامهٔ %1$d</string>
+    <string name="rotation_next">نوبت بعد · %1$s</string>
+    <string name="plan_push">فشاری</string>
+    <string name="plan_pull">کششی</string>
+    <string name="plan_five_by_five">قدرتی ۵ × ۵</string>
 </resources>

@@ -41,7 +41,7 @@ Apple-platform parity, self-hosting/sync, and wearable support require their own
 | Progress | Rolling 365-day activity heatmap, streaks, recent muscle involvement, estimated 1RM and separate History tab. | JVM fixture covers exact day boundaries, streaks, load bases, and exclusion of sets over 12 reps. |
 | Licenses and credits | Bundled source terms, notices for application libraries, and links from Settings. | Check copyright, revision, media rights and offline opening. |
 
-Remaining parity includes named routine collections and rotation, one-off schedule moves, supersets and special-set types, per-side and effort fields, automatic progression, inventory and lifting analytics, custom exercise definitions, session editing and attachments, body charts and photos, JSON and third-party import, PDF/share, locale expansion, optional modules, wearable controls, self-hosted sync/accounts, geofences, webhooks and MCP. The camera coach, Health Connect, Android widgets and local-first data remain part of AI Fitness Coach.
+Remaining parity includes named routine collections, one-off schedule moves, supersets and special-set types, per-side and effort fields, automatic progression, inventory and lifting analytics, custom exercise definitions, session editing and attachments, body charts and photos, JSON and third-party import, PDF/share, locale expansion, wearable controls, self-hosted sync/accounts, geofences, webhooks and MCP. The camera coach, Health Connect, Android widgets and local-first data remain part of AI Fitness Coach.
 
 ### Motion and stress cases
 
@@ -55,3 +55,12 @@ Remaining parity includes named routine collections and rotation, one-off schedu
 | RTL and large text | Bilingual mixed-script provider names and two independent filter controls | Bind layout direction to app language. CI capture samples the muscle filter at 165% type. Review on a physical phone with the camera off and on. |
 
 Continuous welcome animation, list entrance effects, and moving exercise cards were omitted. They add movement while users read or repeatedly filter content.
+
+## Follow-up
+
+| Capability | Implementation |
+| --- | --- |
+| Optional interface modules | Simple and Advanced presets with separate saved choices for Plan, progress charts, AI, Health Connect UI and media management. Workout history and the normal exercise picker stay available in both modes. |
+| Rotating workout routines | Run the seven existing saved routine slots in order. The rotation advances after saving a workout containing sets. Weekday schedules and rotation share the same saved workouts. |
+| Workout starters | Added Push, Pull and a three-exercise 5 × 5 template using the equipment already in the Android library. |
+| Independent content delivery | App-side refresh accepts a versioned catalog and atlas, caches the last valid pack for offline use, and supports licensed pinned media references. The content workflow validates catalog changes separately from the APK workflow. See [Exercise catalog delivery](../catalog-content/README.md). |

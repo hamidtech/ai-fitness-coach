@@ -54,9 +54,11 @@ import java.util.Date
 fun HistoryScreen(
     isPersian: Boolean,
     sessions: List<WorkoutSessionWithDetails>,
-    onAnalyzeWorkouts: (Long?) -> Unit
+    showAnalytics: Boolean = true,
+    onAnalyzeWorkouts: ((Long?) -> Unit)?
 ) {
-    var showProgress by rememberSaveable { mutableStateOf(true) }
+    var wantsOverview by rememberSaveable { mutableStateOf(true) }
+    val showProgress = wantsOverview && showAnalytics
     var categoryFilter by rememberSaveable { mutableStateOf<ExerciseCategory?>(null) }
 
     val filtered = remember(sessions, categoryFilter) {
@@ -71,8 +73,8 @@ fun HistoryScreen(
             Modifier.fillMaxWidth().padding(LayoutSpacing.pagePadding),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(stringResource(R.string.nav_progress), style = MaterialTheme.typography.headlineMedium)
-            if (!showProgress && sessions.isNotEmpty()) {
+            Text(stringResource(if (showAnalytics) R.string.nav_progress else R.string.nav_history), style = MaterialTheme.typography.headlineMedium)
+            if (!showProgress && sessions.isNotEmpty() && onAnalyzeWorkouts != null) {
                 TextButton(onClick = { onAnalyzeWorkouts(null) }) {
                     Icon(Icons.Outlined.AutoAwesome, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
                     Text(stringResource(R.string.ai_analyze_history_btn))
@@ -80,10 +82,10 @@ fun HistoryScreen(
             }
         }
 
-        TabRow(selectedTabIndex = if (showProgress) 0 else 1) {
-            Tab(selected = showProgress, onClick = { showProgress = true },
+        if (showAnalytics) TabRow(selectedTabIndex = if (showProgress) 0 else 1) {
+            Tab(selected = showProgress, onClick = { wantsOverview = true },
                 text = { Text(stringResource(R.string.progress_overview)) })
-            Tab(selected = !showProgress, onClick = { showProgress = false },
+            Tab(selected = !showProgress, onClick = { wantsOverview = false },
                 text = { Text(stringResource(R.string.nav_history)) })
         }
 
@@ -209,7 +211,7 @@ fun HistoryScreen(
                                 }
 
                                 Spacer(Modifier.height(8.dp))
-                                OutlinedButton(onClick = { onAnalyzeWorkouts(item.session.id) }) {
+                                if (onAnalyzeWorkouts != null) OutlinedButton(onClick = { onAnalyzeWorkouts(item.session.id) }) {
                                     Icon(Icons.Outlined.AutoAwesome, contentDescription = null)
                                     Text(stringResource(R.string.ai_analyze_this_workout), modifier = Modifier.padding(start = 8.dp))
                                 }

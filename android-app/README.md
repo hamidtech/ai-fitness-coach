@@ -87,3 +87,17 @@ Progress opens with the daily training heatmap, consecutive-day streaks, seven d
 2. Open an OpenExerciseBase result offline. Confirm the thumbnail is present, then reconnect to download the original; try retry and cancel. Open a dataset entry without a verified image and import your own JPG or MP4.
 3. Use a starter routine, save one weekday, restart, and edit the saved sets. Start on the configured day and save a session. Verify its history, heatmap, muscle totals, and both widgets.
 4. Open Settings → Licenses and credits. Check that the source and license are available and the bundled license text opens offline.
+
+## App features and catalog updates
+
+Settings → App features selects Simple or Advanced and controls which tools
+appear in each. Training, History and Exercises are available in both. App
+feature visibility preserves saved preferences, permissions and background
+schedules. Enable Plan to use either a weekly schedule or a rotation of
+saved slots. The next slot advances when a workout with sets is saved.
+
+Settings → Exercise catalog and the Exercises list can fetch a revised
+offline catalog separately from app installation. The current APK keeps its
+bundled fallback and downloaded media. See
+[exercise catalog delivery](../catalog-content/README.md) for the data format,
+publication steps and license requirements.

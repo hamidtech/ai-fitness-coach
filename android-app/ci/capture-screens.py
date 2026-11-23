@@ -70,6 +70,11 @@ def main():
 
     tap(label("nav_settings"))
     capture("03-settings.png", label("settings_appearance_language"))
+    tap(label("feature_layout"))
+    capture("11-app-features-simple.png", label("feature_simple"))
+    tap(label("feature_advanced"))
+    capture("12-app-features-advanced.png", label("feature_advanced"))
+    adb("shell", "input", "keyevent", "KEYCODE_BACK")
     adb("shell", "am", "start", "-W", "-n", COMPONENT, "--es", "aifc_open_route", "widget_quick_start")
     capture("04-exercise-picker.png", label("widget_start"))
     tap("Bodyweight Squat")

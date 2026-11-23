@@ -2,6 +2,7 @@ package com.aifitnesscoach.core.media
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
@@ -111,11 +112,13 @@ class ExerciseAssetDownloadWorker(
         val prefs = UserPreferencesRepository(applicationContext).preferencesFlow.first()
 
         val existing = assetDao.getById(exerciseId)
-        if (existing?.status == AssetDownloadStatus.DOWNLOADED.name &&
-            existing.localPrimaryPath?.let { File(it).isFile } == true &&
-            (manifest.secondaryUrl == null || existing.localSecondaryPath?.let { File(it).isFile } == true ||
-                existing.sourceId == AssetSourceType.USER_IMPORTED.name)
-        ) return@withContext Result.success()
+        if (resolveEffectiveStatus(manifest, existing) == AssetDownloadStatus.DOWNLOADED) {
+            return@withContext Result.success()
+        }
+        val previous = existing?.takeIf {
+            it.status == AssetDownloadStatus.DOWNLOADED.name &&
+                it.localPrimaryPath?.let { path -> File(path).isFile } == true
+        }
 
         val attempt = UUID.randomUUID().toString()
         var received = 0L
@@ -132,25 +135,31 @@ class ExerciseAssetDownloadWorker(
             licenseName = manifest.licenseName,
             updatedAtMs = System.currentTimeMillis()
         )
-        assetDao.upsert(working)
+        if (previous == null) assetDao.upsert(working)
         val client = OkHttpClient.Builder()
+            .followRedirects(false)
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .callTimeout(30, TimeUnit.SECONDS)
             .build()
         var saved = false
         try {
-            val isPng = manifest.mediaType == AssetMediaType.PNG_SINGLE
-            val extension = if (isPng) "png" else "webp"
-            val mimeType = "image/$extension"
+            val (extension, mimeType) = when (manifest.mediaType) {
+                AssetMediaType.PNG_SINGLE -> "png" to "image/png"
+                AssetMediaType.JPEG_SINGLE -> "jpg" to "image/jpeg"
+                AssetMediaType.GIF -> "gif" to "image/gif"
+                AssetMediaType.MP4 -> "mp4" to "video/mp4"
+                else -> "webp" to "image/webp"
+            }
+            val limit = manifest.expectedBytes ?: 2_000_000L
             suspend fun receive(url: String, role: String): Pair<File, String> {
                 val file = ExerciseAssetCatalog.resolveConfinedMediaFile(
                     mediaDir, "${exerciseId}_${attempt}_$role.$extension"
                 )
                 staged.add(file)
-                val hash = downloadFile(client, url, file, mimeType) { bytes ->
+                val hash = downloadFile(client, url, file, mimeType, limit) { bytes ->
                     received += bytes
-                    assetDao.upsert(working.copy(bytesDownloaded = received))
+                    if (previous == null) assetDao.upsert(working.copy(bytesDownloaded = received))
                 }
                 return file to hash
             }
@@ -160,6 +169,7 @@ class ExerciseAssetDownloadWorker(
             require(manifest.expectedBytes == null || received == manifest.expectedBytes) {
                 "Downloaded size differs from the published manifest"
             }
+            require(manifest.expectedSha256 == null || hash == manifest.expectedSha256) { "Media checksum mismatch" }
             coroutineContext.ensureActive()
             withContext(NonCancellable) {
                 assetDao.upsert(working.copy(
@@ -175,13 +185,13 @@ class ExerciseAssetDownloadWorker(
             listOfNotNull(existing?.localPrimaryPath, existing?.localSecondaryPath).forEach { File(it).delete() }
         } catch (error: CancellationException) {
             withContext(NonCancellable) {
-                if (!saved) assetDao.upsert(working.copy(status = AssetDownloadStatus.PAUSED.name, bytesDownloaded = 0))
+                if (!saved && previous == null) assetDao.upsert(working.copy(status = AssetDownloadStatus.PAUSED.name, bytesDownloaded = 0))
             }
             throw error
         } catch (error: Exception) {
             val cancelled = isStopped
             withContext(NonCancellable) {
-                assetDao.upsert(working.copy(
+                if (previous == null) assetDao.upsert(working.copy(
                     status = if (cancelled) AssetDownloadStatus.PAUSED.name else AssetDownloadStatus.FAILED.name,
                     bytesDownloaded = 0,
                     errorMessage = if (cancelled) null else applicationContext.getString(R.string.media_status_failed)
@@ -213,6 +223,7 @@ class ExerciseAssetDownloadWorker(
         url: String,
         destFile: File,
         mimeType: String,
+        maxBytes: Long,
         onBytes: suspend (Int) -> Unit
     ): String {
         val digest = MessageDigest.getInstance("SHA-256")
@@ -229,7 +240,7 @@ class ExerciseAssetDownloadWorker(
                         val read = input.read(buffer)
                         if (read < 0) break
                         total += read
-                        require(total <= 2_000_000L) { "Media exceeds the download limit" }
+                        require(total <= maxBytes) { "Media exceeds the download limit" }
                         output.write(buffer, 0, read)
                         digest.update(buffer, 0, read)
                         onBytes(read)
@@ -240,10 +251,21 @@ class ExerciseAssetDownloadWorker(
                 }
             }
         }
-        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeFile(destFile.absolutePath, options)
-        require(options.outMimeType == mimeType && options.outWidth > 0 && options.outHeight > 0) {
-            "Invalid image file"
+        if (mimeType == "video/mp4") {
+            val metadata = MediaMetadataRetriever()
+            try {
+                metadata.setDataSource(destFile.absolutePath)
+                require(metadata.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                    ?.toIntOrNull()?.let { it > 0 } == true)
+            } finally {
+                metadata.release()
+            }
+        } else {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(destFile.absolutePath, options)
+            require(options.outMimeType == mimeType && options.outWidth in 1..8192 && options.outHeight in 1..8192) {
+                "Invalid image file"
+            }
         }
         return digest.digest().joinToString("") { "%02x".format(it) }
     }

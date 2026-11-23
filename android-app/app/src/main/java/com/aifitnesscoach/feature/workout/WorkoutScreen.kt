@@ -120,7 +120,7 @@ fun WorkoutScreen(
     onCameraGuideAcknowledged: () -> Unit = {},
     onOpenCameraGuide: (String) -> Unit = {},
     onPoseTrackingActiveChanged: (Boolean) -> Unit = {},
-    onSaveAndAnalyze: () -> Unit = {},
+    onSaveAndAnalyze: (() -> Unit)? = null,
     onSavePlan: ((List<PlannedWorkoutItem>) -> Unit)? = null,
     onExitWorkout: () -> Unit
 ) {
@@ -257,14 +257,14 @@ fun WorkoutScreen(
                         onSaved = onExitWorkout
                     )
                 },
-                onSaveAndAnalyze = {
+                onSaveAndAnalyze = if (onSaveAndAnalyze != null) ({
                     viewModel.saveWorkoutSession(
                         syncToHealthConnect = preferences.healthConnectEnabled &&
                             preferences.hcWriteWorkoutsEnabled &&
                             preferences.healthAutoSyncEnabled,
                         onSaved = onSaveAndAnalyze
                     )
-                },
+                }) else null,
                 onDiscard = { viewModel.discardWorkout(onExitWorkout) }
             )
         }
@@ -932,7 +932,7 @@ private fun WorkoutSummaryView(
     athleteName: String,
     isPersian: Boolean,
     onSave: () -> Unit,
-    onSaveAndAnalyze: () -> Unit,
+    onSaveAndAnalyze: (() -> Unit)?,
     onDiscard: () -> Unit
 ) {
     Column(
@@ -987,7 +987,7 @@ private fun WorkoutSummaryView(
         ) {
             Text(stringResource(R.string.workout_save_session))
         }
-        OutlinedButton(
+        if (onSaveAndAnalyze != null) OutlinedButton(
             onClick = onSaveAndAnalyze,
             enabled = !uiState.isSaving && uiState.completedSets.isNotEmpty(),
             modifier = Modifier.fillMaxWidth().height(48.dp)

@@ -16,7 +16,8 @@ import com.aifitnesscoach.core.database.ExerciseAssetEntity
 import com.aifitnesscoach.core.exercise.definitions.ExerciseCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import com.aifitnesscoach.core.exercise.definitions.ExternalExerciseSources
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -29,7 +30,7 @@ class ExerciseAssetRepository(
     val mediaDir: File = File(context.filesDir, "exercise_media").apply { mkdirs() }
 
     fun observeAllAssetItems(): Flow<List<ExerciseAssetUiItem>> {
-        return assetDao.observeAll().map { entities ->
+        return assetDao.observeAll().combine(ExternalExerciseSources.version) { entities, _ ->
             val entityById = entities.associateBy { it.exerciseId }
             ExerciseCatalog.allExercises.map { ex ->
                 val manifest = ExerciseAssetCatalog.entryFor(ex.id)
@@ -69,8 +70,7 @@ class ExerciseAssetRepository(
                     )
                 )
             } else if (entity.status == AssetDownloadStatus.DOWNLOADED.name) {
-                val manifest = ExerciseAssetCatalog.entryFor(entity.exerciseId)
-                if (resolveEffectiveStatus(manifest, entity) != AssetDownloadStatus.DOWNLOADED) {
+                if (!hasUsableDownloadedMedia(entity)) {
                     assetDao.deleteById(entity.exerciseId)
                 }
             }

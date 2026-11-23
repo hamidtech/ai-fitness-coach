@@ -45,6 +45,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.database.AppFeature
+import com.aifitnesscoach.core.database.nextRotationSlot
 import com.aifitnesscoach.core.database.UserPreferences
 import com.aifitnesscoach.core.exercise.ExerciseCategory
 import com.aifitnesscoach.core.exercise.definitions.ExerciseCatalog
@@ -243,7 +245,8 @@ private fun AIFitnessCoachAppRoot(
             coachExplanationProvider = container.coachExplanationProvider,
             ttsCoachManager = container.ttsCoachManager,
             healthConnectManager = container.healthConnectManager,
-            onWorkoutPersisted = { WorkoutWidgetRefresh.request(appContext) }
+            onWorkoutPersisted = { WorkoutWidgetRefresh.request(appContext) },
+            onRotationCompleted = container.preferencesRepository::completeRotationSlot
         )
     }
     val workoutUiState by workoutViewModel.uiState.collectAsStateWithLifecycle()
@@ -273,7 +276,28 @@ private fun AIFitnessCoachAppRoot(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    LaunchedEffect(pendingDeepLinkRoute, preferences.profile.hasCompletedOnboarding, currentRoute) {
+    val layout = preferences.interfacePreferences
+    val showPlan = layout.shows(AppFeature.PLAN)
+    val showProgress = layout.shows(AppFeature.PROGRESS)
+    val showAi = layout.shows(AppFeature.AI)
+    val showMedia = layout.shows(AppFeature.MEDIA)
+    val showHealth = layout.shows(AppFeature.HEALTH)
+    val hiddenRoutes = buildSet {
+        if (!showPlan) addAll(listOf(MainDestination.Plan.route, MainDestination.PlanEdit.route))
+        if (!showAi) addAll(listOf(MainDestination.AiInsights.route, MainDestination.AiProviders.route,
+            MainDestination.LocalModels.route, MainDestination.ScheduledAnalysis.route))
+        if (!showMedia) addAll(listOf(MainDestination.MediaLibrary.route, MainDestination.MediaLibraryExercise.route))
+        if (!showHealth) addAll(listOf(MainDestination.Health.route, MainDestination.HealthSettings.route))
+    }
+    LaunchedEffect(currentRoute, layout) {
+        if (currentRoute in hiddenRoutes) {
+            navController.navigate(MainDestination.Home.route) {
+                popUpTo(MainDestination.Home.route)
+                launchSingleTop = true
+            }
+        }
+    }
+    LaunchedEffect(pendingDeepLinkRoute, preferences.profile.hasCompletedOnboarding, currentRoute, layout) {
         if (pendingDeepLinkRoute != null && preferences.profile.hasCompletedOnboarding &&
             currentRoute != null && currentRoute != MainDestination.Onboarding.route
         ) {
@@ -281,7 +305,7 @@ private fun AIFitnessCoachAppRoot(
             if (pendingDeepLinkRoute == MainDestination.QuickWorkout.route) {
                 selectedCategoryFilter = null
             }
-            navController.navigate(pendingDeepLinkRoute) {
+            if (pendingDeepLinkRoute !in hiddenRoutes) navController.navigate(pendingDeepLinkRoute) {
                 launchSingleTop = true
             }
             onConsumeDeepLink()
@@ -300,10 +324,14 @@ private fun AIFitnessCoachAppRoot(
     fun startToday() {
         if (navController.currentDestination?.route !in topLevelRoutes) return
         val today = LocalDate.now().dayOfWeek.value
-        val planned = WeeklyPlan.decode(preferences.weeklyPlan[today])
+        val plans = if (showPlan) preferences.weeklyPlan.mapValues { WeeklyPlan.decode(it.value) } else emptyMap()
+        val slot = if (showPlan && preferences.rotationEnabled) {
+            nextRotationSlot(plans.filterValues { it.isNotEmpty() }.keys, preferences.lastRotationSlot)
+        } else null
+        val planned = plans[slot ?: today].orEmpty()
         if (planned.isNotEmpty()) {
             workoutViewModel.openConfiguredPlan(planned)
-            workoutViewModel.beginSessionFromPlan(preferences.cameraGuideAcknowledged)
+            workoutViewModel.beginSessionFromPlan(preferences.cameraGuideAcknowledged, rotationSlot = slot)
             navController.navigate(MainDestination.Workout.route) { launchSingleTop = true }
         } else {
             navController.navigate(MainDestination.QuickWorkout.route) { launchSingleTop = true }
@@ -314,9 +342,9 @@ private fun AIFitnessCoachAppRoot(
         Triple(MainDestination.Home.route, R.string.nav_home, Icons.Outlined.Home),
         Triple(MainDestination.Plan.route, R.string.nav_plan, Icons.Outlined.DateRange),
         Triple(MainDestination.QuickWorkout.route, R.string.nav_start, Icons.Outlined.PlayArrow),
-        Triple(MainDestination.History.route, R.string.nav_progress, Icons.Outlined.History),
+        Triple(MainDestination.History.route, if (showProgress) R.string.nav_progress else R.string.nav_history, Icons.Outlined.History),
         Triple(MainDestination.Exercises.route, R.string.nav_exercises, Icons.Outlined.FitnessCenter)
-    )
+    ).filterNot { it.first in hiddenRoutes }
 
     Scaffold(
         bottomBar = {
@@ -387,7 +415,7 @@ private fun AIFitnessCoachAppRoot(
                             isPersian = isPersian,
                             recentExerciseIds = recentExerciseIds,
                             allSessions = sessions,
-                            latestInsight = latestInsight,
+                            latestInsight = latestInsight.takeIf { showAi },
                             dailyQuote = dailyQuote,
                             onOpenProfileSetup = { navController.navigate(MainDestination.PersonalProfile.route) },
                             onStartQuickWorkout = ::startToday,
@@ -452,7 +480,7 @@ private fun AIFitnessCoachAppRoot(
                             downloadedAsset = downloadedAssetsMap[exercise.id],
                             isPersian = isPersian,
                             onBack = { navController.popBackStack() },
-                            onOpenMedia = { navController.navigate("media_library?exercise=${exercise.id}") },
+                            onOpenMedia = if (showMedia) ({ navController.navigate("media_library?exercise=${exercise.id}") }) else null,
                             onOpenCameraGuide = { navController.navigate("camera_guide/${exercise.id}") },
                             onStartWorkout = { item ->
                                 workoutViewModel.startQuickExercise(
@@ -468,14 +496,19 @@ private fun AIFitnessCoachAppRoot(
                     composable(MainDestination.Plan.route) {
                         WeeklyPlanScreen(
                             savedDays = preferences.weeklyPlan,
+                            rotationEnabled = preferences.rotationEnabled,
+                            lastRotationSlot = preferences.lastRotationSlot,
+                            onRotationEnabled = { enabled ->
+                                scope.launch { container.preferencesRepository.setRotationEnabled(enabled) }
+                            },
                             isPersian = isPersian,
                             onEdit = { day, items ->
                                 workoutViewModel.openConfiguredPlan(items)
                                 navController.navigate("plan_edit/$day") { launchSingleTop = true }
                             },
-                            onStart = { items ->
+                            onStart = { items, slot ->
                                 workoutViewModel.openConfiguredPlan(items)
-                                workoutViewModel.beginSessionFromPlan(preferences.cameraGuideAcknowledged)
+                                workoutViewModel.beginSessionFromPlan(preferences.cameraGuideAcknowledged, rotationSlot = slot)
                                 navController.navigate(MainDestination.Workout.route) { launchSingleTop = true }
                             }
                         )
@@ -485,10 +518,11 @@ private fun AIFitnessCoachAppRoot(
                         HistoryScreen(
                             isPersian = isPersian,
                             sessions = sessions,
-                            onAnalyzeWorkouts = { sessionId ->
+                            showAnalytics = showProgress,
+                            onAnalyzeWorkouts = if (showAi) ({ sessionId ->
                                 selectedAnalysisSessionId = sessionId
                                 navController.navigate(MainDestination.AiInsights.route)
-                            }
+                            }) else null
                         )
                     }
 
@@ -501,10 +535,10 @@ private fun AIFitnessCoachAppRoot(
                                 healthConnectManager = container.healthConnectManager,
                                 syncedWorkoutCount = syncedCount,
                                 onBack = if (route == MainDestination.HealthSettings.route) ({ navController.popBackStack() }) else null,
-                                onOpenInsights = {
+                                onOpenInsights = if (showAi) ({
                                     selectedAnalysisSessionId = null
                                     navController.navigate(MainDestination.AiInsights.route)
-                                }
+                                }) else null
                             )
                         }
                     }
@@ -591,12 +625,12 @@ private fun AIFitnessCoachAppRoot(
                             onPoseTrackingActiveChanged = { active ->
                                 container.localInferenceEngine.setPoseTrackingActive(active)
                             },
-                            onSaveAndAnalyze = {
+                            onSaveAndAnalyze = if (showAi) ({
                                 selectedAnalysisSessionId = null
                                 navController.navigate(MainDestination.AiInsights.route) {
                                     popUpTo(MainDestination.Home.route) { inclusive = false }
                                 }
-                            },
+                            }) else null,
                                 onSavePlan = day?.let { weekday ->
                                     { items ->
                                         scope.launch {

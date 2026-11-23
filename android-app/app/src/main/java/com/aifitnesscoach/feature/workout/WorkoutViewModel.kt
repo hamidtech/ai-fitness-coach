@@ -73,6 +73,7 @@ enum class WorkoutStage {
 }
 
 data class WorkoutUiState(
+    val rotationSlot: Int? = null,
     val stage: WorkoutStage = WorkoutStage.PLANNING,
     val plannedItems: List<PlannedWorkoutItem> = emptyList(),
     val currentItemIndex: Int = 0,
@@ -111,7 +112,8 @@ class WorkoutViewModel(
     private val coachExplanationProvider: CoachExplanationProvider,
     private val ttsCoachManager: TtsCoachManager,
     private val healthConnectManager: HealthConnectManager,
-    private val onWorkoutPersisted: () -> Unit = {}
+    private val onWorkoutPersisted: () -> Unit = {},
+    private val onRotationCompleted: suspend (Int) -> Unit = {}
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WorkoutUiState())
@@ -176,10 +178,11 @@ class WorkoutViewModel(
         }
     }
 
-    fun beginSessionFromPlan(skipCameraGuide: Boolean = false) {
+    fun beginSessionFromPlan(skipCameraGuide: Boolean = false, rotationSlot: Int? = null) {
         if (_uiState.value.plannedItems.isEmpty()) return
         _uiState.update {
             it.copy(
+                rotationSlot = rotationSlot,
                 stage = if (skipCameraGuide || it.plannedItems.first().exercise.analyzerId == null) {
                     WorkoutStage.LIVE_TRACKING
                 } else {
@@ -455,6 +458,13 @@ class WorkoutViewModel(
 
             val insertedId = workoutDao.saveFullWorkout(session, sets, observations)
             onWorkoutPersisted()
+            if (sets.isNotEmpty()) state.rotationSlot?.let { slot ->
+                try {
+                    onRotationCompleted(slot)
+                } catch (error: java.io.IOException) {
+                    android.util.Log.w("WorkoutViewModel", "Unable to advance the saved rotation", error)
+                }
+            }
 
             if (syncToHealthConnect) {
                 healthConnectManager.writeWorkoutSession(session.copy(id = insertedId), sets)

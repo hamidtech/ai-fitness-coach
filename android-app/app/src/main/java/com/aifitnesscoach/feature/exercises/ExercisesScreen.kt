@@ -6,6 +6,8 @@ import androidx.compose.ui.Alignment
 import com.aifitnesscoach.core.media.ExerciseArtwork
 import com.aifitnesscoach.core.exercise.definitions.DiscoverableExercise
 import com.aifitnesscoach.core.exercise.definitions.ExerciseSource
+import com.aifitnesscoach.core.exercise.definitions.ExternalExerciseSources
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.draw.clip
 import com.aifitnesscoach.core.exercise.definitions.MuscleRegion
 import com.aifitnesscoach.core.exercise.definitions.discoveryEntry
@@ -107,7 +109,8 @@ fun ExercisesScreen(
     var equipment by rememberSaveable { mutableStateOf<String?>(null) }
     var region by rememberSaveable { mutableStateOf<MuscleRegion?>(null) }
     var openFilter by rememberSaveable { mutableStateOf<DiscoveryFilter?>(null) }
-    val catalog = remember { ExerciseCatalog.allExercises.map(::discoveryEntry) }
+    val catalogVersion by ExternalExerciseSources.version.collectAsStateWithLifecycle()
+    val catalog = remember(catalogVersion) { ExerciseCatalog.allExercises.map(::discoveryEntry) }
     val catalogBySource = remember(catalog, source, selectedCategory) {
         catalog.filter {
             (source == null || it.source == source || it.source == ExerciseSource.BUILT_IN) &&
@@ -127,7 +130,8 @@ fun ExercisesScreen(
     if (filter != null) {
         val options = when (filter) {
             DiscoveryFilter.SOURCE -> listOf(null to sourceLabel(null)) +
-                ExerciseSource.entries.map { it.name to sourceLabel(it) }
+                ExerciseSource.entries.filter { source -> catalog.any { it.source == source } }
+                    .map { it.name to sourceLabel(it) }
             DiscoveryFilter.EQUIPMENT -> listOf(null to stringResource(R.string.discovery_all_equipment)) +
                 equipmentOptions.map { it to equipmentLabel(it, isPersian) }
             DiscoveryFilter.MUSCLE -> listOf(null to stringResource(R.string.discovery_all_muscles)) +
@@ -267,6 +271,7 @@ fun ExercisesScreen(
                     }
                 }
             }
+            if (!quickPicker) item(key = "refresh", contentType = "action") { CatalogRefreshPanel() }
             items(filtered, key = { it.exercise.id }, contentType = { "exercise" }) { entry ->
                 ExerciseListItem(entry.exercise, isPersian, entry) { onSelectExerciseForDetail(entry.exercise) }
             }
@@ -328,7 +333,7 @@ internal fun ExerciseWorkoutSetup(
     downloadedAsset: ExerciseAssetEntity?,
     isPersian: Boolean,
     onBack: () -> Unit,
-    onOpenMedia: () -> Unit,
+    onOpenMedia: (() -> Unit)?,
     onOpenCameraGuide: () -> Unit,
     recentLoad: WeightEntry? = null,
     onStartWorkout: (PlannedWorkoutItem) -> Unit
@@ -443,7 +448,9 @@ internal fun ExerciseWorkoutSetup(
                 downloadedAsset = downloadedAsset
             )
 
-            TextButton(onClick = onOpenMedia) { Text(stringResource(R.string.exercise_media_actions)) }
+            if (onOpenMedia != null) {
+                TextButton(onClick = onOpenMedia) { Text(stringResource(R.string.exercise_media_actions)) }
+            }
             Text(
                 stringResource(if (exercise.analyzerId != null) R.string.setup_camera_analysis else R.string.setup_manual_mode),
                 style = MaterialTheme.typography.bodyMedium
@@ -659,6 +666,7 @@ private fun sourceLabel(source: ExerciseSource?): String = when (source) {
     ExerciseSource.BUILT_IN -> stringResource(R.string.discovery_builtin)
     ExerciseSource.HASAN -> stringResource(R.string.discovery_hasan)
     ExerciseSource.OPEN_EXERCISE_BASE -> "OpenExerciseBase"
+    ExerciseSource.OTHER -> stringResource(R.string.catalog_other_sources)
     null -> stringResource(R.string.discovery_all_sources)
 }
 

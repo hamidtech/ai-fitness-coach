@@ -113,17 +113,18 @@ object ExerciseAssetCatalog {
     ).associateBy { it.exerciseId }
 
     fun entryFor(exerciseId: String): ExerciseMediaManifestEntry {
+        ExternalExerciseSources.media(exerciseId)?.let { return it }
         entriesByExerciseId[exerciseId]?.let { return it }
         val upstream = ExternalExerciseSources.entry(exerciseId)
         val photo = ExternalExerciseSources.photo(exerciseId)
-        if (photo != null) return ExerciseMediaManifestEntry(
+        if (photo?.path != null) return ExerciseMediaManifestEntry(
             exerciseId = exerciseId,
             sourceType = AssetSourceType.OPEN_EXERCISE_BASE,
             sourceSlug = photo.path,
             mediaType = AssetMediaType.PNG_SINGLE,
             primaryUrl = "https://raw.githubusercontent.com/OpenExerciseBase/OpenExerciseBase-Database/" +
-                "${ExternalExerciseSources.OPEN_REVISION}/${photo.path}",
-            version = ExternalExerciseSources.OPEN_REVISION,
+                "${photo.revision}/${photo.path}",
+            version = photo.revision,
             licenseName = ExternalExerciseSources.OPEN_LICENSE,
             attribution = ExternalExerciseSources.OPEN_ATTRIBUTION,
             licenseUrl = ExternalExerciseSources.OPEN_LICENSE_URL,

@@ -2,6 +2,15 @@ package com.aifitnesscoach
 
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.content.ContextWrapper
+import com.aifitnesscoach.core.database.AppFeature
+import com.aifitnesscoach.core.database.InterfaceMode
+import com.aifitnesscoach.core.exercise.definitions.CatalogRefreshResult
+import java.io.ByteArrayOutputStream
+import java.util.zip.GZIPInputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import org.json.JSONObject
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import com.aifitnesscoach.core.exercise.definitions.ExerciseCatalog
@@ -156,6 +165,72 @@ class AndroidOverhaulDeviceTest {
             assertEquals(mapOf(1 to "first", 7 to "last"), read.preferencesFlow.first().weeklyPlan)
             write.savePlanDay(1, null)
             assertEquals(mapOf(7 to "last"), read.preferencesFlow.first().weeklyPlan)
+        }
+    }
+
+    @Test
+    fun visibilityOverridesAndRotationProgressPersist() = runBlocking {
+        withIsolatedPreferences { write, read ->
+            val initial = read.preferencesFlow.first()
+            assertEquals(InterfaceMode.SIMPLE, initial.interfacePreferences.mode)
+            assertTrue(!initial.interfacePreferences.shows(AppFeature.PLAN))
+            write.setFeatureVisibility(InterfaceMode.SIMPLE, AppFeature.MEDIA, true)
+            write.setInterfaceMode(InterfaceMode.ADVANCED)
+            write.setFeatureVisibility(InterfaceMode.ADVANCED, AppFeature.MEDIA, false)
+            assertTrue(!read.preferencesFlow.first().interfacePreferences.shows(AppFeature.MEDIA))
+            write.setInterfaceMode(InterfaceMode.SIMPLE)
+            assertTrue(read.preferencesFlow.first().interfacePreferences.shows(AppFeature.MEDIA))
+
+            write.savePlanDay(2, "first")
+            write.savePlanDay(5, "second")
+            write.setRotationEnabled(true)
+            write.completeRotationSlot(5)
+            assertEquals(0, read.preferencesFlow.first().lastRotationSlot)
+            write.completeRotationSlot(2)
+            write.completeRotationSlot(5)
+            assertEquals(5, read.preferencesFlow.first().lastRotationSlot)
+            write.completeRotationSlot(2)
+            assertEquals(2, read.preferencesFlow.first().lastRotationSlot)
+        }
+    }
+
+    @Test
+    fun catalogRefreshStoresOnlyValidatedNewerPacks() = runBlocking {
+        val app = instrumentation.targetContext
+        val sandbox = File(app.cacheDir, UUID.randomUUID().toString()).apply { mkdirs() }
+        val isolated = object : ContextWrapper(app) {
+            override fun getFilesDir(): File = sandbox
+        }
+        try {
+            val catalog = app.assets.open("exercise_sources/catalog.bin").use { file ->
+                GZIPInputStream(file).readBytes()
+            }
+            val atlas = app.assets.open(ExternalExerciseSources.ATLAS_PATH).use { it.readBytes() }
+            fun pack(version: Int, data: ByteArray = catalog): ByteArray {
+                val bytes = ByteArrayOutputStream()
+                ZipOutputStream(bytes).use { zip ->
+                    mapOf("manifest.json" to """{"schema":1,"version":$version}""".toByteArray(),
+                        "catalog.json" to data, "thumbnails.webp" to atlas).forEach { (name, payload) ->
+                        zip.putNextEntry(ZipEntry(name))
+                        zip.write(payload)
+                        zip.closeEntry()
+                    }
+                }
+                return bytes.toByteArray()
+            }
+            val version = ExternalExerciseSources.version.value + 1
+            val good = pack(version)
+            val stored = File(sandbox, "exercise-catalog.pack")
+            assertEquals(CatalogRefreshResult.UPDATED, ExternalExerciseSources.refresh(isolated) { good })
+            assertEquals(version, ExternalExerciseSources.version.value)
+            assertTrue(good.contentEquals(stored.readBytes()))
+            assertEquals(CatalogRefreshResult.CURRENT, ExternalExerciseSources.refresh(isolated) { good })
+            val broken = JSONObject(catalog.decodeToString()).apply { remove("exercises") }.toString().toByteArray()
+            assertEquals(CatalogRefreshResult.FAILED, ExternalExerciseSources.refresh(isolated) { pack(version + 1, broken) })
+            assertEquals(CatalogRefreshResult.FAILED, ExternalExerciseSources.refresh(isolated) { pack(version - 1) })
+            assertTrue(good.contentEquals(stored.readBytes()))
+        } finally {
+            sandbox.deleteRecursively()
         }
     }
 

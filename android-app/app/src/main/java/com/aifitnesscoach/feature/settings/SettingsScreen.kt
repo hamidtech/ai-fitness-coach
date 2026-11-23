@@ -62,6 +62,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.aifitnesscoach.R
+import com.aifitnesscoach.core.database.AppFeature
+import com.aifitnesscoach.feature.exercises.CatalogRefreshPanel
 import com.aifitnesscoach.core.ui.ControlFlow
 import com.aifitnesscoach.core.ai.analysis.SavedInsightRepository
 import com.aifitnesscoach.core.ai.local.LocalModelRepository
@@ -82,6 +84,8 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 enum class SettingsPage(@StringRes val title: Int, @StringRes val description: Int, val icon: ImageVector) {
+    FEATURES(R.string.feature_layout, R.string.feature_layout_subtitle, Icons.Outlined.Palette),
+    CATALOG(R.string.catalog_title, R.string.catalog_subtitle, Icons.Outlined.FitnessCenter),
     PROFILE(R.string.profile_title, R.string.settings_profile_description, Icons.Outlined.PersonOutline),
     APPEARANCE(R.string.settings_appearance_language, R.string.settings_appearance_description, Icons.Outlined.Palette),
     WORKOUT(R.string.settings_section_b_workout, R.string.settings_workout_description, Icons.Outlined.FitnessCenter),
@@ -105,9 +109,20 @@ fun SettingsHome(preferences: UserPreferences, onBack: () -> Unit, onOpenPage: (
             }
             Text(stringResource(R.string.nav_settings), style = MaterialTheme.typography.headlineMedium)
         }
-        SettingsGroup(R.string.settings_group_account, listOf(SettingsPage.PROFILE, SettingsPage.APPEARANCE), preferences, onOpenPage)
-        SettingsGroup(R.string.settings_group_training, listOf(SettingsPage.WORKOUT, SettingsPage.HEALTH, SettingsPage.AI), preferences, onOpenPage)
-        SettingsGroup(R.string.settings_group_device, listOf(SettingsPage.NOTIFICATIONS, SettingsPage.STORAGE, SettingsPage.PRIVACY, SettingsPage.LICENSES), preferences, onOpenPage)
+        val layout = preferences.interfacePreferences
+        SettingsGroup(R.string.settings_group_account, listOf(SettingsPage.FEATURES, SettingsPage.PROFILE, SettingsPage.APPEARANCE), preferences, onOpenPage)
+        SettingsGroup(R.string.settings_group_training, buildList {
+            add(SettingsPage.WORKOUT)
+            add(SettingsPage.CATALOG)
+            if (layout.shows(AppFeature.HEALTH)) add(SettingsPage.HEALTH)
+            if (layout.shows(AppFeature.AI)) add(SettingsPage.AI)
+        }, preferences, onOpenPage)
+        SettingsGroup(R.string.settings_group_device, buildList {
+            add(SettingsPage.NOTIFICATIONS)
+            if (layout.shows(AppFeature.MEDIA)) add(SettingsPage.STORAGE)
+            add(SettingsPage.PRIVACY)
+            add(SettingsPage.LICENSES)
+        }, preferences, onOpenPage)
     }
 }
 
@@ -197,6 +212,19 @@ fun SettingsScreen(
         }
 
         when (page) {
+            SettingsPage.FEATURES -> InterfaceSettings(
+                layout = preferences.interfacePreferences,
+                onMode = { scope.launch { preferencesRepository.setInterfaceMode(it) } },
+                onToggle = { feature, enabled ->
+                    scope.launch {
+                        preferencesRepository.setFeatureVisibility(preferences.interfacePreferences.mode, feature, enabled)
+                    }
+                }
+            )
+            SettingsPage.CATALOG -> {
+                Text(stringResource(R.string.catalog_help))
+                CatalogRefreshPanel()
+            }
             SettingsPage.LICENSES -> LicensesContent()
             SettingsPage.PROFILE -> {
                 val profileSummary = preferences.profile.name.takeIf { it.isNotBlank() }

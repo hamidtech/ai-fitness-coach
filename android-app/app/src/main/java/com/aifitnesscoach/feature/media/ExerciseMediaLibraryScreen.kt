@@ -10,6 +10,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import android.text.format.Formatter
 import com.aifitnesscoach.core.media.ExerciseArtwork
 import com.aifitnesscoach.core.media.AssetMediaType
+import com.aifitnesscoach.core.media.AssetSourceType
 import com.aifitnesscoach.core.database.UserPreferencesRepository
 import com.aifitnesscoach.core.ui.LayoutSpacing
 import androidx.compose.foundation.layout.Column
@@ -106,7 +107,7 @@ fun ExerciseMediaLibraryScreen(
     val downloadableIds = remember(items, pending) {
         items.filter {
             (exerciseId == null || it.exercise.id == exerciseId) &&
-                it.manifest.mediaType != AssetMediaType.PNG_SINGLE &&
+                it.manifest.sourceType == AssetSourceType.REPDB_FREE_TIER &&
                 it.exercise.id !in pending && it.manifest.primaryUrl != null &&
                 it.effectiveStatus in setOf(AssetDownloadStatus.AVAILABLE, AssetDownloadStatus.FAILED, AssetDownloadStatus.PAUSED)
         }.map { it.exercise.id }
@@ -263,11 +264,16 @@ fun ExerciseMediaLibraryScreen(
                             item.entity?.licenseName?.takeIf { it.isNotBlank() }?.let { Text(it) }
                         }
                         if (item.manifest.primaryUrl != null) {
-                            Text(stringResource(
-                                if (item.manifest.mediaType == AssetMediaType.PNG_SINGLE) R.string.media_png_source else R.string.media_webp_source,
-                                item.manifest.resolution.orEmpty(),
-                                Formatter.formatShortFileSize(context, item.manifest.expectedBytes ?: 0)
-                            ))
+                            val size = Formatter.formatShortFileSize(context, item.manifest.expectedBytes ?: 0)
+                            if (item.manifest.sourceType == AssetSourceType.CATALOG_FEED) {
+                                Text(listOf(item.manifest.mediaType.name.substringBefore('_'), size,
+                                    item.manifest.attribution).joinToString(" · "))
+                            } else {
+                                Text(stringResource(
+                                    if (item.manifest.mediaType == AssetMediaType.PNG_SINGLE) R.string.media_png_source else R.string.media_webp_source,
+                                    item.manifest.resolution.orEmpty(), size
+                                ))
+                            }
                             item.manifest.licenseUrl?.let { url ->
                                 TextButton(onClick = { uriHandler.openUri(url) }) {
                                     Text(item.manifest.licenseName)

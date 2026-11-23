@@ -71,8 +71,7 @@ fun ExerciseDemoMediaView(
     val context = LocalContext.current
     val primaryFile = downloadedAsset?.localPrimaryPath?.let(::File)?.takeIf { it.exists() }
     val secondaryFile = downloadedAsset?.localSecondaryPath?.let(::File)?.takeIf { it.exists() }
-    val isDownloaded = primaryFile != null &&
-        resolveEffectiveStatus(ExerciseAssetCatalog.entryFor(exerciseId), downloadedAsset) == AssetDownloadStatus.DOWNLOADED
+    val isDownloaded = hasUsableDownloadedMedia(downloadedAsset)
 
     val hasBundledMp4 = remember(mediaRef.demoVideoAsset) { assetExists(context, mediaRef.demoVideoAsset) }
     val hasBundledGif = remember(mediaRef.demoGifAsset) {
@@ -252,8 +251,7 @@ fun ExerciseDemoMediaView(
         }
         val attribution = when {
             !mediaFailed && isDownloaded -> downloadedAsset?.attribution
-            ExternalExerciseSources.photo(exerciseId) != null -> ExternalExerciseSources.OPEN_ATTRIBUTION
-            else -> null
+            else -> ExternalExerciseSources.photo(exerciseId)?.attribution
         }
         attribution?.takeIf(String::isNotBlank)?.let {
             Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
