@@ -3,7 +3,7 @@
 from pathlib import Path
 import re
 import subprocess
-from time import sleep
+from time import monotonic, sleep
 import xml.etree.ElementTree as ET
 
 
@@ -20,9 +20,10 @@ def label(name):
     return STRINGS.find(f"./string[@name='{name}']").text
 
 
-def find_node(text):
+def find_node(text, *, timeout=25, failure_label=None):
     xml_path = "/data/local/tmp/fitness-screen.xml"
-    for _ in range(10):
+    deadline = monotonic() + timeout
+    while monotonic() < deadline:
         adb("shell", "rm", "-f", xml_path)
         try:
             adb("shell", "uiautomator", "dump", xml_path)
@@ -32,6 +33,8 @@ def find_node(text):
             continue
         for node in tree.iter("node"):
             labels = [node.get("text", ""), node.get("content-desc", "")]
+            if failure_label and failure_label in labels:
+                raise RuntimeError(f"The app reported {failure_label!r} while waiting for {text!r}")
             if any(value == text or value.startswith((text + ",", text + "\n")) for value in labels):
                 return node
         sleep(0.3)
@@ -44,8 +47,8 @@ def tap(text):
     adb("shell", "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2))
 
 
-def capture(filename, expected_label):
-    find_node(expected_label)
+def capture(filename, expected_label, **wait_options):
+    find_node(expected_label, **wait_options)
     (OUTPUT / filename).write_bytes(adb("exec-out", "screencap", "-p"))
 
 
@@ -111,7 +114,13 @@ def main():
     tap("Dumbbell bench press")
     capture("16-video-download.png", label("exercise_download_video"))
     tap(label("exercise_download_video"))
-    capture("17-video-available-offline.png", label("exercise_media_offline"))
+    try:
+        capture("17-video-available-offline.png", label("exercise_media_offline"), timeout=75,
+                failure_label=label("media_status_failed"))
+    except RuntimeError:
+        (OUTPUT / "17-video-download-diagnostic.png").write_bytes(adb("exec-out", "screencap", "-p"))
+        print(adb("logcat", "-d", "-s", "ExerciseMediaDownload", "WM-WorkerWrapper").decode())
+        raise
     adb("shell", "cmd", "connectivity", "airplane-mode", "enable")
     try:
         tap("Play")

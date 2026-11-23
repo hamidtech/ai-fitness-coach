@@ -3,6 +3,7 @@ package com.aifitnesscoach.core.media
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
+import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
@@ -102,6 +103,7 @@ class ExerciseAssetDownloadWorker(
         val manifest = ExerciseAssetCatalog.entryFor(exerciseId)
         val primaryUrl = manifest.primaryUrl
         if (manifest.defaultStatus != AssetDownloadStatus.AVAILABLE || primaryUrl == null) {
+            Log.w("ExerciseMediaDownload", "source_unavailable exercise=$exerciseId")
             return@withContext Result.failure()
         }
 
@@ -190,6 +192,14 @@ class ExerciseAssetDownloadWorker(
             throw error
         } catch (error: Exception) {
             val cancelled = isStopped
+            if (!cancelled) {
+                val type = error.javaClass.simpleName
+                val reason = when (error) {
+                    is IllegalStateException, is IllegalArgumentException -> error.message
+                    else -> null
+                }
+                Log.w("ExerciseMediaDownload", "download_failed exercise=$exerciseId type=$type reason=$reason")
+            }
             withContext(NonCancellable) {
                 if (previous == null) assetDao.upsert(working.copy(
                     status = if (cancelled) AssetDownloadStatus.PAUSED.name else AssetDownloadStatus.FAILED.name,
