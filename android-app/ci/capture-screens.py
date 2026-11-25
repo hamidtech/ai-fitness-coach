@@ -187,7 +187,7 @@ def main():
     tap(label("exercise_filter_video"))
     # The extra tracking label makes rows taller; search for the exact test movement.
     tap(label("exercises_search_hint"))
-    adb("shell", "input", "text", "Dumbbell%sbench%spress")
+    adb("shell", "input", "text", "dumbbell%sbench")
     adb("shell", "input", "keyevent", "KEYCODE_BACK")
     capture("15-video-filter.png", "Dumbbell bench press")
     tap("Dumbbell bench press")
@@ -214,7 +214,7 @@ def main():
     tap(label("zing_guides"))
     capture("20-zing-guide-filter.png", label("zing_open_library"))
     tap(label("exercises_search_hint"))
-    adb("shell", "input", "text", "High%splank")
+    adb("shell", "input", "text", "high%splank")
     adb("shell", "input", "keyevent", "KEYCODE_BACK")
     tap("High plank")
     capture("21-new-high-plank.png", label("setup_general_hold"))
