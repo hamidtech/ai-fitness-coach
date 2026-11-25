@@ -94,8 +94,11 @@ internal fun CameraPositionInstructions(exercise: ExerciseDefinition, isPersian:
     val guide = exercise.cameraGuide
     Column(verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
         Text(if (isPersian) guide.recommendedView.labelFa else guide.recommendedView.labelEn, style = MaterialTheme.typography.titleMedium)
-        Text(stringResource(R.string.camera_setup_distance, if (isPersian) guide.distanceFa else guide.distanceEn))
-        Text(stringResource(R.string.camera_setup_height, if (isPersian) guide.heightFa else guide.heightEn))
+        val distance = if (isPersian) guide.distanceFa else guide.distanceEn
+        val height = if (isPersian) guide.heightFa else guide.heightEn
+        if (distance.isNotBlank()) Text(stringResource(R.string.camera_setup_distance, distance))
+        if (height.isNotBlank()) Text(stringResource(R.string.camera_setup_height, height))
+        if (distance.isBlank() || height.isBlank()) Text(stringResource(R.string.guide_general_framing))
         Text(stringResource(if (exercise.id in floorExerciseIds) R.string.guide_landscape else R.string.guide_portrait))
         Text(stringResource(R.string.guide_frame_range))
         when (exercise.id) {
@@ -109,5 +112,6 @@ internal fun CameraPositionInstructions(exercise: ExerciseDefinition, isPersian:
 private val floorExerciseIds = setOf(
     "dumbbell_chest_press", "push_up", "glute_bridge", "superman", "forearm_plank", "side_plank",
     "dead_bug", "bird_dog", "abdominal_crunch", "reverse_crunch", "mountain_climber",
-    "hollow_body_hold", "mini_band_clamshell", "band_dead_bug"
+    "hollow_body_hold", "mini_band_clamshell", "band_dead_bug", "aifc-high-plank",
+    "aifc-child-pose", "aifc-seated-forward-fold", "aifc-wide-push-up"
 )

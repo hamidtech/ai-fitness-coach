@@ -1,6 +1,7 @@
 package com.aifitnesscoach.core.exercise
 
 import com.aifitnesscoach.core.exercise.analyzers.BicepsCurlAnalyzer
+import com.aifitnesscoach.core.exercise.analyzers.CalibratedPoseAnalyzer
 import com.aifitnesscoach.core.exercise.analyzers.BodyweightSquatAnalyzer
 import com.aifitnesscoach.core.exercise.analyzers.ForearmPlankAnalyzer
 
@@ -17,10 +18,8 @@ object AnalyzerRegistry {
         "band_biceps_curl" to { BicepsCurlAnalyzer(exerciseId = "band_biceps_curl") }
     )
 
-    fun createForExercise(definition: ExerciseDefinition): ExerciseAnalyzer? {
-        val analyzerId = definition.analyzerId ?: return null
-        return factories[analyzerId]?.invoke()
-    }
+    fun createForExercise(definition: ExerciseDefinition): ExerciseAnalyzer =
+        definition.analyzerId?.let(factories::get)?.invoke() ?: CalibratedPoseAnalyzer(definition.id)
 
     fun isSupported(analyzerId: String?): Boolean =
         analyzerId != null && factories.containsKey(analyzerId)

@@ -100,7 +100,8 @@ import com.aifitnesscoach.core.exercise.ExerciseMode
 import com.aifitnesscoach.core.localization.LocaleManager
 import com.aifitnesscoach.core.personalization.PersonalizedGreeting
 import com.aifitnesscoach.core.pose.TrackingQuality
-import com.aifitnesscoach.feature.exercises.statusLabel
+import com.aifitnesscoach.core.exercise.AnalyzerRegistry
+import com.aifitnesscoach.core.exercise.analyzers.CalibrationStage
 import com.aifitnesscoach.feature.exercises.ExercisesScreen
 import com.aifitnesscoach.core.exercise.EquipmentCategoryType
 import com.aifitnesscoach.core.ui.ControlFlow
@@ -168,14 +169,14 @@ fun WorkoutScreen(
         }
     }
 
-    val requiresAnalysis = uiState.currentItem?.exercise?.analyzerId != null
+    val requiresAnalysis = uiState.cameraEnabled && uiState.currentItem != null
     var useFrontCamera by rememberSaveable(preferences.cameraLens) {
         mutableStateOf(preferences.cameraLens == CameraLensPreference.FRONT)
     }
 
-    LaunchedEffect(uiState.stage, hasCameraPermission, uiState.currentItem?.exercise?.analyzerId) {
+    LaunchedEffect(uiState.stage, hasCameraPermission, requiresAnalysis) {
         onPoseTrackingActiveChanged(uiState.stage == WorkoutStage.LIVE_TRACKING && hasCameraPermission &&
-            uiState.currentItem?.exercise?.analyzerId != null)
+            requiresAnalysis)
     }
     DisposableEffect(Unit) {
         onDispose { onPoseTrackingActiveChanged(false) }
@@ -206,6 +207,7 @@ fun WorkoutScreen(
                     onCameraGuideAcknowledged()
                     viewModel.startLiveTracking()
                 },
+                onManual = viewModel::continueWithoutCamera,
                 onBack = onExitWorkout
             )
         }
@@ -216,6 +218,7 @@ fun WorkoutScreen(
                     onRequestPermission = requestPermission,
                     permissionState = permissionState,
                     onOpenGuide = { uiState.currentItem?.exercise?.id?.let(onOpenCameraGuide) },
+                    onManual = viewModel::continueWithoutCamera,
                     onBack = onExitWorkout
                 )
             } else {
@@ -224,8 +227,11 @@ fun WorkoutScreen(
                     preferences = preferences,
                     isPersian = isPersian,
                     useFrontCamera = useFrontCamera,
-                    hasCameraPermission = hasCameraPermission,
-                    onToggleCamera = { useFrontCamera = !useFrontCamera },
+                    hasCameraPermission = hasCameraPermission && uiState.cameraEnabled,
+                    onToggleCamera = {
+                        viewModel.resetCalibration()
+                        useFrontCamera = !useFrontCamera
+                    },
                     onOpenGuide = { uiState.currentItem?.exercise?.id?.let(onOpenCameraGuide) },
                     coachExplanationProvider = coachExplanationProvider,
                     viewModel = viewModel
@@ -528,6 +534,7 @@ private fun CameraSetupGuideView(
     permissionState: CameraPermissionState,
     onOpenGuide: () -> Unit,
     onStartTracking: () -> Unit,
+    onManual: () -> Unit,
     onBack: () -> Unit
 ) {
     val item = uiState.currentItem ?: return
@@ -554,6 +561,9 @@ private fun CameraSetupGuideView(
                         }
                     }
 
+                    TextButton(onClick = onManual, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.workout_without_camera))
+                    }
                     OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.workout_discard))
                     }
@@ -580,10 +590,10 @@ private fun CameraSetupGuideView(
             CameraPositionInstructions(ex, isPersian)
             TextButton(onClick = onOpenGuide) { Text(stringResource(R.string.guide_full)) }
 
-            if (ex.analyzerId == null) {
+            if (!AnalyzerRegistry.isSupported(ex.analyzerId)) {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                     Text(
-                        text = stringResource(R.string.workout_no_analyzer_notice, statusLabel(ex.implementationStatus)),
+                        text = stringResource(if (ex.exerciseMode == ExerciseMode.TIMED_HOLD) R.string.setup_general_hold else R.string.setup_general_camera),
                         modifier = Modifier.padding(14.dp)
                     )
                 }
@@ -597,6 +607,7 @@ private fun CameraPermissionRationaleView(
     onRequestPermission: () -> Unit,
     permissionState: CameraPermissionState,
     onOpenGuide: () -> Unit,
+    onManual: () -> Unit,
     onBack: () -> Unit
 ) {
     Column(
@@ -619,6 +630,7 @@ private fun CameraPermissionRationaleView(
             Text(stringResource(if (permissionState == CameraPermissionState.SETTINGS_REQUIRED) R.string.camera_open_settings else R.string.camera_grant_permission))
         }
         TextButton(onClick = onOpenGuide) { Text(stringResource(R.string.camera_setup_title)) }
+        TextButton(onClick = onManual) { Text(stringResource(R.string.workout_without_camera)) }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.workout_discard))
@@ -659,7 +671,25 @@ private fun LiveTrackingWorkoutView(
     val cameraFailed = cameraState in setOf(
         WorkoutCameraState.CAMERA_UNAVAILABLE, WorkoutCameraState.PREVIEW_ERROR, WorkoutCameraState.POSE_ERROR
     )
-    val canCompleteSet = item.exercise.analyzerId == null || cameraState == WorkoutCameraState.WORKOUT_READY
+    var captureRequested by remember(cameraAttempt, useFrontCamera) { mutableStateOf(false) }
+    var countdown by remember(cameraAttempt, useFrontCamera) { mutableIntStateOf(0) }
+    LaunchedEffect(captureRequested, cameraState, uiState.isPaused, hasCameraPermission) {
+        if (!captureRequested) return@LaunchedEffect
+        if (uiState.isPaused || !hasCameraPermission || cameraState != WorkoutCameraState.WORKOUT_READY) {
+            countdown = 0
+            captureRequested = false
+            return@LaunchedEffect
+        }
+        for (remaining in 3 downTo 1) {
+            countdown = remaining
+            delay(1000L)
+        }
+        viewModel.captureCalibrationPose()
+        countdown = 0
+        captureRequested = false
+    }
+    val specialized = AnalyzerRegistry.isSupported(item.exercise.analyzerId)
+    val canCompleteSet = !hasCameraPermission || !specialized || cameraState == WorkoutCameraState.WORKOUT_READY
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Color(0xFF111827))) {
         val headerLimit = maxHeight * 0.40f
@@ -669,7 +699,7 @@ private fun LiveTrackingWorkoutView(
                 useFrontCamera = useFrontCamera,
                 showSkeletonOverlay = preferences.skeletonOverlayEnabled && cameraState == WorkoutCameraState.WORKOUT_READY,
                 latestPoseFrame = uiState.latestPoseFrame,
-                needsPose = item.exercise.analyzerId != null,
+                needsPose = true,
                 onPose = { frame ->
                     viewModel.onPoseFrame(frame, preferences.voiceFeedbackEnabled, ttsLocale, isPersian)
                 },
@@ -754,7 +784,13 @@ private fun LiveTrackingWorkoutView(
             )
 
             if (cameraFailed) {
-                Button(onClick = { cameraAttempt++ }) { Text(stringResource(R.string.camera_retry)) }
+                Button(onClick = { viewModel.resetCalibration(); cameraAttempt++ }) { Text(stringResource(R.string.camera_retry)) }
+            }
+
+            if (hasCameraPermission) {
+                TextButton(onClick = viewModel::continueWithoutCamera) {
+                    Text(stringResource(R.string.workout_without_camera), color = Color.White)
+                }
             }
 
             if (preferences.developerMetricsEnabled && cameraState == WorkoutCameraState.WORKOUT_READY) {
@@ -821,12 +857,12 @@ private fun LiveTrackingWorkoutView(
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = analysis?.phase?.let { if (isPersian) it.labelFa else it.labelEn } ?: "—",
+                        text = analysis?.phase?.takeIf { hasCameraPermission }?.let { if (isPersian) it.labelFa else it.labelEn } ?: "—",
                         color = Color.White,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
-                    analysis?.primaryAngleDegrees?.let { angle ->
+                    analysis?.primaryAngleDegrees?.takeIf { hasCameraPermission }?.let { angle ->
                         Text(
                             text = "${angle.toInt()}°",
                             color = Color.White.copy(alpha = 0.85f),
@@ -836,7 +872,7 @@ private fun LiveTrackingWorkoutView(
                 }
             }
 
-            val liveTip = analysis?.activeFeedbackKey?.let {
+            val liveTip = analysis?.activeFeedbackKey?.takeIf { hasCameraPermission }?.let {
                 coachExplanationProvider.formatCoachingTip(it, isPersian)
             } ?: item.bandMetadata?.let { band ->
                 "${if (isPersian) band.bandType.labelFa else band.bandType.labelEn} · ${if (isPersian) band.resistanceLevel.labelFa else band.resistanceLevel.labelEn}"
@@ -850,7 +886,32 @@ private fun LiveTrackingWorkoutView(
                 )
             }
 
-            if (item.exercise.analyzerId == null && !uiState.isManualHold) {
+            if (!specialized && hasCameraPermission && !uiState.isManualHold &&
+                cameraState == WorkoutCameraState.WORKOUT_READY) {
+                val stage = uiState.calibrationStage
+                Text(stringResource(when (stage) {
+                    CalibrationStage.START -> R.string.calibration_start_help
+                    CalibrationStage.END -> R.string.calibration_end_help
+                    CalibrationStage.READY -> R.string.calibration_ready
+                }), color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                if (uiState.calibrationError) {
+                    Text(stringResource(R.string.calibration_error), color = Color(0xFFFDE047))
+                }
+                if (stage == CalibrationStage.READY) {
+                    TextButton(onClick = viewModel::resetCalibration) {
+                        Text(stringResource(R.string.calibration_reset), color = Color.White)
+                    }
+                } else {
+                    Button(onClick = { captureRequested = true }, enabled = !captureRequested && !uiState.isPaused &&
+                        analysis?.trackingQuality == TrackingQuality.GOOD) {
+                        Text(if (countdown > 0) stringResource(R.string.calibration_countdown, countdown)
+                            else stringResource(if (stage == CalibrationStage.START) R.string.calibration_start
+                                else R.string.calibration_end))
+                    }
+                }
+            }
+
+            if (!uiState.isManualHold && item.exercise.exerciseMode != ExerciseMode.TIMED_HOLD) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = { viewModel.adjustManualReps(-1) },

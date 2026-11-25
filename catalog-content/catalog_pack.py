@@ -62,6 +62,13 @@ def validate(pack, built_in, previous=None):
         for field in ("equipment", "muscles", "body", "steps"):
             require(isinstance(item[field], list) and all(isinstance(v, str) for v in item[field]),
                     f"Invalid {field} for {ident}")
+        if "nameFa" in item:
+            require(isinstance(item["nameFa"], str) and 0 < len(item["nameFa"].strip()) <= 200,
+                    f"Invalid translated name for {ident}")
+        for field in ("musclesFa", "stepsFa"):
+            if field in item:
+                require(isinstance(item[field], list) and all(isinstance(v, str) for v in item[field]),
+                        f"Invalid {field} for {ident}")
         if "tile" in item:
             require(type(item["tile"]) is int and 0 <= item["tile"] < height // 96 * 16, f"Invalid tile for {ident}")
             if item.get("path"):

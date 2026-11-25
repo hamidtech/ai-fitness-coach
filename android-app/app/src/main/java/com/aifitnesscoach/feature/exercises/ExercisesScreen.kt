@@ -72,6 +72,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
+import com.aifitnesscoach.core.exercise.definitions.ZingExerciseGuides
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -85,10 +87,10 @@ import com.aifitnesscoach.core.equipment.ResistanceLevel
 import com.aifitnesscoach.core.equipment.WeightEntry
 import com.aifitnesscoach.core.equipment.WeightLoadMode
 import com.aifitnesscoach.core.equipment.WeightUnit
+import com.aifitnesscoach.core.exercise.AnalyzerRegistry
 import com.aifitnesscoach.core.exercise.ExerciseCategory
 import com.aifitnesscoach.core.exercise.ExerciseDefinition
 import com.aifitnesscoach.core.exercise.ExerciseMode
-import com.aifitnesscoach.core.exercise.ImplementationStatus
 import com.aifitnesscoach.core.exercise.definitions.ExerciseCatalog
 import com.aifitnesscoach.core.media.ExerciseDemoMediaView
 import com.aifitnesscoach.feature.workout.PlannedWorkoutItem
@@ -118,6 +120,8 @@ fun ExercisesScreen(
         )
     }
     var videoOnly by rememberSaveable { mutableStateOf(false) }
+    var zingOnly by rememberSaveable { mutableStateOf(false) }
+    val uriHandler = LocalUriHandler.current
     var equipment by rememberSaveable { mutableStateOf<String?>(null) }
     var region by rememberSaveable { mutableStateOf<MuscleRegion?>(null) }
     var openFilter by rememberSaveable { mutableStateOf<DiscoveryFilter?>(null) }
@@ -136,10 +140,10 @@ fun ExercisesScreen(
     val equipmentOptions = remember(catalogBySource) {
         catalogBySource.flatMap { it.equipment }.distinct().sorted()
     }
-    val filtered = remember(catalogBySource, searchQuery, equipment, region, quickPicker, videoOnly, downloadable, downloadedAssets) {
+    val filtered = remember(catalogBySource, searchQuery, equipment, region, quickPicker, videoOnly, zingOnly, downloadable, downloadedAssets) {
         val query = searchKey(searchQuery)
         val matches = catalogBySource.filter { entry ->
-            entry.matches(query, equipment, region) && (!videoOnly || hasMotionMedia(
+            entry.matches(query, equipment, region) && (!zingOnly || ZingExerciseGuides.urlFor(entry.exercise.id) != null) && (!videoOnly || hasMotionMedia(
                 downloadable[entry.exercise.id], downloadedAssets[entry.exercise.id]
             ))
         }
@@ -296,6 +300,11 @@ fun ExercisesScreen(
                         )
                         if (!quickPicker) {
                             FilterChip(
+                                selected = zingOnly,
+                                onClick = { zingOnly = !zingOnly },
+                                label = { Text(stringResource(R.string.zing_guides)) }
+                            )
+                            FilterChip(
                                 selected = videoOnly,
                                 onClick = { videoOnly = !videoOnly },
                                 label = { Text(stringResource(R.string.exercise_filter_video)) }
@@ -308,6 +317,11 @@ fun ExercisesScreen(
                                 label = { Text(categoryLabel(category)) },
                                 trailingIcon = { Icon(Icons.Outlined.Close, contentDescription = null) }
                             )
+                        }
+                    }
+                    if (zingOnly) {
+                        TextButton(onClick = { uriHandler.openUri(ZingExerciseGuides.libraryUrl) }) {
+                            Text(stringResource(R.string.zing_open_library))
                         }
                     }
                     Text(stringResource(R.string.discovery_results, filtered.size),
@@ -330,6 +344,7 @@ fun ExercisesScreen(
                             equipment = null
                             region = null
                             videoOnly = false
+                            zingOnly = false
                         }) { Text(stringResource(R.string.common_clear)) }
                     }
                 }
@@ -401,13 +416,11 @@ fun ExerciseListItem(
                 if (mediaLabel != null) {
                     Text(mediaLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
-                if (exercise.analyzerId != null) {
-                    Text(
-                        stringResource(R.string.exercise_camera_badge),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                Text(
+                    stringResource(if (AnalyzerRegistry.isSupported(exercise.analyzerId)) R.string.exercise_camera_badge else R.string.exercise_pose_badge),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
             Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null)
         }
@@ -549,11 +562,20 @@ internal fun ExerciseWorkoutSetup(
                 onManage = onOpenMedia
             )
             Text(
-                stringResource(if (exercise.analyzerId != null) R.string.setup_camera_analysis else R.string.setup_manual_mode),
+                stringResource(when {
+                    AnalyzerRegistry.isSupported(exercise.analyzerId) -> R.string.setup_camera_analysis
+                    exercise.exerciseMode == ExerciseMode.TIMED_HOLD -> R.string.setup_general_hold
+                    else -> R.string.setup_general_camera
+                }),
                 style = MaterialTheme.typography.bodyMedium
             )
-            if (entry.source == ExerciseSource.BUILT_IN) {
-                TextButton(onClick = onOpenCameraGuide) { Text(stringResource(R.string.camera_setup_title)) }
+            TextButton(onClick = onOpenCameraGuide) { Text(stringResource(R.string.camera_setup_title)) }
+
+            ZingExerciseGuides.urlFor(exercise.id)?.let { guideUrl ->
+                val uriHandler = LocalUriHandler.current
+                TextButton(onClick = { uriHandler.openUri(guideUrl) }) {
+                    Text(stringResource(R.string.zing_open_guide))
+                }
             }
 
             // Quick Set / Rep / Equipment Setup right inside Exercise Details
@@ -742,14 +764,6 @@ fun categoryLabel(category: ExerciseCategory): String = when (category) {
     ExerciseCategory.BODYWEIGHT_TRAINING -> stringResource(R.string.cat_bodyweight)
     ExerciseCategory.CORE_TRAINING -> stringResource(R.string.cat_core)
     ExerciseCategory.RESISTANCE_BAND_TRAINING -> stringResource(R.string.cat_resistance_band)
-}
-
-@Composable
-fun statusLabel(status: ImplementationStatus): String = when (status) {
-    ImplementationStatus.IMPLEMENTED_NEEDS_VALIDATION -> stringResource(R.string.status_implemented)
-    ImplementationStatus.EXPERIMENTAL -> stringResource(R.string.status_experimental)
-    ImplementationStatus.COMING_SOON -> stringResource(R.string.status_coming_soon)
-    ImplementationStatus.MANUAL_ONLY -> stringResource(R.string.setup_manual_mode)
 }
 
 private enum class DiscoveryFilter(val title: Int) {

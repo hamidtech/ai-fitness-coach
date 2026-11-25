@@ -517,6 +517,12 @@ private fun AIFitnessCoachAppRoot(
                     composable(MainDestination.Plan.route) {
                         WeeklyPlanScreen(
                             savedDays = preferences.weeklyPlan,
+                            profile = preferences.profile,
+                            sessions = sessions,
+                            onReviewAdaptive = { items, checkIn ->
+                                workoutViewModel.openConfiguredPlan(items, checkIn = checkIn)
+                                navController.navigate(MainDestination.Workout.route) { launchSingleTop = true }
+                            },
                             rotationEnabled = preferences.rotationEnabled,
                             lastRotationSlot = preferences.lastRotationSlot,
                             onRotationEnabled = { enabled ->

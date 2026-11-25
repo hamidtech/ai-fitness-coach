@@ -71,3 +71,14 @@ commit, and checked against the upstream byte count and SHA-256.
 Check for catalog updates from the Exercises toolbar, then use the Video or
 GIF filter to find these movements. The package contains the media references.
 Android fetches individual clips when requested.
+
+
+## Version 3 movement additions
+
+Four independently authored movements are added to the existing 1,515 external
+records: high plank, child's pose, seated forward fold on the floor, and wide
+push-up. Each includes original schematic artwork and bilingual instructions.
+The optional `nameFa`, `musclesFa` and `stepsFa` fields are backward compatible.
+Zing's public exercise guides are linked as references from the app's guide
+filter; their text, images and videos are not included in the pack.
+All v2 media and prior exercise IDs are retained.

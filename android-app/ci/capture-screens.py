@@ -168,6 +168,9 @@ def main():
     adb("shell", "input", "swipe", "540", "1660", "540", "1120", "300")
     tap(label("nav_plan"))
     capture("07-weekly-plan.png", label("plan_rest_day"))
+    tap(label("coach_plan_title"))
+    capture("19-adaptive-workout.png", label("coach_plan_description"))
+    tap(label("coach_hide"))
     tap(label("nav_progress"))
     capture("08-progress-empty.png", label("history_empty"))
     tap(label("nav_exercises"))
@@ -198,6 +201,19 @@ def main():
             adb("shell", "settings", "delete", "system", "font_scale")
         else:
             adb("shell", "settings", "put", "system", "font_scale", initial_font)
+
+    adb("shell", "input", "keyevent", "KEYCODE_BACK")
+    tap(label("zing_guides"))
+    capture("20-zing-guide-filter.png", label("zing_open_library"))
+    tap(label("exercises_search_hint"))
+    adb("shell", "input", "text", "High%splank")
+    adb("shell", "input", "keyevent", "KEYCODE_BACK")
+    tap("High plank")
+    capture("21-new-high-plank.png", label("setup_general_hold"))
+    tap(label("home_start_workout"))
+    capture("22-universal-camera-setup.png", label("workout_without_camera"))
+    tap(label("workout_without_camera"))
+    capture("23-manual-camera-fallback.png", label("workout_manual_only"))
 
 
 if __name__ == "__main__":

@@ -99,7 +99,7 @@
 
     <!-- Camera & Workout -->
     <string name="camera_permission_title">Camera Permission Required</string>
-    <string name="camera_permission_rationale">AI Fitness Coach processes video frames locally on your device to track exercise form and count repetitions. No video is uploaded or saved.</string>
+    <string name="camera_permission_rationale">AI Fitness Coach processes camera frames locally to track body landmarks and count movement when supported. No video is uploaded or saved.</string>
     <string name="camera_grant_permission">Grant Camera Access</string>
     <string name="camera_setup_title">Camera Setup Guide</string>
     <string name="camera_setup_distance">Distance: %1$s</string>
@@ -625,4 +625,42 @@
     <string name="exercise_media_manage">Manage media</string>
     <string name="exercise_filter_video">Video or GIF</string>
     <string name="exercise_list_media_offline">%1$s · Offline</string>
+
+    <string name="workout_without_camera">Continue without camera</string>
+    <string name="exercise_pose_badge">Camera pose tracking</string>
+    <string name="setup_general_camera">Live skeleton tracking is available. Calibrate two poses for an estimated rep count, or log manually. Timed holds use a manual timer. Form coaching is exercise-specific.</string>
+    <string name="calibration_start_help">Show the starting position, then capture it. Keep the moving joint in view.</string>
+    <string name="calibration_end_help">Show the other end of the movement, then capture it. Use a comfortable range.</string>
+    <string name="calibration_ready">Estimated counting • return to the start after each repetition.</string>
+    <string name="calibration_error">Keep the moving joint visible and show two distinct positions. Try again.</string>
+    <string name="calibration_reset">Recalibrate</string>
+    <string name="calibration_start">Capture start</string>
+    <string name="calibration_end">Capture end</string>
+    <string name="guide_general_framing">Place the camera on a stable support. Keep the working joints and their full movement range visible.</string>
+    <string name="zing_guides">Zing guides</string>
+    <string name="zing_open_library">Browse the Zing exercise library (web)</string>
+    <string name="zing_open_guide">View Zing exercise guide (web)</string>
+    <string name="license_zing">External reference pages only. Zing’s media and text remain on their website. No Zing SDK or assets are bundled.</string>
+    <string name="license_cc0_videos">Workout Free Videos is published under CC0 1.0. Downloadable clips use pinned source links with verified file hashes.</string>
+    <string name="coach_plan_title">Adaptive workout</string>
+    <string name="coach_hide">Hide adaptive workout</string>
+    <string name="coach_plan_description">Get an editable session using your goal, experience, equipment, and logged workouts. Review the movements and load before starting.</string>
+    <string name="coach_focus">Training focus</string>
+    <string name="coach_focus_core">Core</string>
+    <string name="coach_focus_mobility">Mobility</string>
+    <string name="coach_duration">Approximate duration</string>
+    <string name="coach_minutes">%1$d min</string>
+    <string name="coach_equipment">Available equipment (bodyweight, mat and wall included)</string>
+    <string name="coach_dumbbells">Dumbbells</string>
+    <string name="coach_bands">Resistance bands</string>
+    <string name="coach_recent_muscles">Muscles trained in the past 48 hours</string>
+    <string name="coach_no_recent">No recent sets logged.</string>
+    <string name="coach_review_plan">Create and review workout</string>
+    <string name="coach_no_match">No suitable exercises found. Adjust the training focus or equipment.</string>
+    <string name="check_in_title">Fitness check-in</string>
+    <string name="check_in_description">Record a short squat and plank session. Repeat under similar conditions to follow your own progress.</string>
+    <string name="check_in_last">Last check-in: %1$d squats · %2$d s plank</string>
+    <string name="check_in_start">Review fitness check-in</string>
+    <string name="calibration_countdown">Capturing in %1$d s</string>
+    <string name="setup_general_hold">Live skeleton tracking is available. Log this hold with the manual timer. Exercise-specific form coaching is unavailable.</string>
 </resources>

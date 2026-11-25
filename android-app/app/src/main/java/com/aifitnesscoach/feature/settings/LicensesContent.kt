@@ -64,7 +64,9 @@ private val notices = listOf(
         "https://github.com/google/gson/blob/main/LICENSE", "apache-2.0.txt"),
     ThirdPartyNotice("LiteRT-LM · Apache 2.0", R.string.license_litert,
         "https://github.com/google-ai-edge/LiteRT-LM/blob/main/LICENSE", "apache-2.0.txt"),
-    ThirdPartyNotice("OpenGym", R.string.license_opengym, "https://github.com/DuarteSantos8/openGym")
+    ThirdPartyNotice("OpenGym", R.string.license_opengym, "https://github.com/DuarteSantos8/openGym"),
+    ThirdPartyNotice("Zing Coach", R.string.license_zing, "https://www.zing.coach/terms-of-use"),
+    ThirdPartyNotice("Workout Free Videos · CC0", R.string.license_cc0_videos, "https://github.com/namnq/workout-free-videos")
 )
 
 @Composable
