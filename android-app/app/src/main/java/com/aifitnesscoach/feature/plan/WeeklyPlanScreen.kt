@@ -22,6 +22,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.ui.Alignment
 import com.aifitnesscoach.core.database.nextRotationSlot
+import com.aifitnesscoach.core.database.UserProfile
+import com.aifitnesscoach.core.database.WorkoutSessionWithDetails
 import com.aifitnesscoach.core.exercise.definitions.ExternalExerciseSources
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material3.Text
@@ -51,6 +53,9 @@ import java.util.Locale
 @Composable
 internal fun WeeklyPlanScreen(
     savedDays: Map<Int, String>,
+    profile: UserProfile,
+    sessions: List<WorkoutSessionWithDetails>,
+    onReviewAdaptive: (List<PlannedWorkoutItem>, Boolean) -> Unit,
     isPersian: Boolean,
     rotationEnabled: Boolean,
     lastRotationSlot: Int,
@@ -66,6 +71,7 @@ internal fun WeeklyPlanScreen(
     val decoded = remember(savedDays, catalogVersion) { savedDays.mapValues { WeeklyPlan.decode(it.value) } }
     val nextSlot = nextRotationSlot(decoded.filterValues { it.isNotEmpty() }.keys, lastRotationSlot)
         .takeIf { rotationEnabled }
+    var showAdaptive by rememberSaveable { mutableStateOf(false) }
     var templateDay by rememberSaveable { mutableStateOf<Int?>(null) }
     val forTemplate = templateDay
     if (forTemplate != null) {
@@ -107,6 +113,14 @@ internal fun WeeklyPlanScreen(
                     Text(stringResource(R.string.rotation_enable), Modifier.weight(1f))
                     Switch(checked = rotationEnabled, onCheckedChange = onRotationEnabled)
                 }
+            }
+        }
+        item(key = "adaptive", contentType = "coach") {
+            Column(verticalArrangement = Arrangement.spacedBy(LayoutSpacing.small)) {
+                OutlinedButton(onClick = { showAdaptive = !showAdaptive }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(if (showAdaptive) R.string.coach_hide else R.string.coach_plan_title))
+                }
+                if (showAdaptive) AdaptiveTrainingPanel(profile, sessions, isPersian, onReviewAdaptive)
             }
         }
         items(if (rotationEnabled) days.sortedBy { it.value } else days, key = { it.value }, contentType = { "weekday" }) { day ->

@@ -12,6 +12,8 @@ import com.aifitnesscoach.core.equipment.WeightEntry
 import com.aifitnesscoach.core.equipment.WeightLoadMode
 import com.aifitnesscoach.core.equipment.WeightUnit
 import com.aifitnesscoach.core.exercise.AnalysisResult
+import com.aifitnesscoach.core.exercise.analyzers.CalibratedPoseAnalyzer
+import com.aifitnesscoach.core.exercise.analyzers.CalibrationStage
 import com.aifitnesscoach.core.exercise.AnalyzerRegistry
 import com.aifitnesscoach.core.exercise.CoachExplanationProvider
 import com.aifitnesscoach.core.exercise.ExerciseAnalyzer
@@ -25,6 +27,7 @@ import com.aifitnesscoach.core.media.TtsCoachManager
 import com.aifitnesscoach.core.pose.PoseFrame
 import com.aifitnesscoach.core.pose.TrackingQuality
 import com.aifitnesscoach.integration.healthconnect.HealthConnectManager
+import com.aifitnesscoach.feature.plan.AdaptiveTraining
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -88,12 +91,16 @@ data class WorkoutUiState(
     val manualRepAdjustment: Int = 0,
     val manualHoldStartedAtMs: Long? = null,
     val manualHoldAccumulatedMs: Long = 0L,
-    val isSaving: Boolean = false
+    val isSaving: Boolean = false,
+    val cameraEnabled: Boolean = true,
+    val checkIn: Boolean = false,
+    val calibrationStage: CalibrationStage = CalibrationStage.START,
+    val calibrationError: Boolean = false
 ) {
     val currentItem: PlannedWorkoutItem? get() = plannedItems.getOrNull(currentItemIndex)
 
     val isManualHold: Boolean get() = currentItem?.exercise?.let {
-        it.analyzerId == null && it.exerciseMode == ExerciseMode.TIMED_HOLD
+        (!cameraEnabled || !AnalyzerRegistry.isSupported(it.analyzerId)) && it.exerciseMode == ExerciseMode.TIMED_HOLD
     } == true
 
     fun manualHoldElapsedMs(nowMs: Long): Long = manualHoldAccumulatedMs +
@@ -128,9 +135,10 @@ class WorkoutViewModel(
         skipCameraGuide: Boolean = false
     ) {
         restTimerJob?.cancel()
+        activeAnalyzer = null
         val item = customItem ?: PlannedWorkoutItem(exercise = exercise, targetSets = 3)
         _uiState.value = WorkoutUiState(
-            stage = if (skipCameraGuide || item.exercise.analyzerId == null) WorkoutStage.LIVE_TRACKING else WorkoutStage.CAMERA_SETUP_GUIDE,
+            stage = if (skipCameraGuide) WorkoutStage.LIVE_TRACKING else WorkoutStage.CAMERA_SETUP_GUIDE,
             plannedItems = listOf(item),
             sessionStartedAtMs = System.currentTimeMillis()
         ).startManualHold(SystemClock.elapsedRealtime())
@@ -141,11 +149,13 @@ class WorkoutViewModel(
         openConfiguredPlan(initialExercises.map { PlannedWorkoutItem(exercise = it) })
     }
 
-    fun openConfiguredPlan(items: List<PlannedWorkoutItem>) {
+    fun openConfiguredPlan(items: List<PlannedWorkoutItem>, checkIn: Boolean = false) {
         restTimerJob?.cancel()
+        activeAnalyzer = null
         _uiState.value = WorkoutUiState(
             stage = WorkoutStage.PLANNING,
-            plannedItems = items
+            plannedItems = items,
+            checkIn = checkIn
         )
     }
 
@@ -183,7 +193,7 @@ class WorkoutViewModel(
         _uiState.update {
             it.copy(
                 rotationSlot = rotationSlot,
-                stage = if (skipCameraGuide || it.plannedItems.first().exercise.analyzerId == null) {
+                stage = if (skipCameraGuide) {
                     WorkoutStage.LIVE_TRACKING
                 } else {
                     WorkoutStage.CAMERA_SETUP_GUIDE
@@ -209,6 +219,7 @@ class WorkoutViewModel(
     }
 
     fun togglePause() {
+        (activeAnalyzer as? CalibratedPoseAnalyzer)?.interrupt()
         val now = SystemClock.elapsedRealtime()
         _uiState.update { current ->
             val updated = current.copy(isPaused = !current.isPaused)
@@ -225,7 +236,7 @@ class WorkoutViewModel(
 
     fun adjustManualReps(delta: Int) {
         _uiState.update {
-            it.copy(manualRepAdjustment = (it.manualRepAdjustment + delta).coerceAtLeast(0))
+            it.copy(manualRepAdjustment = (it.manualRepAdjustment + delta).coerceAtLeast(-(it.latestAnalysis?.repCount ?: 0)))
         }
     }
 
@@ -236,7 +247,8 @@ class WorkoutViewModel(
         isPersian: Boolean
     ) {
         val state = _uiState.value
-        if (state.stage != WorkoutStage.LIVE_TRACKING || state.isPaused) {
+        if (state.stage != WorkoutStage.LIVE_TRACKING || !state.cameraEnabled) return
+        if (state.isPaused) {
             _uiState.update { it.copy(latestPoseFrame = frame) }
             return
         }
@@ -271,6 +283,38 @@ class WorkoutViewModel(
             ) {
                 ttsCoachManager.speakIfReady(tip, ttsLocale, voiceEnabled)
             }
+        }
+    }
+
+    fun captureCalibrationPose() {
+        val state = _uiState.value
+        val analyzer = activeAnalyzer as? CalibratedPoseAnalyzer ?: return
+        val frame = state.latestPoseFrame
+        val captured = state.cameraEnabled && !state.isPaused && frame != null &&
+            SystemClock.uptimeMillis() - frame.timestampMs in 0L..750L &&
+            analyzer.captureReference(frame)
+        _uiState.update { it.copy(calibrationStage = analyzer.calibrationStage, calibrationError = !captured) }
+    }
+
+    fun resetCalibration() {
+        val analyzer = activeAnalyzer as? CalibratedPoseAnalyzer ?: return
+        analyzer.clearCalibration()
+        _uiState.update { it.copy(calibrationStage = analyzer.calibrationStage, calibrationError = false, latestPoseFrame = null) }
+    }
+
+    fun continueWithoutCamera() {
+        val now = SystemClock.elapsedRealtime()
+        _uiState.update { state ->
+            val hold = if (state.isManualHold) state.manualHoldElapsedMs(now)
+                else state.latestAnalysis?.holdDurationMs ?: 0L
+            state.copy(
+                stage = WorkoutStage.LIVE_TRACKING,
+                cameraEnabled = false,
+                manualHoldAccumulatedMs = hold,
+                manualHoldStartedAtMs = null,
+                latestPoseFrame = null,
+                calibrationError = false
+            ).startManualHold(now)
         }
     }
 
@@ -399,11 +443,13 @@ class WorkoutViewModel(
             val startTime = state.sessionStartedAtMs.takeIf { it > 0L } ?: endTime
             val distinctExercises = state.completedSets.map { it.item.exercise }.distinctBy { it.id }
             val titleEn = when {
+                state.checkIn -> "Fitness check-in"
                 distinctExercises.isEmpty() -> "Workout Session"
                 distinctExercises.size == 1 -> distinctExercises.first().nameEn
                 else -> "${distinctExercises.first().nameEn} + ${distinctExercises.size - 1} more"
             }
             val titleFa = when {
+                state.checkIn -> "ارزیابی تمرین"
                 distinctExercises.isEmpty() -> "جلسه تمرین"
                 distinctExercises.size == 1 -> distinctExercises.first().nameFa
                 else -> "${distinctExercises.first().nameFa} و ${distinctExercises.size - 1} حرکت دیگر"
@@ -415,7 +461,8 @@ class WorkoutViewModel(
                 titleFa = titleFa,
                 startedAtEpochMs = startTime,
                 endedAtEpochMs = endTime,
-                totalDurationMs = (endTime - startTime).coerceAtLeast(1000L)
+                totalDurationMs = (endTime - startTime).coerceAtLeast(1000L),
+                notes = if (state.checkIn) AdaptiveTraining.CHECK_IN_TAG else ""
             )
 
             val sets = state.completedSets.map { rec ->
@@ -486,9 +533,14 @@ class WorkoutViewModel(
 
     private fun prepareAnalyzerForCurrentItem() {
         val current = _uiState.value.currentItem ?: return
-        activeAnalyzer = AnalyzerRegistry.createForExercise(current.exercise)
+        // Keep a calibrated movement across sets of the same exercise. New sessions reset the reference.
+        if (activeAnalyzer?.exerciseId != current.exercise.id) {
+            activeAnalyzer = AnalyzerRegistry.createForExercise(current.exercise)
+        }
         activeAnalyzer?.reset()
-        _uiState.update { it.copy(latestAnalysis = null) }
+        _uiState.update { it.copy(latestAnalysis = null, latestPoseFrame = null,
+            calibrationStage = (activeAnalyzer as? CalibratedPoseAnalyzer)?.calibrationStage ?: CalibrationStage.READY,
+            calibrationError = false) }
     }
 
     override fun onCleared() {

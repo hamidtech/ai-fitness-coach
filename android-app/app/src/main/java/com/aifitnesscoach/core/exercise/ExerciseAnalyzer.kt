@@ -13,6 +13,9 @@ enum class MovementPhase(val labelEn: String, val labelFa: String) {
     PEAK_FLEXION("Peak Flexion", "اوج انقباض"),
     EXTENDING("Extending", "باز کردن"),
     HOLDING("Holding", "در حال نگهداشتن"),
+    REFERENCE_START("Start position", "وضعیت شروع"),
+    REFERENCE_END("End position", "وضعیت انتها"),
+    BETWEEN_POSES("Moving", "در حال حرکت"),
     PAUSED_TRACKING_LOST("Paused — Tracking Lost", "متوقف — خطای ردیابی")
 }
 

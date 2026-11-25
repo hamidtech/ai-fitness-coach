@@ -273,12 +273,12 @@ object ExternalExerciseSources {
         val definition = ExerciseDefinition(
             id = id,
             nameEn = name,
-            nameFa = name,
+            nameFa = row.optString("nameFa").takeIf { it.isNotBlank() && it.length <= 200 } ?: name,
             category = category,
             descriptionEn = "",
             descriptionFa = "",
             targetMusclesEn = muscles,
-            targetMusclesFa = muscles,
+            targetMusclesFa = row.optJSONArray("musclesFa")?.strings() ?: muscles,
             equipmentType = type,
             supportedBandTypes = if (type == EquipmentCategoryType.RESISTANCE_BAND) {
                 ResistanceBandType.entries
@@ -289,7 +289,7 @@ object ExternalExerciseSources {
             analyzerId = null,
             demoMedia = MediaAssetRef("", ""),
             instructionsEn = steps,
-            instructionsFa = steps,
+            instructionsFa = row.optJSONArray("stepsFa")?.strings() ?: steps,
             commonMistakesEn = emptyList(),
             commonMistakesFa = emptyList(),
             observableFormChecksEn = emptyList(),

@@ -142,6 +142,12 @@ class AndroidOverhaulDeviceTest {
         assertEquals(191, validated.size)
         assertEquals(1_554, ExerciseCatalog.allExercises.size)
         assertTrue(external.none { it.analyzerId != null })
+        // Catalog records keep their source metadata; every one now has a generic tracking implementation.
+        external.forEach { exercise ->
+            val tracker = com.aifitnesscoach.core.exercise.AnalyzerRegistry.createForExercise(exercise)
+            assertEquals(exercise.id, tracker.exerciseId)
+            assertTrue(tracker is com.aifitnesscoach.core.exercise.analyzers.CalibratedPoseAnalyzer)
+        }
         val openImage = ExerciseAssetCatalog.entryFor(validated.first().id)
         assertEquals(AssetMediaType.PNG_SINGLE, openImage.mediaType)
         assertTrue(requireNotNull(openImage.primaryUrl).contains(ExternalExerciseSources.OPEN_REVISION))

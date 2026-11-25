@@ -12,17 +12,17 @@ An offline-first Android workout tracker and camera-based form coach with Englis
 
 | Feature | Where to find it |
 | --- | --- |
-| Start and track a workout | **Start** is in the center of the bottom bar. Log sets, reps, weights or hold times. Supported exercises offer on-device camera tracking and a positioning guide. |
-| Find exercises | **Exercises → Source** shows the available catalogs and exercise counts. Search by name and combine equipment and muscle group filters. |
-| Download or import exercise media | Open an exercise and tap its media action. Download available licensed demos or import a personal photo, GIF, or MP4. Download options depend on the exercise and its source. |
+| Start and track a workout | **Start** is in the center of the bottom bar. Log sets, reps, weights or hold times. Every exercise can use on-device skeleton tracking and a positioning guide. Four have dedicated form analyzers; other repetition movements offer two-pose calibration and manual correction. |
+| Find exercises | **Exercises → Source** shows the available catalogs and exercise counts. Search by name and combine equipment, muscle group, video and Zing guide filters. |
+| Download or import exercise media | Download an available demo below the preview on the exercise detail screen. Play a saved video there offline or use the media manager to import a personal photo, GIF, or MP4. Download options depend on the exercise and its source. |
 | Update the exercise catalog | In **Exercises**, use **Check for catalog updates**. The same action is under **Settings → Exercise catalog**. The app keeps the last valid catalog for offline use. |
-| Make a routine | Open **Plan** from Home after enabling it in **Settings → App features**. Build a weekly schedule or run your saved routines in rotation. |
+| Make a routine | Open **Plan** from Home after enabling it in **Settings → App features**. Build a weekly schedule, run saved rotations, create an adaptive session, or repeat a fitness check-in. |
 | Inspect workout history and progress | Open **History** in Simple mode. Enable progress charts to see activity, streaks, muscle groups, and estimated strength records under **Progress**. |
 | Analyze workouts with AI | Open **AI Analysis** from the bottom bar. Use rule-based feedback or configure a supported on-device model or external provider in Settings. External analysis requires consent to share the workout summary. |
 | Customize the interface | **Home → Settings → App features** switches between Simple and Advanced layouts and controls which optional sections appear. Settings also includes language, appearance, Health Connect, and licenses. |
 | Pin Android widgets | Add **Quick Workout & Daily Activity** or **Workout & Daily Motivation** from your launcher’s widget picker. They read saved workouts and the app’s daily quote. |
 
-The built-in library, offline catalog, manual tracking, and workout history work without an account. Catalog updates and optional media downloads use the network. Camera processing for supported movements runs on the phone. Review source attribution and media terms under **Settings → Licenses and credits**.
+The built-in library, offline catalog, manual tracking, and workout history work without an account. Catalog updates and optional media downloads use the network. Camera processing for all movements runs on the phone. Review source attribution and media terms under **Settings → Licenses and credits**.
 
 ## Project layout
 
