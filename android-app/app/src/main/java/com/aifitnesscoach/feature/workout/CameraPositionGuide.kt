@@ -32,7 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.aifitnesscoach.R
 import com.aifitnesscoach.core.exercise.ExerciseDefinition
-import com.aifitnesscoach.core.media.ExerciseIllustration
+import com.aifitnesscoach.core.media.ExerciseArtwork
 import com.aifitnesscoach.core.ui.LayoutSpacing
 
 @Composable
@@ -75,7 +75,7 @@ internal fun CameraFramingExample(exerciseId: String, modifier: Modifier = Modif
             .aspectRatio(if (exerciseId in floorExerciseIds) 1.6f else 1f).clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.secondaryContainer)
     ) {
-        ExerciseIllustration(exerciseId, Modifier.fillMaxSize())
+        ExerciseArtwork(exerciseId, Modifier.fillMaxSize())
         Canvas(Modifier.fillMaxSize().padding(12.dp)) {
             val border = 2.dp.toPx()
             drawRect(color, size = Size(size.width, size.height), style = Stroke(border))

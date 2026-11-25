@@ -101,6 +101,7 @@ import com.aifitnesscoach.core.localization.LocaleManager
 import com.aifitnesscoach.core.personalization.PersonalizedGreeting
 import com.aifitnesscoach.core.pose.TrackingQuality
 import com.aifitnesscoach.core.exercise.AnalyzerRegistry
+import com.aifitnesscoach.core.media.ExerciseArtwork
 import com.aifitnesscoach.core.exercise.analyzers.CalibrationStage
 import com.aifitnesscoach.feature.exercises.ExercisesScreen
 import com.aifitnesscoach.core.exercise.EquipmentCategoryType
@@ -708,6 +709,15 @@ private fun LiveTrackingWorkoutView(
                 skeletonColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.fillMaxSize()
             )
+        }
+        if (!hasCameraPermission) {
+            Surface(
+                modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.74f).height(maxHeight * 0.32f),
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow
+            ) {
+                ExerciseArtwork(item.exercise.id, Modifier.fillMaxSize().padding(LayoutSpacing.screen))
+            }
         }
 
         // Top HUD (Exercise Name, Set, Tracking Status, Help, Camera Switch)
