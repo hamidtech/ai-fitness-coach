@@ -6,6 +6,7 @@ import json
 import re
 import struct
 import subprocess
+import zlib
 from time import monotonic, sleep
 import xml.etree.ElementTree as ET
 from zipfile import ZipFile
@@ -54,21 +55,61 @@ def capture(filename, expected_label):
     (OUTPUT / filename).write_bytes(adb("exec-out", "screencap", "-p"))
 
 
-def video_pixels():
-    # ADB screencap emits little-endian display dimensions and packed RGBA/RGBX pixels.
-    frame = adb("exec-out", "screencap")
-    width, height, pixel_format = struct.unpack_from("<III", frame)
-    header = len(frame) - width * height * 4
-    if pixel_format not in (1, 2) or header not in (12, 16):
-        raise RuntimeError("Unexpected emulator screenshot format")
+def sample_png(frame):
+    """Sample the player region from an 8-bit RGB/RGBA Android PNG screenshot."""
+    width, height, depth, color, _, _, interlace = struct.unpack(">IIBBBBB", frame[16:29])
+    if frame[:8] != b"\x89PNG\r\n\x1a\n" or depth != 8 or color not in (2, 6) or interlace:
+        raise RuntimeError("Unexpected emulator PNG format")
+    channels = 4 if color == 6 else 3
+    compressed = bytearray()
+    offset = 8
+    while offset + 12 <= len(frame):
+        length, kind = struct.unpack_from(">I4s", frame, offset)
+        if kind == b"IDAT":
+            compressed.extend(frame[offset + 8:offset + 8 + length])
+        offset += length + 12
+        if kind == b"IEND":
+            break
+    raw = zlib.decompress(compressed)
+    stride = width * channels
+    if len(raw) != height * (stride + 1):
+        raise RuntimeError("Incomplete emulator PNG")
+    sample_rows = {round(height * (0.27 + y * 0.10 / 48)) for y in range(48)}
+    sample_columns = [round(width * (0.15 + x * 0.70 / 96)) * channels for x in range(96)]
+    previous = bytearray(stride)
     pixels = []
-    for y in range(48):
-        row = round(height * (0.27 + y * 0.10 / 48))
-        for x in range(96):
-            column = round(width * (0.15 + x * 0.70 / 96))
-            offset = header + (row * width + column) * 4
-            pixels.append(sum(frame[offset:offset + 3]) / 3)
+
+    for y in range(max(sample_rows) + 1):
+        start = y * (stride + 1)
+        filter_type = raw[start]
+        row = bytearray(raw[start + 1:start + 1 + stride])
+        if filter_type == 1:
+            for i in range(channels, stride):
+                row[i] = (row[i] + row[i - channels]) & 255
+        elif filter_type == 2:
+            row = bytearray((value + above) & 255 for value, above in zip(row, previous))
+        elif filter_type in (3, 4):
+            for i in range(stride):
+                left = row[i - channels] if i >= channels else 0
+                up = previous[i]
+                if filter_type == 3:
+                    prediction = (left + up) // 2
+                else:
+                    diagonal = previous[i - channels] if i >= channels else 0
+                    estimate = left + up - diagonal
+                    dl, du, dd = abs(estimate - left), abs(estimate - up), abs(estimate - diagonal)
+                    prediction = left if dl <= du and dl <= dd else up if du <= dd else diagonal
+                row[i] = (row[i] + prediction) & 255
+        elif filter_type != 0:
+            raise RuntimeError("Unknown PNG row filter")
+        if y in sample_rows:
+            pixels.extend(sum(row[i:i + 3]) / 3 for i in sample_columns)
+        previous = row
     return pixels
+
+
+def video_pixels():
+    return sample_png(adb("exec-out", "screencap", "-p"))
 
 
 def capture_video_playback(pack):
