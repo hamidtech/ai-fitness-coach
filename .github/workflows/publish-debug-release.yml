@@ -1,0 +1,68 @@
+name: Publish Android Debug Release
+
+on:
+  workflow_run:
+    workflows: ["Android APK - Build and Test"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: android-debug-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout the tested main commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Publish a version with release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          BUILD_RUN: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          version="$(sed -nE 's/^[[:space:]]*versionName = "([0-9]+\.[0-9]+\.[0-9]+)"[[:space:]]*$/\1/p' android-app/app/build.gradle.kts)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          tag="v$version"
+          notes="$GITHUB_WORKSPACE/docs/releases/$tag.md"
+          if [[ ! -s "$notes" ]]; then
+            echo "No release notes for $tag. Nothing to publish."
+            exit 0
+          fi
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "$tag already has a release; existing assets are preserved."
+            exit 0
+          fi
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            test "$(git rev-list -n 1 "$tag")" = "$SOURCE_SHA"
+          fi
+
+          staging="$RUNNER_TEMP/fitness-release"
+          mkdir -p "$staging"
+          gh run download "$BUILD_RUN" --repo "$GITHUB_REPOSITORY" \
+            --name ai-fitness-coach-debug-apk --dir "$staging"
+          apk="AI-Fitness-Coach-$tag-debug.apk"
+          mv "$staging/app-debug.apk" "$staging/$apk"
+          cd "$staging"
+          test -s "$apk"
+          sha256sum "$apk" > "$apk.sha256"
+          gh release create "$tag" "$apk" "$apk.sha256" \
+            --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" \
+            --title "AI Fitness Coach $tag — Android Debug" \
+            --notes-file "$notes" --latest
