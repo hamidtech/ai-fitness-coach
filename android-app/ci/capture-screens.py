@@ -170,6 +170,9 @@ def main():
     capture("07-weekly-plan.png", label("plan_rest_day"))
     tap(label("coach_plan_title"))
     capture("19-adaptive-workout.png", label("coach_plan_description"))
+    tap(label("coach_review_plan"))
+    capture("24-adaptive-workout-review.png", label("home_build_session"))
+    tap(label("workout_discard"))
     tap(label("coach_hide"))
     tap(label("nav_progress"))
     capture("08-progress-empty.png", label("history_empty"))
@@ -182,12 +185,17 @@ def main():
     adb("shell", "input", "keyevent", "KEYCODE_BACK")
 
     tap(label("exercise_filter_video"))
+    # The extra tracking label makes rows taller; search for the exact test movement.
+    tap(label("exercises_search_hint"))
+    adb("shell", "input", "text", "Dumbbell%sbench%spress")
+    adb("shell", "input", "keyevent", "KEYCODE_BACK")
     capture("15-video-filter.png", "Dumbbell bench press")
     tap("Dumbbell bench press")
     capture("16-video-download.png", label("exercise_download_video"))
     tap(label("exercise_download_video"))
     capture_video_playback(pack)
     adb("shell", "input", "keyevent", "KEYCODE_BACK")
+    tap(label("common_clear"))
     tap(label("exercise_filter_video"))
 
     # Break UI with a practical narrow-display and large-type configuration.
