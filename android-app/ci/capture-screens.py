@@ -210,7 +210,11 @@ def main():
         else:
             adb("shell", "settings", "put", "system", "font_scale", initial_font)
 
-    adb("shell", "input", "keyevent", "KEYCODE_BACK")
+    # A font-scale configuration change can recreate the navigation host. Start
+    # a fresh activity so the new guide scenario is independent of that dialog.
+    adb("shell", "am", "force-stop", "com.aifitnesscoach")
+    adb("shell", "am", "start", "-W", "-n", COMPONENT)
+    tap(label("nav_exercises"))
     tap(label("zing_guides"))
     capture("20-zing-guide-filter.png", label("zing_open_library"))
     tap(label("exercises_search_hint"))
